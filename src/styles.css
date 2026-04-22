@@ -1,0 +1,29 @@
+* { box-sizing: border-box; }
+html, body, #root {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  background: #08090B;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', 'Inter', system-ui, sans-serif;
+  color: #F2F4F7;
+  overscroll-behavior: none;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  letter-spacing: -0.01em;
+}
+button { font-family: inherit; }
+
+*::-webkit-scrollbar { width: 3px; height: 3px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb { background: #353A43; border-radius: 2px; }
+
+#root {
+  max-width: 480px;
+  margin: 0 auto;
+  position: relative;
+  overflow: hidden;
+}
+
+@media (display-mode: standalone) {
+  body { overscroll-behavior: none; }
+}
