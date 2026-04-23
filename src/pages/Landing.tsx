@@ -2,8 +2,8 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { PageShell } from './PageShell';
 
-const TEAL = '#06B6D4';
-const TEAL_DARK = '#0891B2';
+const TEAL = '#0891B2';      // cyan-600, matches legacy surfvikings.com
+const TEAL_DARK = '#0E7490'; // cyan-700, deeper hover
 const INK = '#0F172A';
 const MUTED = '#64748B';
 const SURFACE = '#F8FAFC';

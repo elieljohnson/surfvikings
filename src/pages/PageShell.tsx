@@ -2,6 +2,22 @@ import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Logo } from '../components/Logo';
 
+/** Tiny media-query hook for responsive behavior without a CSS framework. */
+function useMediaQuery(query: string): boolean {
+  const [matches, setMatches] = React.useState(() =>
+    typeof window !== 'undefined' ? window.matchMedia(query).matches : false
+  );
+  React.useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const mql = window.matchMedia(query);
+    const onChange = () => setMatches(mql.matches);
+    onChange();
+    mql.addEventListener('change', onChange);
+    return () => mql.removeEventListener('change', onChange);
+  }, [query]);
+  return matches;
+}
+
 type NavKey = 'home' | 'app' | 'merch' | 'games' | 'about';
 
 interface PageShellProps {
@@ -19,8 +35,8 @@ const NAV: { key: NavKey; label: string; to: string }[] = [
   { key: 'about', label: 'About',    to: '/about' },
 ];
 
-const TEAL = '#06B6D4';
-const TEAL_DARK = '#0891B2';
+const TEAL = '#0891B2';      // cyan-600, matches legacy surfvikings.com
+const TEAL_DARK = '#0E7490'; // cyan-700
 
 /**
  * Marketing-site shell used by /, /merch, /about, /games.
@@ -59,6 +75,8 @@ export function PageShell({ activeNav, transparentHeader, children }: PageShellP
 
 function TopNav({ active, transparent }: { active: NavKey; transparent: boolean }) {
   const [scrolled, setScrolled] = React.useState(false);
+  const [menuOpen, setMenuOpen] = React.useState(false);
+  const isNarrow = useMediaQuery('(max-width: 768px)');
 
   React.useEffect(() => {
     if (!transparent) return;
@@ -68,11 +86,12 @@ function TopNav({ active, transparent }: { active: NavKey; transparent: boolean 
     return () => window.removeEventListener('scroll', onScroll);
   }, [transparent]);
 
-  const overHero = transparent && !scrolled;
+  // Close mobile menu when route changes
+  const location = useLocation();
+  React.useEffect(() => { setMenuOpen(false); }, [location.pathname]);
 
-  const headerBg = overHero
-    ? 'transparent'
-    : 'rgba(255, 255, 255, 0.88)';
+  const overHero = transparent && !scrolled;
+  const headerBg = overHero ? 'transparent' : 'rgba(255, 255, 255, 0.9)';
   const borderColor = overHero ? 'transparent' : '#E2E8F0';
   const textColor = overHero ? '#FFFFFF' : '#0F172A';
   const mutedText = overHero ? 'rgba(255,255,255,0.78)' : '#64748B';
@@ -89,50 +108,122 @@ function TopNav({ active, transparent }: { active: NavKey; transparent: boolean 
     }}>
       <nav style={{
         maxWidth: 1200, margin: '0 auto',
-        padding: '14px 24px',
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 24,
+        padding: isNarrow ? '12px 16px' : '14px 24px',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
       }}>
         <Link to="/" style={{
           display: 'inline-flex', alignItems: 'center', gap: 10,
           textDecoration: 'none', color: 'inherit',
-          fontWeight: 800, fontSize: 18, letterSpacing: '-0.02em',
+          fontWeight: 800, fontSize: isNarrow ? 16 : 18, letterSpacing: '-0.02em',
+          flexShrink: 0,
         }}>
-          <Logo size={30} />
-          Surf Vikings
+          <Logo size={isNarrow ? 26 : 30} />
+          {!isNarrow && <span>Surf Vikings</span>}
         </Link>
-        <div style={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+
+        {/* Desktop nav — hidden on narrow viewports */}
+        {!isNarrow && (
+          <div style={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+            {NAV.slice(1).map((item) => {
+              const isActive = active === item.key;
+              return (
+                <Link key={item.key} to={item.to} style={{
+                  padding: '8px 12px', borderRadius: 8,
+                  textDecoration: 'none',
+                  color: isActive ? textColor : mutedText,
+                  background: isActive && !overHero ? '#F1F5F9' :
+                              isActive && overHero   ? 'rgba(255,255,255,0.14)' : 'transparent',
+                  fontWeight: 500, fontSize: 14,
+                  transition: 'color 120ms ease',
+                  whiteSpace: 'nowrap',
+                }}>{item.label}</Link>
+              );
+            })}
+            <Link to="/app" style={ctaStyle(false)}
+              onMouseEnter={(e) => { e.currentTarget.style.background = TEAL_DARK; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = TEAL; }}
+            >Open app →</Link>
+          </div>
+        )}
+
+        {/* Mobile: compact CTA + hamburger */}
+        {isNarrow && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Link to="/app" style={ctaStyle(true)}>Open app</Link>
+            <button
+              aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+              aria-expanded={menuOpen}
+              onClick={() => setMenuOpen((o) => !o)}
+              style={{
+                width: 40, height: 40, borderRadius: 10,
+                background: overHero ? 'rgba(255,255,255,0.14)' : '#F1F5F9',
+                border: 'none', cursor: 'pointer',
+                color: textColor,
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                WebkitTapHighlightColor: 'transparent',
+              }}
+            >
+              <HamburgerIcon open={menuOpen}/>
+            </button>
+          </div>
+        )}
+      </nav>
+
+      {/* Mobile drawer */}
+      {isNarrow && menuOpen && (
+        <div style={{
+          borderTop: `1px solid ${overHero ? 'rgba(255,255,255,0.12)' : '#E2E8F0'}`,
+          background: overHero ? 'rgba(15,23,42,0.92)' : 'rgba(255,255,255,0.98)',
+          backdropFilter: 'blur(16px)',
+          WebkitBackdropFilter: 'blur(16px)',
+          padding: '8px 16px 16px',
+          display: 'flex', flexDirection: 'column',
+        }}>
           {NAV.slice(1).map((item) => {
             const isActive = active === item.key;
             return (
               <Link key={item.key} to={item.to} style={{
-                padding: '8px 14px', borderRadius: 8,
-                textDecoration: 'none',
+                padding: '14px 8px', textDecoration: 'none',
                 color: isActive ? textColor : mutedText,
-                background: isActive && !overHero ? '#F1F5F9' :
-                            isActive && overHero   ? 'rgba(255,255,255,0.14)' : 'transparent',
-                fontWeight: 500, fontSize: 14,
-                transition: 'color 120ms ease',
+                fontWeight: isActive ? 600 : 500, fontSize: 16,
+                borderBottom: `1px solid ${overHero ? 'rgba(255,255,255,0.08)' : '#F1F5F9'}`,
               }}>{item.label}</Link>
             );
           })}
-          <Link
-            to="/app"
-            style={{
-              marginLeft: 8,
-              padding: '9px 16px', borderRadius: 999,
-              background: TEAL, color: '#FFFFFF',
-              fontWeight: 600, fontSize: 14, textDecoration: 'none',
-              display: 'inline-flex', alignItems: 'center', gap: 6,
-              transition: 'background 120ms ease',
-            }}
-            onMouseEnter={(e) => { e.currentTarget.style.background = TEAL_DARK; }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = TEAL; }}
-          >
-            Open app →
-          </Link>
         </div>
-      </nav>
+      )}
     </header>
+  );
+}
+
+function ctaStyle(compact: boolean): React.CSSProperties {
+  return {
+    padding: compact ? '8px 14px' : '9px 16px',
+    borderRadius: 999,
+    background: TEAL,
+    color: '#FFFFFF',
+    fontWeight: 600,
+    fontSize: compact ? 13 : 14,
+    textDecoration: 'none',
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 6,
+    whiteSpace: 'nowrap',
+    transition: 'background 120ms ease',
+    WebkitTapHighlightColor: 'transparent',
+  };
+}
+
+function HamburgerIcon({ open }: { open: boolean }) {
+  return (
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+      <line x1="3" y1={open ? 10 : 6}  x2="17" y2={open ? 10 : 6}  stroke="currentColor" strokeWidth="2" strokeLinecap="round"
+        style={{ transition: 'transform 160ms ease, y 160ms ease', transform: open ? 'rotate(45deg)' : 'rotate(0)', transformOrigin: '10px 10px' }} />
+      <line x1="3" y1="10" x2="17" y2="10" stroke="currentColor" strokeWidth="2" strokeLinecap="round"
+        style={{ opacity: open ? 0 : 1, transition: 'opacity 120ms ease' }} />
+      <line x1="3" y1={open ? 10 : 14} x2="17" y2={open ? 10 : 14} stroke="currentColor" strokeWidth="2" strokeLinecap="round"
+        style={{ transition: 'transform 160ms ease, y 160ms ease', transform: open ? 'rotate(-45deg)' : 'rotate(0)', transformOrigin: '10px 10px' }} />
+    </svg>
   );
 }
 

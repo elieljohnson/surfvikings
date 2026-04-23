@@ -24,7 +24,7 @@ export function App() {
   }, [screen]);
 
   return (
-    <div style={{ width: '100%', height: '100%', position: 'relative' }}>
+    <div className="pwa-shell">
       {screen === 'dashboard' && <Dashboard onOpenSpot={openSpot}/>}
       {screen === 'spot' && <SpotDetail spotId={spotId} onBack={() => setScreen('dashboard')}/>}
       {screen === 'map' && <RegionMap onOpenSpot={openSpot}/>}
