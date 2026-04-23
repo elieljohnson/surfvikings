@@ -14,11 +14,13 @@ export const TOKENS = {
   amber:     '#F5A524',
   orange:    '#F97316',
   red:       '#EF4444',
-  epic:      '#14B8A6',
-  good:      '#A3E635',
-  fair:      '#EAB308',
-  poor:      '#EF4444',
-  flat:      '#4B5058',
+  epic:      '#14B8A6', // teal-500
+  good:      '#84CC16', // lime-500
+  fair:      '#A3E635', // lime-400 (bright yellow-green)
+  mediocre:  '#EAB308', // yellow-500
+  meh:       '#F97316', // orange-500
+  poor:      '#EF4444', // red-500
+  flat:      '#4B5058', // gray
   maverick:  '#FF6D00',
   cData:     '#3FB8FF',
   cSwell:    '#3FB8FF',
@@ -29,18 +31,21 @@ export const TOKENS = {
 export type TokenKey = keyof typeof TOKENS;
 
 export function scoreColor(score: number, watchOnly?: boolean): string {
-  if (watchOnly) return score >= 75 ? TOKENS.maverick : score >= 35 ? TOKENS.good : TOKENS.flat;
-  if (score >= 75) return TOKENS.epic;
-  if (score >= 55) return TOKENS.good;
-  if (score >= 35) return TOKENS.fair;
-  if (score >= 15) return TOKENS.poor;
-  return TOKENS.flat;
+  if (watchOnly) return score >= 80 ? TOKENS.maverick : score >= 35 ? TOKENS.mediocre : TOKENS.flat;
+  if (score >= 80) return TOKENS.epic;     // 80-100 teal
+  if (score >= 60) return TOKENS.good;     // 60-79  lime-500
+  if (score >= 50) return TOKENS.fair;     // 50-59  lime-400
+  if (score >= 35) return TOKENS.mediocre; // 35-49  yellow
+  if (score >= 30) return TOKENS.meh;      // 30-34  orange
+  if (score >= 15) return TOKENS.poor;     // 15-29  red
+  return TOKENS.flat;                       // 0-14   gray
 }
 
 export function qualityColor(q: number): string {
-  if (q >= 0.78) return TOKENS.epic;   // #22C55E green
-  if (q >= 0.58) return TOKENS.good;   // #84CC16 lime
-  if (q >= 0.40) return TOKENS.fair;   // #EAB308 yellow
-  if (q >= 0.22) return TOKENS.orange; // #F97316 orange (transition)
-  return TOKENS.poor;                   // #EF4444 red
+  if (q >= 0.80) return TOKENS.epic;     // teal
+  if (q >= 0.60) return TOKENS.good;     // lime-500
+  if (q >= 0.50) return TOKENS.fair;     // lime-400
+  if (q >= 0.35) return TOKENS.mediocre; // yellow
+  if (q >= 0.30) return TOKENS.meh;      // orange
+  return TOKENS.poor;                     // red (also covers < 0.15 → gray would feel broken)
 }

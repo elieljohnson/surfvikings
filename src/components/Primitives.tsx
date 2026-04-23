@@ -175,8 +175,8 @@ export function ScoreTimeline({
   });
   const path = pts.map(([x, y], i) => (i === 0 ? `M${x},${y}` : `L${x},${y}`)).join(' ');
   const areaPath = `${path} L${width},${height} L0,${height} Z`;
-  const epicY = height - 0.75 * height;
-  const goodY = height - 0.55 * height;
+  const epicY = height - 0.80 * height;
+  const goodY = height - 0.60 * height;
   return (
     <svg width={width} height={height + 14} style={{ display: 'block' }}>
       <defs>
@@ -187,8 +187,8 @@ export function ScoreTimeline({
       </defs>
       <line x1="0" x2={width} y1={epicY} y2={epicY} stroke={TOKENS.epic} strokeWidth="0.5" strokeDasharray="2 3" opacity="0.5"/>
       <line x1="0" x2={width} y1={goodY} y2={goodY} stroke={TOKENS.good} strokeWidth="0.5" strokeDasharray="2 3" opacity="0.35"/>
-      <text x={width - 2} y={epicY - 2} textAnchor="end" fontFamily="JetBrains Mono, ui-monospace, monospace" fontSize="11" fill={TOKENS.epic} opacity="0.8">EPIC 75</text>
-      <text x={width - 2} y={goodY - 2} textAnchor="end" fontFamily="JetBrains Mono, ui-monospace, monospace" fontSize="11" fill={TOKENS.good} opacity="0.65">GOOD 55</text>
+      <text x={width - 2} y={epicY - 2} textAnchor="end" fontFamily="JetBrains Mono, ui-monospace, monospace" fontSize="11" fill={TOKENS.epic} opacity="0.8">EPIC 80</text>
+      <text x={width - 2} y={goodY - 2} textAnchor="end" fontFamily="JetBrains Mono, ui-monospace, monospace" fontSize="11" fill={TOKENS.good} opacity="0.65">GOOD 60</text>
       <path d={areaPath} fill="url(#score-ln)"/>
       <path d={path} stroke={TOKENS.pacific} strokeWidth="1.75" fill="none" strokeLinecap="round"/>
       <circle cx={pts[0][0]} cy={pts[0][1]} r="3.5" fill={TOKENS.pacific} stroke={TOKENS.bg} strokeWidth="2"/>
