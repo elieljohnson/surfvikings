@@ -11,7 +11,7 @@ export function Settings() {
   return (
     <Screen>
       <div style={{ padding: '52px 20px 14px', borderBottom: `1px solid ${TOKENS.border}` }}>
-        <div style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 9, letterSpacing: '0.18em', color: TOKENS.textMute, textTransform: 'uppercase' }}>Settings</div>
+        <div style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 11, letterSpacing: '0.18em', color: TOKENS.textMute, textTransform: 'uppercase' }}>Settings</div>
         <div style={{ fontSize: 22, fontWeight: 600, letterSpacing: '-0.02em', marginTop: 4 }}>Surf Vikings</div>
       </div>
 
@@ -55,7 +55,7 @@ export function Settings() {
 function Group({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div style={{ padding: '18px 20px 0' }}>
-      <div style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 9, letterSpacing: '0.18em', color: TOKENS.textMute, textTransform: 'uppercase', marginBottom: 8 }}>{title}</div>
+      <div style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 11, letterSpacing: '0.18em', color: TOKENS.textMute, textTransform: 'uppercase', marginBottom: 8 }}>{title}</div>
       <div style={{ background: TOKENS.surface, border: `1px solid ${TOKENS.border}`, borderRadius: 10 }}>
         {children}
       </div>

@@ -61,10 +61,10 @@ export function RegionMap({ onOpenSpot }: RegionMapProps) {
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 10 }}>
           <div>
-            <div style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 9, letterSpacing: '0.18em', color: TOKENS.textMute, textTransform: 'uppercase' }}>Coastline</div>
+            <div style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 11, letterSpacing: '0.18em', color: TOKENS.textMute, textTransform: 'uppercase' }}>Coastline</div>
             <div style={{ fontSize: 18, fontWeight: 600, letterSpacing: '-0.02em' }}>Salt Point → Santa Cruz</div>
           </div>
-          <div style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 9, color: TOKENS.textDim, letterSpacing: '0.1em' }}>
+          <div style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 11, color: TOKENS.textDim, letterSpacing: '0.1em' }}>
             {visible.length} / {SPOTS.length} SPOTS
           </div>
         </div>
@@ -95,11 +95,11 @@ export function RegionMap({ onOpenSpot }: RegionMapProps) {
             return (
               <div key={r.id} style={{ marginBottom: 8 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 20px 8px' }}>
-                  <div style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 9, letterSpacing: '0.2em', color: TOKENS.textMute, textTransform: 'uppercase' }}>
+                  <div style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 11, letterSpacing: '0.2em', color: TOKENS.textMute, textTransform: 'uppercase' }}>
                     R{ri + 1} · {r.label}
                   </div>
                   <div style={{ flex: 1, height: 1, background: TOKENS.border }}/>
-                  <div style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 8, color: TOKENS.textMute, letterSpacing: '0.12em' }}>
+                  <div style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 10, color: TOKENS.textMute, letterSpacing: '0.12em' }}>
                     BUOY {r.buoy}
                   </div>
                 </div>
@@ -138,7 +138,7 @@ function MapSpotPin({ spot, score, onClick }: { spot: Spot; score: number; onCli
       }}/>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontSize: 12, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{spot.name}</div>
-        <div style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 9, color: TOKENS.textMute, letterSpacing: '0.05em' }}>
+        <div style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 11, color: TOKENS.textMute, letterSpacing: '0.05em' }}>
           D{spot.difficulty} · {spot.type.split('·')[0].trim()}
         </div>
       </div>

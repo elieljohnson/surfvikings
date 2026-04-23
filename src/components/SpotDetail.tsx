@@ -41,7 +41,7 @@ export function SpotDetail({ spotId, onBack }: SpotDetailProps) {
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
           <button onClick={onBack} style={{ background: 'none', border: 'none', color: TOKENS.textDim, cursor: 'pointer', fontSize: 20, padding: 0 }}>‹</button>
-          <div style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 9, letterSpacing: '0.18em', color: TOKENS.textMute, textTransform: 'uppercase' }}>
+          <div style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 11, letterSpacing: '0.18em', color: TOKENS.textMute, textTransform: 'uppercase' }}>
             {activeSpot.regionLabel} · {activeSpot.driveMin}min drive
           </div>
         </div>
@@ -51,7 +51,7 @@ export function SpotDetail({ spotId, onBack }: SpotDetailProps) {
             <div style={{ fontSize: 12, color: TOKENS.textDim, marginTop: 3 }}>{activeSpot.subtitle}</div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 10 }}>
               <DifficultyPips level={activeSpot.difficulty} color={color}/>
-              <span style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 9, color: TOKENS.textDim, letterSpacing: '0.1em' }}>
+              <span style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 11, color: TOKENS.textDim, letterSpacing: '0.1em' }}>
                 DIFF {activeSpot.difficulty}/10 · {activeSpot.type}
               </span>
             </div>
@@ -87,7 +87,7 @@ export function SpotDetail({ spotId, onBack }: SpotDetailProps) {
       {/* Quality timeline */}
       <div style={{ padding: '18px 20px 12px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-          <div style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 9, letterSpacing: '0.18em', color: TOKENS.textMute, textTransform: 'uppercase' }}>Quality · 48h</div>
+          <div style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 11, letterSpacing: '0.18em', color: TOKENS.textMute, textTransform: 'uppercase' }}>Quality · 48h</div>
           <div style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 10, color: TOKENS.textDim }}>
             now <span style={{ color }}>{Math.round(current.score)}</span> · peak{' '}
             <span style={{ color: scoreColor(Math.max(...timeline.map((t) => t.score))) }}>
@@ -108,7 +108,7 @@ export function SpotDetail({ spotId, onBack }: SpotDetailProps) {
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
-                <div style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 9, letterSpacing: '0.2em', color: scoreColor(windows[0].peak), textTransform: 'uppercase' }}>
+                <div style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 11, letterSpacing: '0.2em', color: scoreColor(windows[0].peak), textTransform: 'uppercase' }}>
                   ◉ Optimal Window
                 </div>
                 <div style={{ fontSize: 15, fontWeight: 500, marginTop: 4 }}>
@@ -126,7 +126,7 @@ export function SpotDetail({ spotId, onBack }: SpotDetailProps) {
               {windows.slice(1, 4).map((w, i) => (
                 <div key={i} style={{
                   flex: 1, background: TOKENS.surface, border: `1px solid ${TOKENS.border}`, borderRadius: 6,
-                  padding: 8, fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 9, color: TOKENS.textDim,
+                  padding: 8, fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 11, color: TOKENS.textDim,
                 }}>
                   <div style={{ color: scoreColor(w.peak), fontSize: 12, fontWeight: 500 }}>{Math.round(w.peak)}</div>
                   <div>{hourLabel(w.start)}–{hourLabel(w.end + 1)}</div>
@@ -182,7 +182,7 @@ function ScoreBreakdown({ spot, current }: { spot: Spot; current: ForecastHour }
 
   return (
     <div style={{ padding: '4px 20px 16px' }}>
-      <div style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 9, letterSpacing: '0.18em', color: TOKENS.textMute, textTransform: 'uppercase', marginBottom: 10 }}>Why this score</div>
+      <div style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 11, letterSpacing: '0.18em', color: TOKENS.textMute, textTransform: 'uppercase', marginBottom: 10 }}>Why this score</div>
       <div style={{
         background: TOKENS.surface, border: `1px solid ${TOKENS.borderHi}`,
         borderRadius: 12, padding: 10,
@@ -212,7 +212,7 @@ function ScoreBreakdown({ spot, current }: { spot: Spot; current: ForecastHour }
                 <span style={{ color: barColor, fontWeight: 500 }}>{Math.round(r.score)}</span>
                 <span style={{ color: TOKENS.textMute }}>/{r.max}</span>
               </div>
-              <div style={{ width: 104, fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 9, color: TOKENS.textDim, textAlign: 'right' }}>{r.hint}</div>
+              <div style={{ width: 104, fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 11, color: TOKENS.textDim, textAlign: 'right' }}>{r.hint}</div>
             </div>
           );
         })}
@@ -231,11 +231,11 @@ function ChartRow({
     <div style={{ marginBottom: 16 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6 }}>
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-          <span style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 9, letterSpacing: '0.18em', color: TOKENS.textMute, textTransform: 'uppercase' }}>{label}</span>
+          <span style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 11, letterSpacing: '0.18em', color: TOKENS.textMute, textTransform: 'uppercase' }}>{label}</span>
           <span style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 16, color: TOKENS.text, fontWeight: 500 }}>{current.toFixed(1)}</span>
           <span style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 10, color: TOKENS.textDim }}>{unit}</span>
         </div>
-        <div style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 9, color: TOKENS.textMute }}>
+        <div style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 11, color: TOKENS.textMute }}>
           lo {min.toFixed(1)} · hi {max.toFixed(1)}
         </div>
       </div>
@@ -248,7 +248,7 @@ function BathymetrySection({ spot }: { spot: Spot }) {
   const b = spot.bathymetry!;
   return (
     <div style={{ padding: '4px 20px 16px' }}>
-      <div style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 9, letterSpacing: '0.18em', color: TOKENS.textMute, textTransform: 'uppercase', marginBottom: 10 }}>
+      <div style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 11, letterSpacing: '0.18em', color: TOKENS.textMute, textTransform: 'uppercase', marginBottom: 10 }}>
         Bathymetry · Bottom profile
       </div>
       <div style={{ background: TOKENS.surface, border: `1px solid ${TOKENS.border}`, borderRadius: 10, padding: 14 }}>
@@ -374,13 +374,13 @@ function LocalInsight({ spot }: { spot: Spot }) {
   const h = HAZARDS[spot.id] || ['Sharks', 'Rip currents'];
   return (
     <div style={{ padding: '4px 20px 16px' }}>
-      <div style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 9, letterSpacing: '0.18em', color: TOKENS.textMute, textTransform: 'uppercase', marginBottom: 10 }}>Local intel</div>
+      <div style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 11, letterSpacing: '0.18em', color: TOKENS.textMute, textTransform: 'uppercase', marginBottom: 10 }}>Local intel</div>
       <div style={{ background: TOKENS.surface, border: `1px solid ${TOKENS.border}`, borderRadius: 10, padding: 14 }}>
         <div style={{ fontSize: 12, lineHeight: 1.55, color: TOKENS.text }}>{text}</div>
         <div style={{ display: 'flex', gap: 6, marginTop: 12, flexWrap: 'wrap' }}>
           {h.map((hz) => (
             <span key={hz} style={{
-              fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 9, letterSpacing: '0.1em',
+              fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 11, letterSpacing: '0.1em',
               color: TOKENS.red, background: 'rgba(255,93,93,0.08)',
               border: '1px solid rgba(255,93,93,0.25)',
               padding: '3px 7px', borderRadius: 4, textTransform: 'uppercase',
