@@ -6,35 +6,37 @@ import {
 import { qualityColor } from '../lib/tokens';
 
 export function BackButton({ onClick }: { onClick: () => void }) {
-  const setPress = (pressed: boolean) => (e: React.SyntheticEvent<HTMLButtonElement>) => {
-    (e.currentTarget as HTMLButtonElement).style.transform = pressed ? 'scale(0.92)' : 'scale(1)';
+  const setOpacity = (o: string) => (e: React.SyntheticEvent<HTMLButtonElement>) => {
+    (e.currentTarget as HTMLButtonElement).style.opacity = o;
   };
   return (
     <button
       onClick={onClick}
       aria-label="Back"
       style={{
+        // 44×44 tap target via negative margin + padding so layout stays tight
         flexShrink: 0,
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        background: TOKENS.surface2,
-        border: `1px solid ${TOKENS.borderHi}`,
+        width: 44,
+        height: 44,
+        margin: '-10px 0 -10px -12px',
+        padding: 0,
+        background: 'none',
+        border: 'none',
         color: TOKENS.text,
         cursor: 'pointer',
         display: 'inline-flex',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: 0,
-        transition: 'transform 120ms ease, background 120ms ease',
+        transition: 'opacity 120ms ease',
+        WebkitTapHighlightColor: 'transparent',
       }}
-      onMouseDown={setPress(true)}
-      onMouseUp={setPress(false)}
-      onMouseLeave={setPress(false)}
-      onTouchStart={setPress(true)}
-      onTouchEnd={setPress(false)}
+      onMouseDown={setOpacity('0.55')}
+      onMouseUp={setOpacity('1')}
+      onMouseLeave={setOpacity('1')}
+      onTouchStart={setOpacity('0.55')}
+      onTouchEnd={setOpacity('1')}
     >
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
         <path d="M15 18L9 12L15 6" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round"/>
       </svg>
     </button>
