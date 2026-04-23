@@ -4,11 +4,6 @@
   "outputDirectory": "dist",
   "framework": "vite",
   "regions": ["sfo1"],
-  "functions": {
-    "api/conditions.ts": {
-      "runtime": "edge"
-    }
-  },
   "headers": [
     {
       "source": "/assets/(.*)",
@@ -17,7 +12,31 @@
       ]
     },
     {
-      "source": "/(favicon.svg|icon-(192|512|maskable).png|apple-touch-icon.png)",
+      "source": "/favicon.svg",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=2592000" }
+      ]
+    },
+    {
+      "source": "/icon-192.png",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=2592000" }
+      ]
+    },
+    {
+      "source": "/icon-512.png",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=2592000" }
+      ]
+    },
+    {
+      "source": "/icon-maskable.png",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=2592000" }
+      ]
+    },
+    {
+      "source": "/apple-touch-icon.png",
       "headers": [
         { "key": "Cache-Control", "value": "public, max-age=2592000" }
       ]
