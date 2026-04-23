@@ -5,7 +5,7 @@ import {
   scoreToRating, hourLabel, degToCardinal, angleDelta, MetricKey,
 } from '../lib/data';
 import { useConditions } from '../hooks/useConditions';
-import { Screen, ScoreBadge, ScoreTimeline, Stat, DifficultyPips, ForecastChart } from './Primitives';
+import { Screen, ScoreBadge, ScoreTimeline, Stat, DifficultyPips, ForecastChart, BackButton } from './Primitives';
 
 interface SpotDetailProps {
   spotId: string;
@@ -33,17 +33,15 @@ export function SpotDetail({ spotId, onBack }: SpotDetailProps) {
 
   return (
     <Screen>
+      <BackButton onClick={onBack}/>
       {/* Hero */}
       <div style={{
-        padding: '50px 20px 16px',
+        padding: '68px 20px 16px',
         background: `linear-gradient(180deg, ${TOKENS.surface2} 0%, ${TOKENS.bg} 100%)`,
         borderBottom: `1px solid ${TOKENS.border}`,
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-          <button onClick={onBack} style={{ background: 'none', border: 'none', color: TOKENS.textDim, cursor: 'pointer', fontSize: 20, padding: 0 }}>‹</button>
-          <div style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 13, letterSpacing: '0.18em', color: TOKENS.textMute, textTransform: 'uppercase' }}>
-            {activeSpot.regionLabel} · {activeSpot.driveMin}min drive
-          </div>
+        <div style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 13, letterSpacing: '0.18em', color: TOKENS.textMute, textTransform: 'uppercase', marginBottom: 10 }}>
+          {activeSpot.regionLabel} · {activeSpot.driveMin}min drive
         </div>
         <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16 }}>
           <div style={{ flex: 1, minWidth: 0 }}>
