@@ -1,0 +1,3595 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Surf Vikings: Land Raid</title>
+<style>
+@font-face { font-family: 'Norse'; src: url('Norse.otf') format('opentype'); }
+@font-face { font-family: 'NorseBold'; src: url('Norsebold.otf') format('opentype'); }
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 100%; height: 100%; overflow: hidden; background: #1a1a0e; font-family: 'Segoe UI', sans-serif; touch-action: none; -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+canvas { display: block; position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+#touchControls { display: none; position: absolute; bottom: 0; left: 0; right: 0; height: 220px; pointer-events: none; z-index: 10; }
+.touch-zone { position: absolute; pointer-events: auto; border-radius: 50%; opacity: 0.3; }
+#joystickZone { left: 20px; bottom: 20px; width: 150px; height: 150px; background: rgba(255,255,255,0.12); border: 2px solid rgba(255,255,255,0.25); }
+#joystickKnob { position: absolute; width: 60px; height: 60px; border-radius: 50%; background: rgba(255,255,255,0.3); border: 2px solid rgba(255,255,255,0.4); left: 45px; top: 45px; pointer-events: none; }
+#attackBtn { right: 30px; bottom: 40px; width: 90px; height: 90px; background: rgba(200,50,50,0.3); border: 3px solid rgba(200,50,50,0.5); display: flex; align-items: center; justify-content: center; font-size: 13px; color: rgba(255,255,255,0.7); font-weight: bold; }
+#weaponBtn { right: 140px; bottom: 55px; width: 65px; height: 65px; background: rgba(200,170,50,0.25); border: 2px solid rgba(200,170,50,0.45); display: flex; align-items: center; justify-content: center; font-size: 11px; color: rgba(255,255,255,0.6); font-weight: bold; }
+</style>
+</head>
+<body>
+<canvas id="gameCanvas"></canvas>
+<div id="touchControls">
+  <div id="joystickZone" class="touch-zone"><div id="joystickKnob"></div></div>
+  <div id="attackBtn" class="touch-zone">ATTACK</div>
+  <div id="weaponBtn" class="touch-zone">WEAPON</div>
+</div>
+<script>
+// ============================================================
+// SURF VIKINGS: LAND RAID
+// A top-down Viking combat game
+// © Surf Vikings — surfvikings.com
+// ============================================================
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+
+// Brand
+const BRAND = { teal:'#1a6b7c', tealDark:'#0e4a56', tealLight:'#2a9bb0', gold:'#d4a843', cream:'#f0e6c8', red:'#c0392b', white:'#ffffff' };
+const COLORS = { grass:'#3a5a20', grassLight:'#4a7a28', dirt:'#6b5230', sand:'#c2a86b', water:'#1a5a7c', blood:'#8b1a1a', bloodDark:'#5a0a0a', wood:'#8b6914', stone:'#6a6a6a', roof:'#7a3a1a' };
+
+// ============================================================
+// RESPONSIVE CANVAS
+// ============================================================
+let W, H, SCALE;
+function resize() {
+  const dpr = window.devicePixelRatio || 1;
+  W = window.innerWidth; H = window.innerHeight;
+  canvas.width = W * dpr; canvas.height = H * dpr;
+  canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  SCALE = Math.min(W, H) / 800;
+}
+window.addEventListener('resize', resize);
+resize();
+
+const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+if (isTouchDevice) document.getElementById('touchControls').style.display = 'block';
+
+// ============================================================
+// AUDIO
+// ============================================================
+let audioCtx = null;
+function initAudio() { if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
+function playSound(type) {
+  if (!audioCtx) return;
+  const now = audioCtx.currentTime, osc = audioCtx.createOscillator(), gain = audioCtx.createGain();
+  osc.connect(gain); gain.connect(audioCtx.destination);
+  switch(type) {
+    case 'sword': osc.type='sawtooth'; osc.frequency.setValueAtTime(250,now); osc.frequency.exponentialRampToValueAtTime(400,now+0.08); gain.gain.setValueAtTime(0.15,now); gain.gain.exponentialRampToValueAtTime(0.001,now+0.12); osc.start(now); osc.stop(now+0.12); break;
+    case 'axe': osc.type='square'; osc.frequency.setValueAtTime(180,now); osc.frequency.exponentialRampToValueAtTime(80,now+0.15); gain.gain.setValueAtTime(0.2,now); gain.gain.exponentialRampToValueAtTime(0.001,now+0.2); osc.start(now); osc.stop(now+0.2); break;
+    case 'spear': osc.type='sawtooth'; osc.frequency.setValueAtTime(300,now); osc.frequency.exponentialRampToValueAtTime(150,now+0.15); gain.gain.setValueAtTime(0.15,now); gain.gain.exponentialRampToValueAtTime(0.001,now+0.15); osc.start(now); osc.stop(now+0.15); break;
+    case 'bow': osc.type='sine'; osc.frequency.setValueAtTime(500,now); osc.frequency.exponentialRampToValueAtTime(200,now+0.2); gain.gain.setValueAtTime(0.1,now); gain.gain.exponentialRampToValueAtTime(0.001,now+0.2); osc.start(now); osc.stop(now+0.2); break;
+    case 'hit': osc.type='square'; osc.frequency.setValueAtTime(200,now); osc.frequency.exponentialRampToValueAtTime(50,now+0.3); gain.gain.setValueAtTime(0.2,now); gain.gain.exponentialRampToValueAtTime(0.001,now+0.3); osc.start(now); osc.stop(now+0.3);
+      const buf=audioCtx.createBuffer(1,audioCtx.sampleRate*0.1,audioCtx.sampleRate),data=buf.getChannelData(0); for(let i=0;i<data.length;i++) data[i]=(Math.random()*2-1)*0.3; const n=audioCtx.createBufferSource(),ng=audioCtx.createGain(); n.buffer=buf; n.connect(ng); ng.connect(audioCtx.destination); ng.gain.setValueAtTime(0.15,now); ng.gain.exponentialRampToValueAtTime(0.001,now+0.1); n.start(now); break;
+    case 'powerup': osc.type='sine'; osc.frequency.setValueAtTime(400,now); osc.frequency.exponentialRampToValueAtTime(800,now+0.2); gain.gain.setValueAtTime(0.15,now); gain.gain.exponentialRampToValueAtTime(0.001,now+0.3); osc.start(now); osc.stop(now+0.3); break;
+    case 'thunder': osc.type='sawtooth'; osc.frequency.setValueAtTime(60,now); osc.frequency.exponentialRampToValueAtTime(20,now+0.8); gain.gain.setValueAtTime(0.3,now); gain.gain.exponentialRampToValueAtTime(0.001,now+0.8); osc.start(now); osc.stop(now+0.8);
+      const buf2=audioCtx.createBuffer(1,audioCtx.sampleRate*0.5,audioCtx.sampleRate),d2=buf2.getChannelData(0); for(let i=0;i<d2.length;i++) d2[i]=(Math.random()*2-1)*0.4; const n2=audioCtx.createBufferSource(),ng2=audioCtx.createGain(); n2.buffer=buf2; n2.connect(ng2); ng2.connect(audioCtx.destination); ng2.gain.setValueAtTime(0.25,now); ng2.gain.exponentialRampToValueAtTime(0.001,now+0.5); n2.start(now); break;
+    case 'damage': osc.type='sawtooth'; osc.frequency.setValueAtTime(150,now); osc.frequency.exponentialRampToValueAtTime(40,now+0.4); gain.gain.setValueAtTime(0.25,now); gain.gain.exponentialRampToValueAtTime(0.001,now+0.4); osc.start(now); osc.stop(now+0.4); break;
+    case 'gold': osc.type='sine'; osc.frequency.setValueAtTime(600,now); osc.frequency.exponentialRampToValueAtTime(900,now+0.15); gain.gain.setValueAtTime(0.1,now); gain.gain.exponentialRampToValueAtTime(0.001,now+0.2); osc.start(now); osc.stop(now+0.2); break;
+    case 'levelup': for(let i=0;i<4;i++){const o=audioCtx.createOscillator(),g=audioCtx.createGain();o.connect(g);g.connect(audioCtx.destination);o.type='sine';const t=now+i*0.12;o.frequency.setValueAtTime(400+i*150,t);g.gain.setValueAtTime(0.12,t);g.gain.exponentialRampToValueAtTime(0.001,t+0.15);o.start(t);o.stop(t+0.15);} return;
+    case 'gameover': osc.type='sawtooth'; osc.frequency.setValueAtTime(200,now); osc.frequency.exponentialRampToValueAtTime(30,now+1); gain.gain.setValueAtTime(0.2,now); gain.gain.exponentialRampToValueAtTime(0.001,now+1); osc.start(now); osc.stop(now+1); break;
+    case 'shop': osc.type='sine'; osc.frequency.setValueAtTime(500,now); gain.gain.setValueAtTime(0.08,now); gain.gain.exponentialRampToValueAtTime(0.001,now+0.15); osc.start(now); osc.stop(now+0.15); break;
+  }
+}
+
+// ============================================================
+// LOGO
+// ============================================================
+const logoImg = new Image(); let logoLoaded = false;
+const svgData = `<svg width="938" height="1042" viewBox="0 0 938 1042" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M38.9103 875.29C43.7073 877.58 51.0884 880.279 54.1183 884.069C55.6273 889.939 50.7772 891.7 47.4972 896.25C40.9321 905.36 26.3384 918.68 22.5704 929.1C22.5257 949.38 92.0654 963.53 45.5695 1007.21C38.7715 1013.6 28.9413 1034.75 20.9015 1041.1C13.6647 1038.27 8.71482 1035.35 2.00891 1031.57C9.17691 1019.92 22.5588 1007.56 30.7648 995.93C40.8678 981.62 45.0335 977.56 28.8195 965.01C2.52854 944.65 -12.985 935.469 14.424 905.649C21.2179 898.129 31.0943 884.05 38.9103 875.29ZM913.216 875.09C918.446 876.92 928.876 880.93 928.556 885.88C927.845 896.77 894.766 920.17 897.126 930.439C900.966 948.009 950.475 963.87 934.485 987.479C924.195 1002.68 908.426 1026.43 896.636 1041.1C889.186 1038.02 884.066 1035.46 877.556 1030.79C886.226 1017.99 917.845 983.43 915.216 977.81C903.416 952.61 848.936 947.659 890.985 903.88C894.925 899.77 907.446 882.1 913.216 875.09ZM134.826 879.35C138.616 877.6 148.626 877.219 151.286 880.279C155.866 885.549 152.906 902.479 152.646 909.839C150.736 952.509 151.616 995.25 155.276 1037.81C146.247 1038.9 136.006 1041.98 133.976 1030.52L133.866 1029.85C128.726 1028.49 120.506 1035 114.956 1037.83C105.826 1046.53 81.8972 1031.84 82.4064 1023.51C83.2564 1009.71 79.9063 882.322 81.7062 878.729C84.4464 878.619 101.475 877.319 101.446 880.999C101.056 924.529 99.0461 968.039 101.166 1011.61C102.016 1029.03 132.336 1008.66 132.406 1007.82C135.656 969.969 132.686 930.46 132.626 892.3C132.626 887.36 131.816 883.37 134.826 879.35ZM836.166 875.59C842.826 878.66 846.966 880.899 853.266 884.659C839.266 905.179 815.426 934.019 805.896 956.529C812.786 972.629 828.805 998.229 837.985 1014.75C837.635 993.999 839.576 970.08 836.836 949.76C844.936 948.96 850.436 948.93 858.506 949.27C857.946 959.51 857.516 969.76 857.235 980.01C856.865 991.12 856.916 1028.33 855.716 1036.34C851.556 1040.97 833.386 1040.72 830.856 1036.36C818.296 1015.02 792.016 982.27 786.426 959.51C783.846 948.98 829.356 883.18 836.166 875.59ZM608.336 877.729C613.916 878.13 620.436 882.41 625.006 885.55C616.646 900.62 594.126 939.669 588.716 954.569C595.596 966.879 601.886 981.47 608.036 994.35C614.626 1008.17 620.896 1019.53 628.196 1032.82C621.917 1035.74 614.146 1040.22 607.406 1039.05C605.246 1035.84 596.676 1015.34 594.386 1010.29C586.776 993.49 577.586 976.29 570.346 959.54C569.836 983.87 570.866 1008.54 572.416 1032.82C572.836 1039.4 563.487 1039.4 559.067 1038.63C555.367 1038.41 554.616 1038.42 551.176 1037.11C548.986 1033.73 551.396 1009.65 551.566 1003.33C552.626 964.009 552.546 924.69 550.316 885.42C550.126 882.06 550.426 881.559 552.636 879.499C557.406 877.979 563.936 877.799 568.716 879.209C570.196 880.499 571.566 881.08 571.616 883.18C572.166 904.93 568.686 928.02 570.806 949.67L570.916 950.739C579.226 940.249 601.416 881.569 608.336 877.729ZM200.786 875.739C203.407 876.38 220.595 891.129 223.396 894.329C230.606 902.589 257.476 916.769 249.876 929.619C242.436 942.189 231.316 952.919 222.946 964.529C228.816 981.989 248.246 1014.8 257.716 1031.66C232.626 1049.11 232.546 1028.82 222.906 1008.16C216.866 995.539 207.616 976.03 200.416 964.51C200.916 972.422 202.736 1030.83 201.616 1036.36C195.496 1041.26 187.006 1038.58 180.166 1036.6C182.256 1019.74 182.686 990.899 182.706 973.399C182.756 945.919 183.696 908.449 180.876 881.609C187.316 879.539 194.256 877.649 200.786 875.739ZM274.356 880.149C279.916 877.619 323.166 877.999 331.166 878.419C331.036 884.419 331.096 892.139 330.566 897.989C317.776 897.109 307.155 896.579 294.365 896.569C293.995 913.299 293.125 931.459 293.405 948.029C304.945 948.289 315.566 946.699 326.106 946.869C326.266 953.729 326.616 960.74 325.956 967.56C315.516 967.26 303.376 966.39 293.206 966.47C293.253 973.248 293.423 980.333 293.287 987.125L293.256 988.479C294.296 995.56 296.656 1033.95 293.336 1037.85C288.246 1039.32 278.376 1039.83 274.266 1035.98C273.226 1030.77 274.416 1001.55 274.586 994.289C274.826 984.499 274.436 969.55 274.886 960.14L275.365 949.239L274.426 919.499C274.266 912.709 273.046 885.75 274.356 880.149ZM501.616 879.06C509.826 878.36 515.057 878.489 523.196 878.739C523.666 892.709 522.156 916.14 521.736 931.22C521.016 950.39 522.106 967.35 521.856 985.939C522.686 1001.59 523.706 1022.03 523.366 1037.48C517.376 1038.37 506.706 1040.64 501.946 1036.41C501.076 1029.85 502.406 1018.27 502.856 1011.34C505.706 967.21 501.576 922.84 501.616 879.06ZM645.256 880.289C650.096 876.999 661.336 877.519 666.126 880.459C665.776 887.299 665.576 895.19 664.916 901.92C664.516 934.73 663.856 963.769 664.206 996.959C665.416 1003.19 666.436 1030.12 665.726 1036.45C661.756 1039.53 650.166 1039.24 645.556 1037.57C642.636 1033.15 644.906 1007.26 645.246 1000.12C645.326 986.169 645.806 965.379 645.986 951.859C646.116 941.159 643.346 885.769 645.256 880.289ZM712.156 876.989C724.306 893.909 736.217 910.999 747.897 928.239L747.276 878.93C754.576 878.27 761.586 876.68 767.046 881.18C767.986 885.5 767.356 897.559 767.196 902.409C766.476 923.849 765.306 944.02 766.006 965.47L767.386 1018.14C767.586 1024.83 770.666 1033.84 765.586 1037.9C762.916 1038.51 748.097 1039.66 747.866 1035.77C746.426 1010.54 749.056 984.239 746.736 959.039C746.196 953.218 717.887 911.78 713.406 910.699C712.886 913.239 712.976 915.28 712.946 917.85C713.636 940.329 712.756 963.939 713.226 986.699C713.446 997.189 714.696 1027.22 713.726 1036.21C711.576 1038.41 712.526 1037.74 708.966 1038.29C703.246 1039.53 698.536 1038.24 692.866 1037.15C694.936 985 696.966 932.37 693.586 880.18C699.686 879.03 706.026 878.039 712.156 876.989ZM412.437 877.819C414.896 877.619 414.086 877.689 416.636 878.489C417.116 879.099 418.047 880.16 418.147 880.97C423.747 923.09 434.086 964.31 440.086 1006.35C442.436 997.21 444.436 981.47 446.126 971.68L457.296 910.379C458.606 903.219 461.306 884.97 463.626 879.14C468.666 876.51 477.196 879.639 483.176 881.089C479.876 892.919 477.396 906.799 474.956 918.999C465.786 955.039 457.666 1001.82 450.696 1038.6C444.057 1038.26 436.066 1038.48 429.317 1038.49C419.507 987.919 409.256 930.679 396.766 880.779C401.596 879.659 407.487 878.729 412.437 877.819ZM201.236 898.629C201.116 919.139 201.466 941.359 200.866 961.699C205.626 956.829 212.156 950.409 216.316 945.229C221.556 937.979 225.526 932.289 230.216 924.659C225.116 919.599 206.507 900.659 201.236 898.629ZM783.116 154.025C797.446 176.768 808.886 189.921 822.136 214.877C867.656 300.668 881.136 399.867 860.146 494.69C836.456 598.632 772.866 689.102 683.086 746.588C591.756 803.89 486.566 824.16 381.166 799.84C275.586 775.7 184.066 710.267 127.076 618.163C70.8064 527.813 52.759 418.797 76.9259 315.133C91.5759 252.397 115.376 206.044 153.485 154.738C149.905 172.766 148.026 191.092 147.886 209.472C95.536 294.127 79.2763 396.227 102.746 492.957C104.906 501.745 107.836 511.011 109.756 519.677C126.236 455.749 208.106 439.592 222.476 503.213C214.006 498.47 204.946 494.52 195.306 497.717C166.976 507.118 169.786 542.281 194.836 553.219C215.876 562.405 246.436 551.643 256.176 530.799C261.686 518.378 258.996 500.14 256.266 487.02L253.326 474.758C253.346 474.757 253.365 474.756 253.385 474.756C249.216 453.402 250.086 434.72 252.626 413.376C318.736 413.642 372.756 421.522 425.006 370.371C425.026 308.95 424.486 246.938 425.156 185.584C436.286 176.708 455.596 164.766 468.216 157.924C480.116 164.299 500.996 176.746 511.226 185.616C512.336 246.196 509.836 310.65 511.696 370.664C569.636 421.727 612.296 413.674 683.976 413.448C687.026 436.247 687.976 459.922 681.246 482.236L680.556 486.355L680.492 486.375C673.637 525.095 675.144 546.187 719.646 556.331C748.066 562.81 773.736 530.23 754.766 505.931C744.506 492.393 727.366 495.94 713.896 502.79C728.406 440.56 810.396 455.091 826.756 519.875C851.076 429.534 851.826 356.285 817.976 267.154C813.676 256.149 808.696 245.427 803.046 235.049C800.096 229.557 790.756 214.245 789.886 208.958C786.826 190.368 787.906 172.796 783.116 154.025ZM367.176 640.742C356.226 638.477 351.026 638.051 339.656 639.508C337.186 639.825 331.855 641.01 329.735 640.896C320.326 648.035 314.565 648.339 307.106 660.116C299.986 671.435 297.656 685.117 300.636 698.152C310.216 739.029 350.876 737.735 383.516 729.395C391.626 737.281 399.846 744.462 408.336 751.939C380.896 759.559 372.966 761.479 344.326 763.189C352.196 765.819 362.306 768.359 369.796 771.199C391.876 779.579 403.566 770.989 424.436 764.749C454.676 787.509 451.456 784.759 489.546 784.449C445.746 763.689 414.656 735.307 379.596 702.434C359.186 683.305 334.156 674.252 337.426 714.037L335.826 714.21C310.756 700.368 313.936 665.878 339.286 658.89C374.586 649.157 414.816 698.422 438.866 718.514C454.726 731.886 471.846 743.691 489.985 753.76C502.805 760.82 529.266 772.469 543.496 774.459C554.106 775.939 581.866 766.529 593.346 763.199C527.406 760.969 480.606 732.215 433.006 688.194C411.426 668.234 395.016 651.829 367.176 640.742ZM388.756 478.271C371.806 472.151 334.936 474.928 315.036 474.376C333.226 521.65 363.046 537.426 412.266 537.773C412.186 547.633 411.636 557.436 409.716 567.136C407.386 581.092 404.746 591.222 400.376 604.694C400.358 604.687 400.34 604.679 400.322 604.672C400.32 604.679 400.319 604.686 400.317 604.692C382.417 597.323 369.896 594.052 350.606 590.538C285.216 590.297 262.126 638.244 196.706 631.862C184.586 630.68 171.666 626.953 160.806 621.373C164.726 626.995 177.956 647.599 183.906 648.988C188.326 649.557 193.336 650.322 197.726 650.69C227.146 649.675 239.366 648.87 267.116 637.276C254.446 658.124 247.876 692.571 257.746 715.59C259.767 722.434 282.436 733.629 289.556 737.604C255.326 695.993 270.076 633.556 321.195 614.317C369.375 596.186 412.936 631.094 445.756 662.419C480.176 695.28 524.356 727.126 572.886 733.337C640.656 745.575 661.596 663.768 604.286 640.501C583.776 635.98 584.096 639.873 567.676 641.212C547.806 650.009 536.755 658.647 520.526 672.913C516.096 676.812 507.496 684.688 503.156 687.405C495.406 682.895 487.656 677.111 480.756 671.363C511.776 642.833 546.926 607.846 591.956 609.761C612.276 610.484 631.466 619.274 645.286 634.185C659.606 649.976 666.916 670.897 665.536 692.169C664.516 710.276 658.506 723.245 647.626 737.283C655.196 733.099 673.426 723.705 678.636 717.342C689.146 691.369 682.866 660.782 669.416 637.16L671.973 638.178C697.169 648.116 711.599 650.991 739.282 650.423L742.096 650.354C745.736 649.755 750.716 649.422 754.506 649.067C761.806 640.595 769.186 631.869 774.706 622.113C740.936 638.44 702.876 633.721 670.356 617.322C639.494 601.761 620.048 590.514 584.308 590.625L584.306 590.627C563.466 596.716 560.266 594.796 536.476 604.591C536.473 604.583 536.471 604.575 536.468 604.567C536.451 604.574 536.433 604.582 536.416 604.589C532.426 592.859 530.166 585.021 528.146 572.984L528.156 572.768C525.551 561.266 524.358 549.492 524.576 537.702C568.426 537.333 597.226 525.422 617.876 484.632L617.895 484.585C617.868 484.599 617.842 484.615 617.816 484.629L622.014 474.266C600.263 475.2 577.766 473.174 556.026 475.812C498.386 493.646 505.186 554.71 520.306 601.14C521.306 604.206 522.356 607.26 523.436 610.301C504.116 624.068 485.796 639.175 468.596 655.51C451.616 640.008 432.406 622.669 413.096 610.251C427.666 569.078 441.566 497.344 388.756 478.271ZM580.836 657.773C618.086 653.459 633.186 693.583 598.446 715.7C603.636 692.428 596.356 680.162 572.096 690.969C562.116 697.389 557.406 702.097 549.317 710.478C539.967 707.773 528.806 702.356 520.556 697.235C539.776 680.541 555.636 663.834 580.836 657.773ZM153.836 497.476C108.246 547.321 154.276 607.49 214.346 603.317C252.946 600.636 273.956 577.217 310.036 568.065L293.945 553.649C256.536 564.867 223.005 601.034 178.566 577.521C164.516 570.112 154.105 557.292 149.735 542.027C143.896 522.302 147.936 514.055 153.836 497.476ZM784.326 498.491C787.876 514.371 792.025 518.997 788.195 537.04C784.975 552.586 775.676 566.202 762.366 574.852C753.176 580.656 742.656 584.028 731.806 584.656C693.346 587.125 673.546 560.629 643.376 554.088L642.166 553.831C637.825 557.848 630.703 564.854 626.116 568.022C626.111 568.028 626.105 568.034 626.1 568.04C631.261 570.423 642.841 572.58 648.526 575.289C671.655 586.656 689.096 598.962 715.526 602.553C777.525 610.979 828.126 553.895 784.326 498.491ZM468.396 361.032C430.296 401.256 393.986 431.697 335.926 436.646C322.146 438.539 290.856 437.548 275.916 437.41C272.407 439.847 273.894 446.749 274.225 450.935C296.225 450.669 318.216 450.542 340.206 450.552C346.675 450.533 360.514 450.193 369.2 450.472C371.214 450.536 372.954 450.633 374.266 450.774C382.206 451.918 386.186 452.495 393.986 454.826L395.176 454.964C399.656 456.719 402.856 458.142 407.176 460.268C413.356 464.071 419.837 467.912 425.067 472.979C430.647 479.064 440.506 496.762 445.126 503.806C445.926 502.336 452.485 484.314 452.626 482.51L447.626 475.51L442.126 469.15L438.626 466.51C436.976 463.371 436.676 465.512 432.686 460.268L428.836 455.917C425.456 452.722 424.336 451.533 420.156 449.165L412.386 443.367C407.226 440.547 402.006 438.866 396.486 436.905C399.937 433.585 417.186 425.03 423.086 421.457C443.636 434.893 453.746 444.334 468.806 464.165C484.256 443.401 492.036 435.675 514.006 421.335C521.906 425.878 533.236 432.8 541.336 436.144C515.086 445.52 499.186 461.651 482.536 483.633C486.996 491.191 489.616 495.385 492.596 503.806C503.46 479.497 522.305 456.118 550.749 452.787C550.745 452.785 550.74 452.783 550.735 452.78C563.815 449.499 644.795 450.728 662.186 450.785V450.786C662.206 450.786 662.226 450.787 662.246 450.787C663.066 447.929 662.806 440.826 662.806 437.457C633.016 437.418 604.856 439.758 575.696 432.509C530.586 421.296 499.196 394.353 468.396 361.032ZM468.476 382.297C480.166 394.715 488.066 401.468 500.876 412.373C487.366 420.662 479.076 430.259 468.316 441.65C458.306 429.661 448.316 421.363 436.006 412.058C449.026 401.474 457.076 394.558 468.476 382.297ZM735.676 78.5098C739.326 82.0071 747.096 98.0026 749.666 103.146C768.926 141.717 778.456 185.388 773.596 228.476C768.366 274.733 745.076 318.893 712.076 351.435C701.756 361.592 689.986 370.738 678.586 379.787L680.646 399.736C655.656 399.789 629.216 400.515 604.416 399.352C578.826 398.151 540.166 381.922 537.486 352.409C536.386 340.191 540.756 329.511 550.106 321.693C562.695 311.168 586.386 320.341 581.826 337.798C575.506 337.672 564.206 336.866 559.996 342.351C556.376 347.071 562.977 357.916 567.817 359.724C580.196 364.34 592.466 358.364 597.436 346.28C600.586 338.582 600.476 329.934 597.126 322.322C592.286 311.119 584.786 306.789 574.126 302.562C552.726 300.156 540.076 306.402 528.126 324.3C529.596 282.781 528.376 233.999 528.296 192.121C534.906 194.932 541.406 198.003 547.776 201.325C609.716 233.15 650.986 289.75 671.926 355.168C675.386 352.141 679.186 349.081 682.736 346.122C671.336 312.082 662.316 292.563 641.016 263.357C658.486 255.145 674.266 243.728 687.526 229.699C727.156 187.404 737.386 134.597 735.676 78.5098ZM203.046 76.4463C203.066 154.892 221.426 225.169 297.666 262.609C276.746 292.439 266.926 311.034 256.326 345.355L266.676 355.244C290.996 282.518 337.416 221.287 410.316 191.909L410.326 323.865C390.886 292.925 345.466 293.679 339.646 328.901C338.296 336.697 340.176 344.709 344.856 351.087C359.616 371.524 386.926 358.797 375.276 339.174C372.215 334.021 357.226 340.358 356.256 334.2C356.716 313.434 384.895 313.443 393.896 325.747C411.196 349.399 396.886 376.872 373.106 388.344C368.115 390.726 357.795 394.989 352.606 395.382C336.115 401.816 278.596 399.531 257.826 399.429C258.586 391.431 259.036 387.15 260.926 379.196C215.666 346.948 181.386 304.153 169.136 249.064C161.256 227.654 163.256 181.408 169.186 159.233C175.156 129.547 188.876 102.911 203.046 76.4463ZM191.706 179.119C190.516 181.991 191.375 183.394 191.985 186.872L192.186 187.688C193.396 192.79 193.726 197.334 194.806 202.461C197.937 217.268 203.486 229.56 210.577 242.533L212.016 245.139C229.866 271.523 230.286 269.046 250.866 289.37L251.626 289.317C254.206 288.127 261.426 274.927 263.676 271.329C239.396 254.677 224.456 237.65 208.716 212.946C204.246 205.942 194.926 181.149 191.706 179.119ZM744.07 183.874C739.569 192.443 733.903 207.115 730.726 212.338C714.476 239.067 700.016 253.217 675.226 271.684C677.285 275.248 682.537 285.006 685.914 289.067C689.983 284.583 701.351 275.043 705.576 270.488C727.715 246.718 741.263 216.228 744.07 183.874ZM748.306 177.719C748.134 177.835 747.957 177.986 747.772 178.167C747.923 178.235 748.063 178.303 748.195 178.37C748.229 178.167 748.266 177.951 748.306 177.719ZM409.376 4.39746C517.176 -12.0915 633.256 18.2312 717.596 87.958C717.136 97.79 716.856 109.894 715.766 119.482C653.136 66.2125 585.626 35.0995 503.136 27.1055C475.306 25.4475 457.976 25.6307 430.317 27.4326C351.577 36.9926 280.027 65.5789 220.937 119.674C220.177 108.846 219.366 98.4264 219.286 87.5664C277.686 42.5284 335.926 15.6325 409.376 4.39746Z" fill="white"/></svg>`;
+const svgBlob = new Blob([svgData], {type:'image/svg+xml'});
+logoImg.onload = () => { logoLoaded = true; };
+logoImg.src = URL.createObjectURL(svgBlob);
+function drawLogo(cx, cy, size) {
+  if (!logoLoaded) return;
+  ctx.save();
+  const aspect = 938/1042, drawH = size, drawW = drawH * aspect;
+  ctx.drawImage(logoImg, cx-drawW/2, cy-drawH/2, drawW, drawH);
+  ctx.restore();
+}
+
+// ============================================================
+// INPUT
+// ============================================================
+const keys = {};
+window.addEventListener('keydown', e => { keys[e.code] = true; if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code)) e.preventDefault(); });
+window.addEventListener('keyup', e => { keys[e.code] = false; });
+
+let joystickAngle=0, joystickMag=0, touchAttacking=false, joystickTouchId=null, joystickCenter={x:0,y:0};
+const joystickZone=document.getElementById('joystickZone'), joystickKnob=document.getElementById('joystickKnob');
+const attackBtn=document.getElementById('attackBtn'), weaponBtn=document.getElementById('weaponBtn');
+
+joystickZone.addEventListener('touchstart', e => { e.preventDefault(); const t=e.changedTouches[0]; joystickTouchId=t.identifier; const r=joystickZone.getBoundingClientRect(); joystickCenter={x:r.left+r.width/2,y:r.top+r.height/2}; }, {passive:false});
+joystickZone.addEventListener('touchmove', e => { e.preventDefault(); for(let t of e.changedTouches){ if(t.identifier===joystickTouchId){ const dx=t.clientX-joystickCenter.x, dy=t.clientY-joystickCenter.y, dist=Math.sqrt(dx*dx+dy*dy), maxR=55, clampDist=Math.min(dist,maxR); joystickAngle=Math.atan2(dy,dx); joystickMag=clampDist/maxR; joystickKnob.style.left=(45+(dx/dist)*clampDist)+'px'; joystickKnob.style.top=(45+(dy/dist)*clampDist)+'px'; }} }, {passive:false});
+function resetJoystick(){ joystickTouchId=null; joystickMag=0; joystickKnob.style.left='45px'; joystickKnob.style.top='45px'; }
+joystickZone.addEventListener('touchend', e => { for(let t of e.changedTouches) if(t.identifier===joystickTouchId) resetJoystick(); });
+joystickZone.addEventListener('touchcancel', resetJoystick);
+attackBtn.addEventListener('touchstart', e => { e.preventDefault(); touchAttacking=true; }, {passive:false});
+attackBtn.addEventListener('touchend', e => { e.preventDefault(); touchAttacking=false; }, {passive:false});
+attackBtn.addEventListener('touchcancel', () => { touchAttacking=false; });
+weaponBtn.addEventListener('touchstart', e => { e.preventDefault(); cycleWeapon(); }, {passive:false});
+
+// Track mouse position for aiming
+let mouseX = 0, mouseY = 0;
+canvas.addEventListener('mousemove', e => {
+  const rect = canvas.getBoundingClientRect();
+  mouseX = e.clientX - rect.left;
+  mouseY = e.clientY - rect.top;
+});
+
+// Mouse click to attack
+canvas.addEventListener('mousedown', e => {
+  if(gameState===STATE.PLAYING) {
+    const rect = canvas.getBoundingClientRect();
+    mouseX = e.clientX - rect.left;
+    mouseY = e.clientY - rect.top;
+    attackAction();
+  }
+});
+
+// ============================================================
+// GAME CONSTANTS & STATE
+// ============================================================
+const STATE = { SPLASH:0, NAME_ENTRY:1, PLAYING:2, SHOP:3, LEVEL_TRANSITION:4, GAME_OVER:5, LANDING:6 };
+let gameState = STATE.SPLASH;
+let score=0, gold=0, totalGold=0;
+let level=1, maxLevel=10;
+let gameTime=0, attackCooldown=0;
+let playerName='', nameError='';
+let leaderboard = JSON.parse(localStorage.getItem('lrLeaderboard') || '[]');
+let highScore = parseInt(localStorage.getItem('lrHighScore') || '0');
+let transitionTimer=0, landingTimer=0;
+let flashTimer=0, flashColor='';
+let shakeTimer=0, shakeIntensity=0;
+
+// Upgrades
+let upgrades = { damage:0, armor:0, speed:0, maxHp:0 };
+
+// Weapons: sword(0), axe(1), spear(2), bow(3)
+const WEAPONS = [
+  { name:'Sword', range:50, arc:Math.PI*2, damage:35, cooldown:0.25, color:'#b8b8c8', unlocked:true, projectile:false },
+  { name:'Axe', range:55, arc:Math.PI/2.5, damage:55, cooldown:0.4, color:'#707078', unlocked:true, projectile:false },
+  { name:'Spear', range:80, arc:Math.PI/5, damage:45, cooldown:0.35, color:'#8a7050', unlocked:true, projectile:false },
+  { name:'Bow', range:280, arc:0, damage:30, cooldown:0.5, color:'#5a3a20', unlocked:true, projectile:true },
+  { name:"Thor's Hammer", range:65, arc:Math.PI/1.5, damage:80, cooldown:0.6, color:'#6080c0', unlocked:false, projectile:false, aoe:true, aoeRadius:120, cost:9000 },
+  { name:'Sword of Summer', range:60, arc:Math.PI/2, damage:50, cooldown:0.3, color:'#e8c840', unlocked:false, projectile:false, multiHit:3, breaksWalls:true, cost:7000 },
+  { name:'Fire Blade', range:55, arc:Math.PI/2, damage:999, cooldown:0.35, color:'#ff4400', unlocked:false, projectile:false, oneHitKill:true, cost:6000 }
+];
+let currentWeapon = 0;
+
+function cycleWeapon() {
+  let next = currentWeapon;
+  for (let i = 1; i <= WEAPONS.length; i++) {
+    let idx = (currentWeapon + i) % WEAPONS.length;
+    if (WEAPONS[idx].unlocked) { next = idx; break; }
+  }
+  currentWeapon = next;
+  playSound('shop');
+}
+
+// ============================================================
+// PLAYER
+// ============================================================
+let player = null;
+function createPlayer() {
+  const baseHp = 150 + upgrades.maxHp * 30;
+  return { x:W/2, y:H*0.85, hp:baseHp, maxHp:baseHp, facing:0, speed:3.5+upgrades.speed*0.5, size:18, invuln:0, shieldTimer:0, attackAnim:0, moving:false };
+}
+
+// ============================================================
+// ENTITIES
+// ============================================================
+let enemies=[], projectiles=[], particles=[], bloodPools=[], powerups=[], buildings=[], trees=[], goldPickups=[], healthPickups=[];
+let allies=[]; // hired Viking raiders
+let catapults=[]; // village wall defenses (level 5+)
+let wolves=[]; // wolf allies — fast, nimble fighters
+let villageCenterY=0, villageReached=false, villageHp=0, villageMaxHp=0;
+let enemiesKilled=0, totalEnemiesForLevel=0, spawnTimer=0;
+let bossSpawned=false, bossAlive=false;
+
+// Village wall & gate system
+let villageWall = null; // { x, y, w, h } bounding rect of the walled village
+let villageGate = null; // { x, y, w, h, hp, maxHp, broken }
+let insideVillage = false; // player has entered the village
+let villagePillaged = false; // gold scored this level
+let levelGoldReward = 0;
+let gateBlockedMsg = 0; // timer showing "kill all enemies first" message
+
+// ============================================================
+// LEVEL GENERATION
+// ============================================================
+function generateLevel(lvl) {
+  enemies=[]; projectiles=[]; particles=[]; bloodPools=[]; powerups=[]; buildings=[]; trees=[]; goldPickups=[]; healthPickups=[]; catapults=[];
+  enemiesKilled=0; spawnTimer=0; bossSpawned=false; insideVillage=false; villagePillaged=false;
+  // Reposition surviving allies and wolves near player spawn
+  for (let a of allies) { a.x = W/2 + (allies.indexOf(a))*30 - 15; a.y = H*0.85 + 25; }
+  for (let w of wolves) { w.x = W/2 + (wolves.indexOf(w))*20 - 10; w.y = H*0.85 + 40; }
+
+  // Village center and walls
+  const villageCenterX = W / 2;
+  villageCenterY = H * 0.25;
+  const villageWidth = 240 + lvl * 20;
+  const villageHeight = 200 + lvl * 15;
+
+  villageWall = {
+    x: villageCenterX - villageWidth/2,
+    y: villageCenterY - villageHeight/2,
+    w: villageWidth,
+    h: villageHeight
+  };
+
+  // Gate on south side
+  villageGate = {
+    x: villageCenterX - 35,
+    y: villageCenterY + villageHeight/2 - 20,
+    w: 70,
+    h: 20,
+    hp: 80 + lvl * 40,
+    maxHp: 80 + lvl * 40,
+    broken: false
+  };
+
+  levelGoldReward = 100 + lvl * 50;
+
+  // Buildings in a circle around the village center
+  const numBuildings = 6 + Math.min(lvl, 2);
+  const circleRadius = 70 + lvl * 5;
+  for (let i = 0; i < numBuildings; i++) {
+    const angle = (i / numBuildings) * Math.PI * 2;
+    const bx = villageCenterX + Math.cos(angle) * circleRadius;
+    const by = villageCenterY + Math.sin(angle) * circleRadius;
+    buildings.push({ x:bx, y:by, w:40+Math.random()*20, h:35+Math.random()*15, hp:50+lvl*10, maxHp:50+lvl*10, type:Math.floor(Math.random()*3) });
+  }
+
+  // Trees scattered outside the village
+  for (let i = 0; i < 25 + lvl * 3; i++) {
+    let tx, ty;
+    do {
+      tx = Math.random() * W;
+      ty = Math.random() * H;
+    } while (tx > villageWall.x - 100 && tx < villageWall.x + villageWall.w + 100 &&
+             ty > villageWall.y - 100 && ty < villageWall.y + villageWall.h + 100);
+    trees.push({ x:tx, y:ty, size:8+Math.random()*12, type:Math.floor(Math.random()*3) });
+  }
+
+  // Catapult defenses on walls for level 5+
+  if (lvl >= 5) {
+    const numCatapults = Math.min(2 + Math.floor((lvl - 5) / 2), 6); // 2 at level 5, up to 6
+    const wallX = villageWall.x, wallY = villageWall.y;
+    const wallW = villageWall.w, wallH = villageWall.h;
+    // Place catapults evenly along top, left, and right walls (not south — that's the gate)
+    const positions = [];
+    // Top wall
+    for (let i = 0; i < Math.ceil(numCatapults / 3); i++) {
+      positions.push({ x: wallX + wallW * (0.25 + i * 0.5), y: wallY + 10 });
+    }
+    // Left wall
+    for (let i = 0; i < Math.ceil(numCatapults / 3); i++) {
+      positions.push({ x: wallX + 10, y: wallY + wallH * (0.3 + i * 0.4) });
+    }
+    // Right wall
+    for (let i = 0; i < Math.ceil(numCatapults / 3); i++) {
+      positions.push({ x: wallX + wallW - 10, y: wallY + wallH * (0.3 + i * 0.4) });
+    }
+    for (let i = 0; i < numCatapults && i < positions.length; i++) {
+      catapults.push({
+        x: positions[i].x,
+        y: positions[i].y,
+        hp: 40 + lvl * 5,
+        maxHp: 40 + lvl * 5,
+        fireTimer: 2 + Math.random() * 2, // stagger initial shots
+        fireCd: 2.5 - Math.min(lvl * 0.1, 1), // fire faster at higher levels
+        range: 300 + lvl * 10,
+        damage: 8 + lvl,
+        size: 18,
+        hitFlash: 0
+      });
+    }
+  }
+
+  spawnTimer = 2;
+  player = createPlayer();
+}
+
+
+function spawnEnemy(forceType) {
+  const types = ['warrior','warrior','warrior','fast','armored'];
+  if (level >= 2) types.push('archer','archer');
+  if (level >= 4) types.push('armored','armored');
+
+  let type = forceType || types[Math.floor(Math.random()*types.length)];
+
+  // Spawn from edges
+  let ex, ey;
+  const side = Math.floor(Math.random()*4);
+  if (side===0) { ex=Math.random()*W; ey=-30; }
+  else if (side===1) { ex=W+30; ey=Math.random()*H; }
+  else if (side===2) { ex=Math.random()*W; ey=H+30; }
+  else { ex=-30; ey=Math.random()*H; }
+
+  let hp, speed, damage, size, color, attackRange, attackCd;
+  switch(type) {
+    case 'warrior': hp=20+level*4; speed=0.7+level*0.04; damage=5+level*0.5; size=14; color='#5a3a22'; attackRange=30; attackCd=1.2; break;
+    case 'fast': hp=14+level*3; speed=1.1+level*0.05; damage=4+level*0.5; size=12; color='#3a4a20'; attackRange=25; attackCd=1.0; break;
+    case 'armored': hp=45+level*8; speed=0.45+level*0.025; damage=8+level; size=17; color='#3a3a3a'; attackRange=35; attackCd=1.5; break;
+    case 'archer': hp=16+level*3; speed=0.6+level*0.03; damage=6+level*0.5; size=13; color='#4a3020'; attackRange=200; attackCd=2.0; break;
+    case 'chief': hp=100+level*20; speed=0.5+level*0.025; damage=12+level*1.5; size=24; color='#5a1010'; attackRange=40; attackCd=1.0; bossAlive=true; break;
+  }
+
+  enemies.push({ x:ex, y:ey, hp, maxHp:hp, speed, damage, size, color, type, attackRange, attackCd, attackTimer:0, facing:0, hitFlash:0, stagger:0 });
+}
+
+// ============================================================
+// DRAWING HELPERS
+// ============================================================
+function drawViking(x, y, size, facing, attackAnim, shielded) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(facing + Math.PI/2);
+
+  // Shadow
+  ctx.fillStyle = 'rgba(0,0,0,0.35)';
+  ctx.beginPath();
+  ctx.ellipse(0, size*0.5, size*0.9, size*0.35, 0, 0, Math.PI*2);
+  ctx.fill();
+
+  // Legs (visible from top-down)
+  const legOffset = player.moving ? Math.sin(gameTime*12)*3 : 0;
+  ctx.fillStyle = '#4a3520';
+  ctx.fillRect(-size*0.35, size*0.2+legOffset, size*0.25, size*0.5);
+  ctx.fillRect(size*0.1, size*0.2-legOffset, size*0.25, size*0.5);
+  // Boots
+  ctx.fillStyle = '#2a1a0a';
+  ctx.fillRect(-size*0.38, size*0.6+legOffset, size*0.31, size*0.15);
+  ctx.fillRect(size*0.07, size*0.6-legOffset, size*0.31, size*0.15);
+
+  // Torso / chainmail
+  const torsoGrad = ctx.createRadialGradient(0, 0, size*0.1, 0, 0, size);
+  torsoGrad.addColorStop(0, '#6a6a72');
+  torsoGrad.addColorStop(0.5, '#505058');
+  torsoGrad.addColorStop(1, '#38383e');
+  ctx.fillStyle = torsoGrad;
+  ctx.beginPath();
+  ctx.ellipse(0, 0, size*0.8, size*0.65, 0, 0, Math.PI*2);
+  ctx.fill();
+  // Chainmail texture lines
+  ctx.strokeStyle = 'rgba(120,120,130,0.3)';
+  ctx.lineWidth = 0.5;
+  for (let i = -3; i <= 3; i++) {
+    ctx.beginPath();
+    ctx.moveTo(-size*0.6, i*size*0.15);
+    ctx.lineTo(size*0.6, i*size*0.15);
+    ctx.stroke();
+  }
+
+  // Belt
+  ctx.fillStyle = '#5a3a1a';
+  ctx.fillRect(-size*0.7, -size*0.05, size*1.4, size*0.12);
+  ctx.fillStyle = '#b8960a';
+  ctx.fillRect(-size*0.08, -size*0.07, size*0.16, size*0.16);
+
+  // Cape / cloak flowing behind
+  ctx.fillStyle = 'rgba(100,20,20,0.6)';
+  ctx.beginPath();
+  ctx.moveTo(-size*0.5, size*0.1);
+  ctx.quadraticCurveTo(-size*0.3, size*1.2 + Math.sin(gameTime*3)*3, size*0.3, size*1.2 + Math.sin(gameTime*3+1)*3);
+  ctx.quadraticCurveTo(size*0.5, size*0.5, size*0.5, size*0.1);
+  ctx.fill();
+
+  // Shoulders (pauldrons)
+  ctx.fillStyle = '#58585e';
+  ctx.beginPath();
+  ctx.ellipse(-size*0.65, -size*0.1, size*0.25, size*0.2, -0.2, 0, Math.PI*2);
+  ctx.fill();
+  ctx.strokeStyle = '#3a3a3e';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.ellipse(size*0.65, -size*0.1, size*0.25, size*0.2, 0.2, 0, Math.PI*2);
+  ctx.fill();
+  ctx.stroke();
+
+  // Head
+  const headGrad = ctx.createRadialGradient(0, -size*0.5, 1, 0, -size*0.5, size*0.45);
+  headGrad.addColorStop(0, '#d4aa70');
+  headGrad.addColorStop(1, '#a07848');
+  ctx.fillStyle = headGrad;
+  ctx.beginPath();
+  ctx.arc(0, -size*0.5, size*0.4, 0, Math.PI*2);
+  ctx.fill();
+
+  // Helmet - iron with nose guard
+  const helmGrad = ctx.createLinearGradient(-size*0.4, -size*0.9, size*0.4, -size*0.5);
+  helmGrad.addColorStop(0, '#707078');
+  helmGrad.addColorStop(0.5, '#909098');
+  helmGrad.addColorStop(1, '#606068');
+  ctx.fillStyle = helmGrad;
+  ctx.beginPath();
+  ctx.arc(0, -size*0.55, size*0.42, Math.PI, 0);
+  ctx.fill();
+  ctx.strokeStyle = '#3a3a40';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+  // Helmet rim
+  ctx.fillStyle = '#505058';
+  ctx.fillRect(-size*0.44, -size*0.56, size*0.88, size*0.08);
+  // Nose guard
+  ctx.fillStyle = '#606068';
+  ctx.fillRect(-size*0.04, -size*0.7, size*0.08, size*0.35);
+
+  // Horns - curved bone
+  ctx.lineWidth = 3.5;
+  const hornGrad = ctx.createLinearGradient(-size*1.2, -size*1.4, -size*0.4, -size*0.4);
+  hornGrad.addColorStop(0, '#e8dcc0');
+  hornGrad.addColorStop(1, '#a89870');
+  ctx.strokeStyle = hornGrad;
+  ctx.beginPath();
+  ctx.moveTo(-size*0.4, -size*0.55);
+  ctx.quadraticCurveTo(-size*1.0, -size*1.1, -size*0.6, -size*1.5);
+  ctx.stroke();
+  const hornGrad2 = ctx.createLinearGradient(size*1.2, -size*1.4, size*0.4, -size*0.4);
+  hornGrad2.addColorStop(0, '#e8dcc0');
+  hornGrad2.addColorStop(1, '#a89870');
+  ctx.strokeStyle = hornGrad2;
+  ctx.beginPath();
+  ctx.moveTo(size*0.4, -size*0.55);
+  ctx.quadraticCurveTo(size*1.0, -size*1.1, size*0.6, -size*1.5);
+  ctx.stroke();
+
+  // Beard
+  ctx.fillStyle = '#6a4a1a';
+  ctx.beginPath();
+  ctx.moveTo(-size*0.25, -size*0.25);
+  ctx.quadraticCurveTo(-size*0.3, -size*0.05, -size*0.15, size*0.05);
+  ctx.quadraticCurveTo(0, size*0.15, size*0.15, size*0.05);
+  ctx.quadraticCurveTo(size*0.3, -size*0.05, size*0.25, -size*0.25);
+  ctx.fill();
+
+  ctx.rotate(-(facing + Math.PI/2)); // undo rotation for weapon swing in world space
+
+  // Attack animation - weapon swing
+  if (attackAnim > 0) {
+    const wep = WEAPONS[currentWeapon];
+    const swingAngle = facing + (Math.PI/3) * Math.sin(attackAnim * Math.PI * 4);
+    const handX = Math.cos(facing)*size*0.5;
+    const handY = Math.sin(facing)*size*0.5;
+    const wx = Math.cos(swingAngle) * (size + wep.range * 0.65);
+    const wy = Math.sin(swingAngle) * (size + wep.range * 0.65);
+
+    if (currentWeapon === 0) {
+      // Sword - blade with fuller
+      ctx.strokeStyle = '#d0d0d8';
+      ctx.lineWidth = 4;
+      ctx.beginPath(); ctx.moveTo(handX, handY); ctx.lineTo(wx, wy); ctx.stroke();
+      ctx.strokeStyle = 'rgba(180,180,200,0.5)';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(handX, handY); ctx.lineTo(wx, wy); ctx.stroke();
+      // Cross guard
+      const mx = (handX+wx)*0.3, my = (handY+wy)*0.3;
+      const perpX = Math.cos(swingAngle+Math.PI/2)*6, perpY = Math.sin(swingAngle+Math.PI/2)*6;
+      ctx.strokeStyle = '#8a7a30';
+      ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.moveTo(mx-perpX, my-perpY); ctx.lineTo(mx+perpX, my+perpY); ctx.stroke();
+    } else if (currentWeapon === 1) {
+      // Axe - wooden handle + metal head
+      ctx.strokeStyle = '#6a4a28';
+      ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.moveTo(handX, handY); ctx.lineTo(wx, wy); ctx.stroke();
+      // Axe blade
+      const bladeAngle = swingAngle + Math.PI/2;
+      ctx.fillStyle = '#808088';
+      ctx.beginPath();
+      ctx.moveTo(wx, wy);
+      ctx.lineTo(wx + Math.cos(bladeAngle)*10, wy + Math.sin(bladeAngle)*10);
+      ctx.quadraticCurveTo(wx + Math.cos(swingAngle)*8, wy + Math.sin(swingAngle)*8, wx - Math.cos(bladeAngle)*10, wy - Math.sin(bladeAngle)*10);
+      ctx.fill();
+      ctx.strokeStyle = '#505058';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    } else if (currentWeapon === 2) {
+      // Spear - long shaft with metal tip
+      ctx.strokeStyle = '#7a5a30';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath(); ctx.moveTo(handX, handY); ctx.lineTo(wx, wy); ctx.stroke();
+      // Spear tip
+      const tipLen = 12;
+      ctx.fillStyle = '#a0a0a8';
+      ctx.beginPath();
+      ctx.moveTo(wx, wy);
+      ctx.lineTo(wx + Math.cos(swingAngle-0.3)*tipLen, wy + Math.sin(swingAngle-0.3)*tipLen);
+      ctx.lineTo(wx + Math.cos(swingAngle)*tipLen*1.5, wy + Math.sin(swingAngle)*tipLen*1.5);
+      ctx.lineTo(wx + Math.cos(swingAngle+0.3)*tipLen, wy + Math.sin(swingAngle+0.3)*tipLen);
+      ctx.fill();
+    }
+    // Swing trail
+    ctx.strokeStyle = 'rgba(200,200,220,0.15)';
+    ctx.lineWidth = 8;
+    ctx.beginPath();
+    ctx.arc(0, 0, size + wep.range*0.5, swingAngle-0.4, swingAngle+0.4);
+    ctx.stroke();
+  } else {
+    // Idle weapon held
+    const wep = WEAPONS[currentWeapon];
+    const idleAngle = facing - 0.3;
+    const ih = Math.cos(idleAngle)*size*1.2, iv = Math.sin(idleAngle)*size*1.2;
+    ctx.strokeStyle = currentWeapon === 2 ? '#7a5a30' : currentWeapon === 1 ? '#6a4a28' : '#a0a0a8';
+    ctx.lineWidth = currentWeapon === 1 ? 3 : 2;
+    ctx.beginPath();
+    ctx.moveTo(Math.cos(facing)*size*0.3, Math.sin(facing)*size*0.3);
+    ctx.lineTo(ih, iv);
+    ctx.stroke();
+  }
+
+  // Shield aura
+  if (shielded) {
+    ctx.strokeStyle = 'rgba(180,150,40,0.4)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(0, 0, size + 10 + Math.sin(gameTime*4)*2, 0, Math.PI*2);
+    ctx.stroke();
+    ctx.strokeStyle = 'rgba(180,150,40,0.15)';
+    ctx.lineWidth = 8;
+    ctx.beginPath();
+    ctx.arc(0, 0, size + 15 + Math.sin(gameTime*4)*2, 0, Math.PI*2);
+    ctx.stroke();
+  }
+
+  ctx.restore();
+}
+
+function drawEnemy(e) {
+  ctx.save();
+  ctx.translate(e.x, e.y);
+  const rot = e.facing + Math.PI/2;
+  const s = e.size;
+  // Walking animation for all enemies
+  const walkCycle = Math.sin(gameTime * 8 + e.x * 0.3 + e.y * 0.2);
+  const legSwing = e.stagger > 0 ? 0 : walkCycle * 2.5;
+
+  ctx.rotate(rot);
+
+  // ---- SHADOW ----
+  ctx.fillStyle = 'rgba(0,0,0,0.28)';
+  ctx.beginPath();
+  ctx.ellipse(0, s*0.55, s*0.85, s*0.3, 0, 0, Math.PI*2);
+  ctx.fill();
+
+  // Hit flash tint
+  const flash = e.hitFlash > 0;
+
+  // ================================================================
+  // CHIEF — Tribal warlord, scarred and massive
+  // ================================================================
+  if (e.type === 'chief') {
+    // Legs — thick, fur-wrapped
+    ctx.fillStyle = flash ? '#ccc' : '#3a2818';
+    ctx.fillRect(-s*0.35, s*0.1+legSwing, s*0.28, s*0.55);
+    ctx.fillRect(s*0.08, s*0.1-legSwing, s*0.28, s*0.55);
+    // Fur wrappings on legs
+    ctx.strokeStyle = '#6a5a3a';
+    ctx.lineWidth = 1;
+    for (let i = 0; i < 3; i++) {
+      const ly = s*0.2 + i*s*0.14;
+      ctx.beginPath(); ctx.moveTo(-s*0.37, ly+legSwing); ctx.lineTo(-s*0.05, ly+legSwing+2); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(s*0.06, ly-legSwing); ctx.lineTo(s*0.38, ly-legSwing+2); ctx.stroke();
+    }
+    // Heavy boots
+    ctx.fillStyle = '#1a0e06';
+    ctx.fillRect(-s*0.4, s*0.55+legSwing, s*0.35, s*0.14);
+    ctx.fillRect(s*0.05, s*0.55-legSwing, s*0.35, s*0.14);
+
+    // Fur cloak trailing behind
+    ctx.fillStyle = flash ? '#bbb' : '#3a1208';
+    ctx.beginPath();
+    ctx.moveTo(-s*0.7, s*0.05);
+    ctx.quadraticCurveTo(-s*0.5, s*1.3+Math.sin(gameTime*2.5)*2, 0, s*1.4+Math.sin(gameTime*2.5+0.5)*2);
+    ctx.quadraticCurveTo(s*0.5, s*1.3+Math.sin(gameTime*2.5+1)*2, s*0.7, s*0.05);
+    ctx.fill();
+    // Fur trim edge
+    ctx.fillStyle = '#7a6a4a';
+    ctx.beginPath();
+    ctx.moveTo(-s*0.72, s*0.03);
+    ctx.quadraticCurveTo(-s*0.4, s*0.15, 0, s*0.12);
+    ctx.quadraticCurveTo(s*0.4, s*0.15, s*0.72, s*0.03);
+    ctx.lineTo(s*0.68, s*0.12);
+    ctx.quadraticCurveTo(0, s*0.22, -s*0.68, s*0.12);
+    ctx.fill();
+
+    // Torso — large, battle-worn leather over chainmail
+    const chiefBody = ctx.createRadialGradient(0, -s*0.05, s*0.1, 0, -s*0.05, s*0.8);
+    chiefBody.addColorStop(0, flash ? '#ddd' : '#5a3a22');
+    chiefBody.addColorStop(0.7, flash ? '#bbb' : '#3a2212');
+    chiefBody.addColorStop(1, flash ? '#999' : '#2a180a');
+    ctx.fillStyle = chiefBody;
+    ctx.beginPath();
+    ctx.ellipse(0, -s*0.05, s*0.75, s*0.6, 0, 0, Math.PI*2);
+    ctx.fill();
+    // Chainmail visible beneath
+    ctx.strokeStyle = 'rgba(100,100,110,0.25)';
+    ctx.lineWidth = 0.5;
+    for (let i = -3; i <= 3; i++) {
+      ctx.beginPath(); ctx.moveTo(-s*0.5, i*s*0.1-s*0.05); ctx.lineTo(s*0.5, i*s*0.1-s*0.05); ctx.stroke();
+    }
+    // Chest scars (battle-worn)
+    ctx.strokeStyle = 'rgba(160,100,80,0.35)';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(-s*0.2, -s*0.25); ctx.lineTo(s*0.15, s*0.1); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(s*0.1, -s*0.3); ctx.lineTo(s*0.3, -s*0.05); ctx.stroke();
+
+    // Shoulder guards — bone/metal
+    const shGrad = ctx.createRadialGradient(-s*0.7, -s*0.15, 1, -s*0.7, -s*0.15, s*0.3);
+    shGrad.addColorStop(0, '#807868');
+    shGrad.addColorStop(1, '#504838');
+    ctx.fillStyle = shGrad;
+    ctx.beginPath(); ctx.ellipse(-s*0.7, -s*0.15, s*0.28, s*0.22, -0.2, 0, Math.PI*2); ctx.fill();
+    ctx.strokeStyle = '#30281e'; ctx.lineWidth = 1; ctx.stroke();
+    // Bone spike on shoulder
+    ctx.fillStyle = '#c8c0a0';
+    ctx.beginPath(); ctx.moveTo(-s*0.85, -s*0.25); ctx.lineTo(-s*0.95, -s*0.55); ctx.lineTo(-s*0.75, -s*0.3); ctx.fill();
+    // Right shoulder
+    const shGrad2 = ctx.createRadialGradient(s*0.7, -s*0.15, 1, s*0.7, -s*0.15, s*0.3);
+    shGrad2.addColorStop(0, '#807868');
+    shGrad2.addColorStop(1, '#504838');
+    ctx.fillStyle = shGrad2;
+    ctx.beginPath(); ctx.ellipse(s*0.7, -s*0.15, s*0.28, s*0.22, 0.2, 0, Math.PI*2); ctx.fill();
+    ctx.strokeStyle = '#30281e'; ctx.lineWidth = 1; ctx.stroke();
+    ctx.fillStyle = '#c8c0a0';
+    ctx.beginPath(); ctx.moveTo(s*0.85, -s*0.25); ctx.lineTo(s*0.95, -s*0.55); ctx.lineTo(s*0.75, -s*0.3); ctx.fill();
+
+    // Belt with skulls
+    ctx.fillStyle = '#4a2a10';
+    ctx.fillRect(-s*0.65, s*0.0, s*1.3, s*0.12);
+    ctx.fillStyle = '#a09060';
+    ctx.fillRect(-s*0.1, -s*0.02, s*0.2, s*0.16); // buckle
+    // Mini skull on belt
+    ctx.fillStyle = '#d0c8b0';
+    ctx.beginPath(); ctx.arc(-s*0.35, s*0.06, s*0.06, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#1a1a1a';
+    ctx.fillRect(-s*0.37, s*0.04, s*0.02, s*0.02);
+    ctx.fillRect(-s*0.34, s*0.04, s*0.02, s*0.02);
+
+    // Head — scarred, grizzled
+    const headGrad = ctx.createRadialGradient(0, -s*0.55, 1, 0, -s*0.55, s*0.4);
+    headGrad.addColorStop(0, flash ? '#eee' : '#c49868');
+    headGrad.addColorStop(1, flash ? '#ccc' : '#8a6840');
+    ctx.fillStyle = headGrad;
+    ctx.beginPath(); ctx.arc(0, -s*0.55, s*0.4, 0, Math.PI*2); ctx.fill();
+    // Facial scar
+    ctx.strokeStyle = 'rgba(160,80,70,0.5)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(-s*0.15, -s*0.75); ctx.lineTo(s*0.05, -s*0.4); ctx.stroke();
+    // Thick beard
+    ctx.fillStyle = flash ? '#aaa' : '#3a2a18';
+    ctx.beginPath();
+    ctx.moveTo(-s*0.3, -s*0.38);
+    ctx.quadraticCurveTo(-s*0.35, -s*0.15, -s*0.2, -s*0.05);
+    ctx.quadraticCurveTo(0, s*0.05, s*0.2, -s*0.05);
+    ctx.quadraticCurveTo(s*0.35, -s*0.15, s*0.3, -s*0.38);
+    ctx.fill();
+    // Braided beard detail
+    ctx.strokeStyle = 'rgba(50,35,20,0.4)';
+    ctx.lineWidth = 0.8;
+    ctx.beginPath(); ctx.moveTo(-s*0.08, -s*0.25); ctx.lineTo(-s*0.1, -s*0.05); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(s*0.08, -s*0.25); ctx.lineTo(s*0.1, -s*0.05); ctx.stroke();
+    // Eyes — fierce
+    ctx.fillStyle = '#e8e0c0';
+    ctx.beginPath(); ctx.ellipse(-s*0.12, -s*0.6, s*0.08, s*0.05, 0, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(s*0.12, -s*0.6, s*0.08, s*0.05, 0, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#2a1508';
+    ctx.beginPath(); ctx.arc(-s*0.12, -s*0.6, s*0.04, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(s*0.12, -s*0.6, s*0.04, 0, Math.PI*2); ctx.fill();
+
+    // Iron war crown with antler
+    const crownGrad = ctx.createLinearGradient(-s*0.35, -s*0.95, s*0.35, -s*0.65);
+    crownGrad.addColorStop(0, '#484048');
+    crownGrad.addColorStop(0.5, '#686068');
+    crownGrad.addColorStop(1, '#484048');
+    ctx.fillStyle = crownGrad;
+    ctx.beginPath();
+    ctx.moveTo(-s*0.38, -s*0.65);
+    ctx.lineTo(-s*0.28, -s*1.05);
+    ctx.lineTo(-s*0.12, -s*0.78);
+    ctx.lineTo(0, -s*1.12);
+    ctx.lineTo(s*0.12, -s*0.78);
+    ctx.lineTo(s*0.28, -s*1.05);
+    ctx.lineTo(s*0.38, -s*0.65);
+    ctx.fill();
+    ctx.strokeStyle = '#282028';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    // Antler on crown
+    ctx.strokeStyle = '#b0a880';
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(0, -s*1.1); ctx.quadraticCurveTo(-s*0.2, -s*1.5, -s*0.1, -s*1.6); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0, -s*1.1); ctx.quadraticCurveTo(s*0.2, -s*1.5, s*0.1, -s*1.6); ctx.stroke();
+    // Crown jewel
+    ctx.fillStyle = '#901818';
+    ctx.beginPath(); ctx.arc(0, -s*0.92, s*0.05, 0, Math.PI*2); ctx.fill();
+    ctx.strokeStyle = 'rgba(200,50,50,0.3)'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(0, -s*0.92, s*0.08, 0, Math.PI*2); ctx.stroke();
+
+    // Weapon — great battle axe (world space)
+    ctx.rotate(-rot);
+    const wAngle = e.facing + Math.sin(gameTime*3)*0.15;
+    const hx = Math.cos(wAngle), hy = Math.sin(wAngle);
+    // Handle
+    ctx.strokeStyle = '#5a3a18';
+    ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(hx*s*0.3, hy*s*0.3); ctx.lineTo(hx*s*2.2, hy*s*2.2); ctx.stroke();
+    // Leather wrap on handle
+    ctx.strokeStyle = '#7a5a28';
+    ctx.lineWidth = 1;
+    for (let i = 0; i < 4; i++) {
+      const wd = s*0.5 + i*s*0.25;
+      ctx.beginPath(); ctx.arc(hx*wd, hy*wd, s*0.08, wAngle-1, wAngle+1); ctx.stroke();
+    }
+    // Double axe blade
+    const tipX = hx*s*2.1, tipY = hy*s*2.1;
+    const perpA = wAngle + Math.PI/2;
+    ctx.fillStyle = '#707078';
+    ctx.beginPath();
+    ctx.moveTo(tipX + Math.cos(perpA)*s*0.5, tipY + Math.sin(perpA)*s*0.5);
+    ctx.quadraticCurveTo(tipX + hx*s*0.3, tipY + hy*s*0.3, tipX - Math.cos(perpA)*s*0.5, tipY - Math.sin(perpA)*s*0.5);
+    ctx.quadraticCurveTo(tipX - hx*s*0.15, tipY - hy*s*0.15, tipX + Math.cos(perpA)*s*0.5, tipY + Math.sin(perpA)*s*0.5);
+    ctx.fill();
+    ctx.strokeStyle = '#404048'; ctx.lineWidth = 1; ctx.stroke();
+    // Blade edge gleam
+    ctx.strokeStyle = 'rgba(180,180,200,0.3)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(tipX, tipY, s*0.35, perpA-0.3, perpA+0.3);
+    ctx.stroke();
+    ctx.rotate(rot);
+
+  // ================================================================
+  // ARMORED — Heavy infantry with plate and round shield
+  // ================================================================
+  } else if (e.type === 'armored') {
+    // Legs — armored greaves
+    ctx.fillStyle = flash ? '#ccc' : '#484850';
+    ctx.fillRect(-s*0.32, s*0.12+legSwing, s*0.24, s*0.48);
+    ctx.fillRect(s*0.08, s*0.12-legSwing, s*0.24, s*0.48);
+    // Greave highlights
+    ctx.strokeStyle = 'rgba(120,120,130,0.3)';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(-s*0.2, s*0.15+legSwing); ctx.lineTo(-s*0.2, s*0.5+legSwing); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(s*0.2, s*0.15-legSwing); ctx.lineTo(s*0.2, s*0.5-legSwing); ctx.stroke();
+    // Heavy boots
+    ctx.fillStyle = '#1a1a1e';
+    ctx.fillRect(-s*0.36, s*0.5+legSwing, s*0.32, s*0.14);
+    ctx.fillRect(s*0.05, s*0.5-legSwing, s*0.32, s*0.14);
+
+    // Torso — layered plate over mail
+    const plateGrad = ctx.createRadialGradient(0, 0, s*0.05, 0, 0, s*0.8);
+    plateGrad.addColorStop(0, flash ? '#ddd' : '#606068');
+    plateGrad.addColorStop(0.6, flash ? '#bbb' : '#484850');
+    plateGrad.addColorStop(1, flash ? '#999' : '#303038');
+    ctx.fillStyle = plateGrad;
+    ctx.beginPath(); ctx.ellipse(0, 0, s*0.72, s*0.58, 0, 0, Math.PI*2); ctx.fill();
+    ctx.strokeStyle = '#282830'; ctx.lineWidth = 1.5; ctx.stroke();
+    // Plate segments
+    ctx.strokeStyle = 'rgba(90,90,100,0.35)';
+    ctx.lineWidth = 0.8;
+    ctx.beginPath();
+    ctx.moveTo(-s*0.5, -s*0.2); ctx.lineTo(s*0.5, -s*0.2);
+    ctx.moveTo(-s*0.45, s*0.05); ctx.lineTo(s*0.45, s*0.05);
+    ctx.moveTo(-s*0.35, s*0.25); ctx.lineTo(s*0.35, s*0.25);
+    ctx.moveTo(0, -s*0.4); ctx.lineTo(0, s*0.3);
+    ctx.stroke();
+    // Metal sheen highlight
+    ctx.fillStyle = 'rgba(160,160,170,0.08)';
+    ctx.beginPath(); ctx.ellipse(-s*0.15, -s*0.15, s*0.3, s*0.25, -0.3, 0, Math.PI*2); ctx.fill();
+
+    // Shoulders — heavy pauldrons
+    ctx.fillStyle = flash ? '#bbb' : '#555560';
+    ctx.beginPath(); ctx.ellipse(-s*0.68, -s*0.1, s*0.26, s*0.2, -0.15, 0, Math.PI*2); ctx.fill();
+    ctx.strokeStyle = '#303038'; ctx.lineWidth = 1; ctx.stroke();
+    ctx.beginPath(); ctx.ellipse(s*0.68, -s*0.1, s*0.26, s*0.2, 0.15, 0, Math.PI*2); ctx.fill();
+    ctx.stroke();
+    // Rivets on pauldrons
+    ctx.fillStyle = '#808088';
+    [-0.58,-0.68,-0.78].forEach(px => { ctx.beginPath(); ctx.arc(px*s, -s*0.1, 1.5, 0, Math.PI*2); ctx.fill(); });
+    [0.58,0.68,0.78].forEach(px => { ctx.beginPath(); ctx.arc(px*s, -s*0.1, 1.5, 0, Math.PI*2); ctx.fill(); });
+
+    // Round shield on left arm
+    ctx.save();
+    const shieldGrad = ctx.createRadialGradient(-s*0.7, s*0.05, s*0.02, -s*0.7, s*0.05, s*0.38);
+    shieldGrad.addColorStop(0, '#8a7a50');
+    shieldGrad.addColorStop(0.5, '#6a5a30');
+    shieldGrad.addColorStop(1, '#4a3a1a');
+    ctx.fillStyle = shieldGrad;
+    ctx.beginPath(); ctx.arc(-s*0.7, s*0.05, s*0.38, 0, Math.PI*2); ctx.fill();
+    // Shield iron rim
+    ctx.strokeStyle = '#505058';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    // Shield boss (center dome)
+    ctx.fillStyle = '#707078';
+    ctx.beginPath(); ctx.arc(-s*0.7, s*0.05, s*0.12, 0, Math.PI*2); ctx.fill();
+    ctx.strokeStyle = '#404048'; ctx.lineWidth = 1; ctx.stroke();
+    // Shield cross pattern
+    ctx.strokeStyle = 'rgba(90,80,50,0.3)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(-s*0.7, s*0.05-s*0.3); ctx.lineTo(-s*0.7, s*0.05+s*0.3);
+    ctx.moveTo(-s*0.7-s*0.3, s*0.05); ctx.lineTo(-s*0.7+s*0.3, s*0.05);
+    ctx.stroke();
+    ctx.restore();
+
+    // Head — full great helm
+    const helmGrad = ctx.createLinearGradient(-s*0.3, -s*0.85, s*0.3, -s*0.45);
+    helmGrad.addColorStop(0, flash ? '#ddd' : '#585860');
+    helmGrad.addColorStop(0.4, flash ? '#eee' : '#707078');
+    helmGrad.addColorStop(1, flash ? '#ccc' : '#484850');
+    ctx.fillStyle = helmGrad;
+    ctx.beginPath(); ctx.arc(0, -s*0.5, s*0.38, 0, Math.PI*2); ctx.fill();
+    ctx.strokeStyle = '#303038'; ctx.lineWidth = 1.5; ctx.stroke();
+    // Helm face plate / T-visor
+    ctx.fillStyle = '#1a1a20';
+    ctx.fillRect(-s*0.04, -s*0.7, s*0.08, s*0.3); // nose guard
+    ctx.fillRect(-s*0.22, -s*0.55, s*0.44, s*0.06); // eye slit
+    // Helm rivet line
+    ctx.fillStyle = '#606068';
+    for (let i = -2; i <= 2; i++) {
+      ctx.beginPath(); ctx.arc(i*s*0.1, -s*0.72, 1.5, 0, Math.PI*2); ctx.fill();
+    }
+
+    // Weapon — mace (world space)
+    ctx.rotate(-rot);
+    const mAngle = e.facing;
+    const mx = Math.cos(mAngle), my = Math.sin(mAngle);
+    ctx.strokeStyle = '#5a4a28';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath(); ctx.moveTo(mx*s*0.4, my*s*0.4); ctx.lineTo(mx*s*1.5, my*s*1.5); ctx.stroke();
+    // Mace head
+    ctx.fillStyle = '#606068';
+    ctx.beginPath(); ctx.arc(mx*s*1.5, my*s*1.5, s*0.18, 0, Math.PI*2); ctx.fill();
+    // Flanges on mace
+    ctx.strokeStyle = '#404048'; ctx.lineWidth = 2;
+    for (let i = 0; i < 4; i++) {
+      const fa = mAngle + i*Math.PI/2;
+      ctx.beginPath();
+      ctx.moveTo(mx*s*1.5, my*s*1.5);
+      ctx.lineTo(mx*s*1.5+Math.cos(fa)*s*0.25, my*s*1.5+Math.sin(fa)*s*0.25);
+      ctx.stroke();
+    }
+    ctx.rotate(rot);
+
+  // ================================================================
+  // ARCHER — Lean hunter, hooded, with longbow
+  // ================================================================
+  } else if (e.type === 'archer') {
+    // Legs — lighter, wrapped leggings
+    ctx.fillStyle = flash ? '#ccc' : '#3a3228';
+    ctx.fillRect(-s*0.28, s*0.12+legSwing, s*0.2, s*0.45);
+    ctx.fillRect(s*0.08, s*0.12-legSwing, s*0.2, s*0.45);
+    // Leg wraps
+    ctx.strokeStyle = '#5a4a30';
+    ctx.lineWidth = 0.8;
+    for (let i = 0; i < 3; i++) {
+      ctx.beginPath();
+      ctx.moveTo(-s*0.3, s*0.2+i*s*0.12+legSwing); ctx.lineTo(-s*0.06, s*0.24+i*s*0.12+legSwing); ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(s*0.06, s*0.2+i*s*0.12-legSwing); ctx.lineTo(s*0.3, s*0.24+i*s*0.12-legSwing); ctx.stroke();
+    }
+    // Soft boots
+    ctx.fillStyle = '#2a1e12';
+    ctx.fillRect(-s*0.3, s*0.48+legSwing, s*0.24, s*0.1);
+    ctx.fillRect(s*0.06, s*0.48-legSwing, s*0.24, s*0.1);
+
+    // Quiver on back
+    ctx.fillStyle = '#5a3a18';
+    ctx.fillRect(s*0.2, -s*0.3, s*0.12, s*0.6);
+    ctx.strokeStyle = '#3a2208'; ctx.lineWidth = 0.8; ctx.strokeRect(s*0.2, -s*0.3, s*0.12, s*0.6);
+    // Arrow feathers poking out
+    ctx.fillStyle = '#c8c0a8';
+    ctx.fillRect(s*0.22, -s*0.38, s*0.03, s*0.1);
+    ctx.fillRect(s*0.27, -s*0.35, s*0.03, s*0.1);
+    ctx.fillRect(s*0.24, -s*0.4, s*0.03, s*0.1);
+
+    // Torso — leather jerkin
+    const leatherGrad = ctx.createRadialGradient(0, 0, s*0.05, 0, 0, s*0.7);
+    leatherGrad.addColorStop(0, flash ? '#ddd' : '#5a4830');
+    leatherGrad.addColorStop(1, flash ? '#aaa' : '#3a2818');
+    ctx.fillStyle = leatherGrad;
+    ctx.beginPath(); ctx.ellipse(0, 0, s*0.6, s*0.48, 0, 0, Math.PI*2); ctx.fill();
+    ctx.strokeStyle = '#2a1a0a'; ctx.lineWidth = 1; ctx.stroke();
+    // Leather stitching
+    ctx.strokeStyle = 'rgba(90,70,40,0.3)';
+    ctx.lineWidth = 0.5;
+    ctx.setLineDash([2, 3]);
+    ctx.beginPath(); ctx.moveTo(0, -s*0.35); ctx.lineTo(0, s*0.3); ctx.stroke();
+    ctx.setLineDash([]);
+    // Belt with pouches
+    ctx.fillStyle = '#4a3018';
+    ctx.fillRect(-s*0.5, s*0.02, s*1.0, s*0.08);
+    ctx.fillStyle = '#3a2210';
+    ctx.fillRect(-s*0.35, -s*0.02, s*0.12, s*0.14); // pouch
+    ctx.fillRect(s*0.2, -s*0.02, s*0.1, s*0.12); // pouch
+
+    // Head — weathered face
+    const archHeadGrad = ctx.createRadialGradient(0, -s*0.48, 1, 0, -s*0.48, s*0.32);
+    archHeadGrad.addColorStop(0, flash ? '#eee' : '#b89060');
+    archHeadGrad.addColorStop(1, flash ? '#ccc' : '#8a6840');
+    ctx.fillStyle = archHeadGrad;
+    ctx.beginPath(); ctx.arc(0, -s*0.48, s*0.3, 0, Math.PI*2); ctx.fill();
+    // Stubble/short beard
+    ctx.fillStyle = 'rgba(60,45,25,0.3)';
+    ctx.beginPath();
+    ctx.arc(0, -s*0.35, s*0.18, -0.5, Math.PI+0.5);
+    ctx.fill();
+    // Eyes — sharp, focused
+    ctx.fillStyle = '#d8d0b0';
+    ctx.beginPath(); ctx.ellipse(-s*0.1, -s*0.52, s*0.06, s*0.035, 0, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(s*0.1, -s*0.52, s*0.06, s*0.035, 0, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#2a2a10';
+    ctx.beginPath(); ctx.arc(-s*0.1, -s*0.52, s*0.03, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(s*0.1, -s*0.52, s*0.03, 0, Math.PI*2); ctx.fill();
+
+    // Hood — draped over head
+    ctx.fillStyle = flash ? '#bbb' : '#3a4522';
+    ctx.beginPath();
+    ctx.arc(0, -s*0.52, s*0.34, Math.PI+0.2, -0.2);
+    ctx.quadraticCurveTo(s*0.38, -s*0.3, s*0.25, -s*0.2);
+    ctx.lineTo(-s*0.25, -s*0.2);
+    ctx.quadraticCurveTo(-s*0.38, -s*0.3, -s*0.34, -s*0.52);
+    ctx.fill();
+    // Hood shadow
+    ctx.fillStyle = 'rgba(0,0,0,0.15)';
+    ctx.beginPath();
+    ctx.arc(0, -s*0.5, s*0.28, 0.3, Math.PI-0.3);
+    ctx.fill();
+
+    // Longbow + bowstring (world space)
+    ctx.rotate(-rot);
+    const bowAngle = e.facing;
+    const bowPerp = bowAngle + Math.PI/2;
+    const bcx = Math.cos(bowPerp)*s*0.4, bcy = Math.sin(bowPerp)*s*0.4;
+    // Bow stave — curved wood
+    ctx.strokeStyle = '#6a4a1a';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.arc(bcx, bcy, s*0.8, bowAngle-0.55, bowAngle+0.55);
+    ctx.stroke();
+    // Bow tips
+    ctx.fillStyle = '#8a6a2a';
+    const bt1x = bcx+Math.cos(bowAngle-0.55)*s*0.8, bt1y = bcy+Math.sin(bowAngle-0.55)*s*0.8;
+    const bt2x = bcx+Math.cos(bowAngle+0.55)*s*0.8, bt2y = bcy+Math.sin(bowAngle+0.55)*s*0.8;
+    ctx.beginPath(); ctx.arc(bt1x, bt1y, 2, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(bt2x, bt2y, 2, 0, Math.PI*2); ctx.fill();
+    // Bowstring
+    ctx.strokeStyle = '#b0a890';
+    ctx.lineWidth = 0.8;
+    ctx.beginPath(); ctx.moveTo(bt1x, bt1y); ctx.lineTo(bt2x, bt2y); ctx.stroke();
+    ctx.rotate(rot);
+
+  // ================================================================
+  // FAST — Berserker scout, painted, feral
+  // ================================================================
+  } else if (e.type === 'fast') {
+    // Legs — bare, muscular
+    ctx.fillStyle = flash ? '#ccc' : '#9a7a58';
+    ctx.fillRect(-s*0.26, s*0.1+legSwing*1.3, s*0.18, s*0.42);
+    ctx.fillRect(s*0.08, s*0.1-legSwing*1.3, s*0.18, s*0.42);
+    // Leg muscle definition
+    ctx.strokeStyle = 'rgba(100,70,45,0.25)';
+    ctx.lineWidth = 0.8;
+    ctx.beginPath(); ctx.moveTo(-s*0.17, s*0.15+legSwing*1.3); ctx.lineTo(-s*0.17, s*0.4+legSwing*1.3); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(s*0.17, s*0.15-legSwing*1.3); ctx.lineTo(s*0.17, s*0.4-legSwing*1.3); ctx.stroke();
+    // Fur-wrapped feet
+    ctx.fillStyle = '#5a4020';
+    ctx.fillRect(-s*0.28, s*0.42+legSwing*1.3, s*0.22, s*0.1);
+    ctx.fillRect(s*0.06, s*0.42-legSwing*1.3, s*0.22, s*0.1);
+
+    // Torso — bare chest with war paint and scars
+    const skinGrad = ctx.createRadialGradient(0, 0, s*0.05, 0, 0, s*0.65);
+    skinGrad.addColorStop(0, flash ? '#eee' : '#b89068');
+    skinGrad.addColorStop(1, flash ? '#ccc' : '#8a6a48');
+    ctx.fillStyle = skinGrad;
+    ctx.beginPath(); ctx.ellipse(0, 0, s*0.58, s*0.46, 0, 0, Math.PI*2); ctx.fill();
+    // Muscular definition
+    ctx.strokeStyle = 'rgba(100,70,45,0.2)';
+    ctx.lineWidth = 0.8;
+    ctx.beginPath(); ctx.moveTo(0, -s*0.3); ctx.lineTo(0, s*0.2); ctx.stroke();
+    ctx.beginPath(); ctx.arc(-s*0.15, -s*0.1, s*0.15, -0.8, 0.8); ctx.stroke();
+    ctx.beginPath(); ctx.arc(s*0.15, -s*0.1, s*0.15, Math.PI-0.8, Math.PI+0.8); ctx.stroke();
+    // War paint — tribal patterns across chest
+    ctx.strokeStyle = 'rgba(160,25,15,0.55)';
+    ctx.lineWidth = 1.5;
+    // Chevron pattern
+    ctx.beginPath(); ctx.moveTo(-s*0.35, -s*0.15); ctx.lineTo(0, s*0.1); ctx.lineTo(s*0.35, -s*0.15); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-s*0.3, -s*0.05); ctx.lineTo(0, s*0.18); ctx.lineTo(s*0.3, -s*0.05); ctx.stroke();
+    // Spirals on shoulders
+    ctx.strokeStyle = 'rgba(160,25,15,0.4)';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.arc(-s*0.35, -s*0.2, s*0.08, 0, Math.PI*1.5); ctx.stroke();
+    ctx.beginPath(); ctx.arc(s*0.35, -s*0.2, s*0.08, Math.PI*0.5, Math.PI*2); ctx.stroke();
+    // Scars
+    ctx.strokeStyle = 'rgba(180,130,110,0.35)';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(-s*0.25, -s*0.3); ctx.lineTo(-s*0.05, s*0.05); ctx.stroke();
+
+    // Fur loincloth/kilt
+    ctx.fillStyle = '#5a4020';
+    ctx.beginPath();
+    ctx.moveTo(-s*0.4, s*0.05);
+    ctx.lineTo(-s*0.35, s*0.25);
+    ctx.lineTo(s*0.35, s*0.25);
+    ctx.lineTo(s*0.4, s*0.05);
+    ctx.fill();
+    ctx.fillStyle = '#7a6040';
+    ctx.fillRect(-s*0.15, s*0.05, s*0.3, s*0.18);
+
+    // Head — wild-eyed, shaved sides
+    const fastHeadGrad = ctx.createRadialGradient(0, -s*0.46, 1, 0, -s*0.46, s*0.3);
+    fastHeadGrad.addColorStop(0, flash ? '#eee' : '#b89060');
+    fastHeadGrad.addColorStop(1, flash ? '#ccc' : '#8a6a48');
+    ctx.fillStyle = fastHeadGrad;
+    ctx.beginPath(); ctx.arc(0, -s*0.46, s*0.3, 0, Math.PI*2); ctx.fill();
+    // Mohawk / top-knot hair
+    ctx.fillStyle = flash ? '#888' : '#2a1a0a';
+    ctx.beginPath();
+    ctx.moveTo(-s*0.06, -s*0.55);
+    ctx.quadraticCurveTo(-s*0.08, -s*0.95, 0, -s*1.0);
+    ctx.quadraticCurveTo(s*0.08, -s*0.95, s*0.06, -s*0.55);
+    ctx.fill();
+    // Face paint — heavy across eyes and cheeks
+    ctx.fillStyle = 'rgba(20,20,20,0.5)';
+    ctx.fillRect(-s*0.25, -s*0.55, s*0.5, s*0.08); // eye band
+    ctx.fillStyle = 'rgba(140,20,10,0.5)';
+    // Diagonal face stripes
+    ctx.beginPath(); ctx.moveTo(-s*0.2, -s*0.45); ctx.lineTo(-s*0.28, -s*0.3); ctx.lineTo(-s*0.22, -s*0.3); ctx.lineTo(-s*0.14, -s*0.45); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(s*0.14, -s*0.45); ctx.lineTo(s*0.22, -s*0.3); ctx.lineTo(s*0.28, -s*0.3); ctx.lineTo(s*0.2, -s*0.45); ctx.fill();
+    // Wild eyes — wide, crazed
+    ctx.fillStyle = '#e8dcc0';
+    ctx.beginPath(); ctx.ellipse(-s*0.1, -s*0.5, s*0.07, s*0.05, 0, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(s*0.1, -s*0.5, s*0.07, s*0.05, 0, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#2a1008';
+    ctx.beginPath(); ctx.arc(-s*0.1, -s*0.5, s*0.03, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(s*0.1, -s*0.5, s*0.03, 0, Math.PI*2); ctx.fill();
+    // Bared teeth / snarl
+    ctx.fillStyle = '#d0c8a0';
+    ctx.fillRect(-s*0.08, -s*0.36, s*0.16, s*0.04);
+
+    // Dual hand axes (world space)
+    ctx.rotate(-rot);
+    const da1 = e.facing - 0.35 + Math.sin(gameTime*6)*0.1;
+    const da2 = e.facing + 0.35 - Math.sin(gameTime*6)*0.1;
+    // Left axe
+    ctx.strokeStyle = '#5a3a18'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(Math.cos(da1)*s*1.2, Math.sin(da1)*s*1.2); ctx.stroke();
+    ctx.fillStyle = '#707078';
+    const ax1x = Math.cos(da1)*s*1.15, ax1y = Math.sin(da1)*s*1.15;
+    ctx.beginPath();
+    ctx.arc(ax1x, ax1y, s*0.12, da1-1.2, da1+1.2);
+    ctx.fill();
+    // Right axe
+    ctx.strokeStyle = '#5a3a18';
+    ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(Math.cos(da2)*s*1.2, Math.sin(da2)*s*1.2); ctx.stroke();
+    ctx.fillStyle = '#707078';
+    const ax2x = Math.cos(da2)*s*1.15, ax2y = Math.sin(da2)*s*1.15;
+    ctx.beginPath();
+    ctx.arc(ax2x, ax2y, s*0.12, da2-1.2, da2+1.2);
+    ctx.fill();
+    ctx.rotate(rot);
+
+  // ================================================================
+  // WARRIOR — Common tribal fighter with tunic and sword
+  // ================================================================
+  } else {
+    // Legs — cloth-wrapped
+    ctx.fillStyle = flash ? '#ccc' : '#4a3a28';
+    ctx.fillRect(-s*0.28, s*0.1+legSwing, s*0.2, s*0.44);
+    ctx.fillRect(s*0.08, s*0.1-legSwing, s*0.2, s*0.44);
+    // Cloth wraps
+    ctx.strokeStyle = '#5a4830';
+    ctx.lineWidth = 0.8;
+    for (let i = 0; i < 2; i++) {
+      const ly = s*0.22 + i*s*0.15;
+      ctx.beginPath(); ctx.moveTo(-s*0.3, ly+legSwing); ctx.lineTo(-s*0.06, ly+2+legSwing); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(s*0.06, ly-legSwing); ctx.lineTo(s*0.3, ly+2-legSwing); ctx.stroke();
+    }
+    // Simple leather shoes
+    ctx.fillStyle = '#2a1a0e';
+    ctx.fillRect(-s*0.3, s*0.45+legSwing, s*0.24, s*0.1);
+    ctx.fillRect(s*0.06, s*0.45-legSwing, s*0.24, s*0.1);
+
+    // Torso — rough-woven tunic over leather
+    const tunicGrad = ctx.createRadialGradient(0, 0, s*0.05, 0, 0, s*0.7);
+    tunicGrad.addColorStop(0, flash ? '#ddd' : '#6a5238');
+    tunicGrad.addColorStop(1, flash ? '#aaa' : '#3a2a18');
+    ctx.fillStyle = tunicGrad;
+    ctx.beginPath(); ctx.ellipse(0, 0, s*0.65, s*0.5, 0, 0, Math.PI*2); ctx.fill();
+    ctx.strokeStyle = '#2a1a0a'; ctx.lineWidth = 1; ctx.stroke();
+    // Tunic weave texture
+    ctx.strokeStyle = 'rgba(80,60,35,0.2)';
+    ctx.lineWidth = 0.5;
+    for (let i = -2; i <= 2; i++) {
+      ctx.beginPath(); ctx.moveTo(-s*0.45, i*s*0.12); ctx.lineTo(s*0.45, i*s*0.12); ctx.stroke();
+    }
+    // Neckline
+    ctx.strokeStyle = '#4a3a20';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(-s*0.15, -s*0.35);
+    ctx.quadraticCurveTo(0, -s*0.2, s*0.15, -s*0.35);
+    ctx.stroke();
+    // Belt
+    ctx.fillStyle = '#3a2510';
+    ctx.fillRect(-s*0.55, s*0.02, s*1.1, s*0.08);
+    ctx.fillStyle = '#706030';
+    ctx.fillRect(-s*0.06, 0, s*0.12, s*0.12); // buckle
+
+    // Shoulders — slight padding
+    ctx.fillStyle = flash ? '#bbb' : '#5a4228';
+    ctx.beginPath(); ctx.ellipse(-s*0.58, -s*0.08, s*0.18, s*0.14, -0.15, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(s*0.58, -s*0.08, s*0.18, s*0.14, 0.15, 0, Math.PI*2); ctx.fill();
+
+    // Head — rough, bearded
+    const warHeadGrad = ctx.createRadialGradient(0, -s*0.48, 1, 0, -s*0.48, s*0.3);
+    warHeadGrad.addColorStop(0, flash ? '#eee' : '#c49868');
+    warHeadGrad.addColorStop(1, flash ? '#ccc' : '#906840');
+    ctx.fillStyle = warHeadGrad;
+    ctx.beginPath(); ctx.arc(0, -s*0.48, s*0.3, 0, Math.PI*2); ctx.fill();
+    // Unkempt hair
+    ctx.fillStyle = flash ? '#999' : '#3a2a14';
+    ctx.beginPath();
+    ctx.arc(0, -s*0.52, s*0.28, Math.PI+0.3, -0.3);
+    ctx.fill();
+    // Some hair strands
+    ctx.strokeStyle = '#3a2a14';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(-s*0.2, -s*0.65); ctx.quadraticCurveTo(-s*0.3, -s*0.5, -s*0.25, -s*0.35); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(s*0.2, -s*0.65); ctx.quadraticCurveTo(s*0.3, -s*0.5, s*0.25, -s*0.35); ctx.stroke();
+    // Short rough beard
+    ctx.fillStyle = flash ? '#999' : '#4a3a1a';
+    ctx.beginPath();
+    ctx.moveTo(-s*0.18, -s*0.35);
+    ctx.quadraticCurveTo(-s*0.2, -s*0.2, -s*0.12, -s*0.15);
+    ctx.quadraticCurveTo(0, -s*0.1, s*0.12, -s*0.15);
+    ctx.quadraticCurveTo(s*0.2, -s*0.2, s*0.18, -s*0.35);
+    ctx.fill();
+    // Eyes
+    ctx.fillStyle = '#d8d0b0';
+    ctx.beginPath(); ctx.ellipse(-s*0.1, -s*0.52, s*0.06, s*0.04, 0, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(s*0.1, -s*0.52, s*0.06, s*0.04, 0, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#1a1a08';
+    ctx.beginPath(); ctx.arc(-s*0.1, -s*0.52, s*0.025, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(s*0.1, -s*0.52, s*0.025, 0, Math.PI*2); ctx.fill();
+    // Leather cap / headband
+    ctx.fillStyle = flash ? '#aaa' : '#4a3018';
+    ctx.fillRect(-s*0.22, -s*0.62, s*0.44, s*0.08);
+
+    // Weapon — short sword (world space)
+    ctx.rotate(-rot);
+    const wAngle = e.facing + Math.sin(gameTime*4+e.x)*0.08;
+    const whx = Math.cos(wAngle), why = Math.sin(wAngle);
+    // Handle
+    ctx.strokeStyle = '#5a3a18';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath(); ctx.moveTo(whx*s*0.3, why*s*0.3); ctx.lineTo(whx*s*0.6, why*s*0.6); ctx.stroke();
+    // Blade
+    ctx.strokeStyle = '#909098';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath(); ctx.moveTo(whx*s*0.6, why*s*0.6); ctx.lineTo(whx*s*1.35, why*s*1.35); ctx.stroke();
+    // Blade edge gleam
+    ctx.strokeStyle = 'rgba(200,200,210,0.25)';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(whx*s*0.7, why*s*0.7); ctx.lineTo(whx*s*1.3, why*s*1.3); ctx.stroke();
+    // Cross guard
+    const cgPerp = wAngle + Math.PI/2;
+    ctx.strokeStyle = '#6a5a30';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.moveTo(whx*s*0.58+Math.cos(cgPerp)*s*0.12, why*s*0.58+Math.sin(cgPerp)*s*0.12);
+    ctx.lineTo(whx*s*0.58-Math.cos(cgPerp)*s*0.12, why*s*0.58-Math.sin(cgPerp)*s*0.12);
+    ctx.stroke();
+    ctx.rotate(rot);
+  }
+
+  ctx.rotate(-rot); // back to world space for HP bar
+
+  // ---- HP BAR ----
+  if (e.hp < e.maxHp) {
+    const barW = s * 2.4;
+    const barH = e.type === 'chief' ? 5 : 3.5;
+    const barY = -s - (e.type === 'chief' ? 20 : 14);
+    // Background
+    ctx.fillStyle = 'rgba(0,0,0,0.55)';
+    ctx.fillRect(-barW/2 - 1, barY - 1, barW + 2, barH + 2);
+    // Bar
+    const hpRatio = e.hp / e.maxHp;
+    const barColor = e.type === 'chief'
+      ? (hpRatio > 0.5 ? '#b89020' : '#c86020')
+      : (hpRatio > 0.5 ? '#6a4030' : '#aa2018');
+    ctx.fillStyle = barColor;
+    ctx.fillRect(-barW/2, barY, barW * hpRatio, barH);
+    // Border
+    ctx.strokeStyle = 'rgba(0,0,0,0.3)';
+    ctx.lineWidth = 0.5;
+    ctx.strokeRect(-barW/2 - 1, barY - 1, barW + 2, barH + 2);
+  }
+
+  ctx.restore();
+}
+
+// Color shade helper
+function shadeColor(color, amt) {
+  if (!color.startsWith('#') || color.length < 7) return color;
+  let r = parseInt(color.substring(1,3),16) + amt;
+  let g = parseInt(color.substring(3,5),16) + amt;
+  let b = parseInt(color.substring(5,7),16) + amt;
+  r = Math.max(0,Math.min(255,r));
+  g = Math.max(0,Math.min(255,g));
+  b = Math.max(0,Math.min(255,b));
+  return `rgb(${r},${g},${b})`;
+}
+
+function drawBuilding(b) {
+  ctx.save();
+
+  // Building shadow
+  ctx.fillStyle = 'rgba(0,0,0,0.2)';
+  ctx.fillRect(b.x - b.w/2 + 4, b.y - b.h/2 + 4, b.w, b.h);
+
+  // Wall - wooden planks gradient
+  const wallGrad = ctx.createLinearGradient(b.x - b.w/2, b.y, b.x + b.w/2, b.y);
+  wallGrad.addColorStop(0, '#7a5a20');
+  wallGrad.addColorStop(0.3, '#8a6a2a');
+  wallGrad.addColorStop(0.7, '#7a5a20');
+  wallGrad.addColorStop(1, '#6a4a18');
+  ctx.fillStyle = wallGrad;
+  ctx.fillRect(b.x - b.w/2, b.y - b.h/2, b.w, b.h);
+  // Plank lines
+  ctx.strokeStyle = 'rgba(60,35,10,0.3)';
+  ctx.lineWidth = 0.5;
+  for (let i = 1; i < 5; i++) {
+    const px = b.x - b.w/2 + (b.w/5)*i;
+    ctx.beginPath(); ctx.moveTo(px, b.y - b.h/2); ctx.lineTo(px, b.y + b.h/2); ctx.stroke();
+  }
+  ctx.strokeStyle = '#4a2a08';
+  ctx.lineWidth = 1.5;
+  ctx.strokeRect(b.x - b.w/2, b.y - b.h/2, b.w, b.h);
+
+  // Thatched roof
+  const roofH = 22;
+  const roofGrad = ctx.createLinearGradient(b.x, b.y - b.h/2 - roofH, b.x, b.y - b.h/2);
+  roofGrad.addColorStop(0, '#6a4a20');
+  roofGrad.addColorStop(1, '#5a3a15');
+  ctx.fillStyle = roofGrad;
+  ctx.beginPath();
+  ctx.moveTo(b.x - b.w/2 - 8, b.y - b.h/2);
+  ctx.lineTo(b.x, b.y - b.h/2 - roofH);
+  ctx.lineTo(b.x + b.w/2 + 8, b.y - b.h/2);
+  ctx.fill();
+  ctx.strokeStyle = '#3a2008';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  // Thatch texture lines
+  ctx.strokeStyle = 'rgba(90,60,20,0.4)';
+  ctx.lineWidth = 0.5;
+  for (let i = 0; i < 4; i++) {
+    const ty = b.y - b.h/2 - roofH*0.2 - i*4;
+    ctx.beginPath();
+    ctx.moveTo(b.x - b.w/3 - i*2, ty + i*5);
+    ctx.lineTo(b.x + b.w/3 + i*2, ty + i*5);
+    ctx.stroke();
+  }
+
+  // Door - dark arched entrance
+  ctx.fillStyle = '#1a0a02';
+  ctx.beginPath();
+  ctx.moveTo(b.x - 6, b.y + b.h/2);
+  ctx.lineTo(b.x - 6, b.y + 2);
+  ctx.arc(b.x, b.y + 2, 6, Math.PI, 0);
+  ctx.lineTo(b.x + 6, b.y + b.h/2);
+  ctx.fill();
+
+  // Damage cracks (deterministic, not random per frame)
+  if (b.hp < b.maxHp) {
+    const dmgRatio = 1 - b.hp / b.maxHp;
+    if (dmgRatio > 0.2) {
+      ctx.strokeStyle = '#2a1a08';
+      ctx.lineWidth = 1;
+      // Fixed crack positions based on building position
+      const seed = Math.floor(b.x * 7 + b.y * 13);
+      const numCracks = Math.floor(dmgRatio * 6);
+      for (let i = 0; i < numCracks; i++) {
+        const cx = b.x - b.w*0.3 + ((seed + i*37) % 100)/100 * b.w*0.6;
+        const cy = b.y - b.h*0.3 + ((seed + i*53) % 100)/100 * b.h*0.6;
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.lineTo(cx + ((seed+i)%7)-3, cy + ((seed+i*2)%9)-4);
+        ctx.lineTo(cx + ((seed+i*3)%11)-5, cy + ((seed+i*4)%13)-6);
+        ctx.stroke();
+      }
+    }
+    if (dmgRatio > 0.6) {
+      // Smoke wisps
+      ctx.fillStyle = 'rgba(60,50,40,0.15)';
+      ctx.beginPath();
+      ctx.arc(b.x + Math.sin(gameTime*2)*5, b.y - b.h/2 - roofH - 10 - Math.sin(gameTime)*5, 8, 0, Math.PI*2);
+      ctx.fill();
+    }
+  }
+  ctx.restore();
+}
+
+function drawTree(t) {
+  ctx.save();
+  ctx.translate(t.x, t.y);
+
+  // Tree shadow
+  ctx.fillStyle = 'rgba(0,0,0,0.15)';
+  ctx.beginPath();
+  ctx.ellipse(t.size*0.3, t.size*0.2, t.size*0.8, t.size*0.3, 0.3, 0, Math.PI*2);
+  ctx.fill();
+
+  // Trunk with bark texture
+  const trunkGrad = ctx.createLinearGradient(-4, 0, 4, 0);
+  trunkGrad.addColorStop(0, '#3a2210');
+  trunkGrad.addColorStop(0.5, '#5a3a1a');
+  trunkGrad.addColorStop(1, '#3a2210');
+  ctx.fillStyle = trunkGrad;
+  ctx.fillRect(-3.5, -t.size*0.3, 7, t.size*0.9);
+  // Bark lines
+  ctx.strokeStyle = 'rgba(30,15,5,0.3)';
+  ctx.lineWidth = 0.5;
+  ctx.beginPath();
+  ctx.moveTo(-1, -t.size*0.2); ctx.lineTo(-1.5, t.size*0.4);
+  ctx.moveTo(1, -t.size*0.1); ctx.lineTo(1.5, t.size*0.3);
+  ctx.stroke();
+
+  if (t.type === 2) {
+    // Pine/conifer
+    const layers = 4;
+    for (let i = layers-1; i >= 0; i--) {
+      const ly = -t.size*0.3 - i*t.size*0.25;
+      const lw = t.size*(0.7 - i*0.12);
+      ctx.fillStyle = i%2===0 ? '#1a3a0e' : '#204a12';
+      ctx.beginPath();
+      ctx.moveTo(-lw, ly + t.size*0.15);
+      ctx.lineTo(0, ly - t.size*0.1);
+      ctx.lineTo(lw, ly + t.size*0.15);
+      ctx.fill();
+    }
+  } else {
+    // Deciduous - layered canopy
+    const baseGreen = t.type === 0 ? [35,75,22] : [45,85,28];
+    for (let i = 0; i < 3; i++) {
+      const ox = (i-1)*t.size*0.25;
+      const oy = -t.size*0.5 - i*t.size*0.12;
+      const r = t.size*(0.55 - i*0.05);
+      const shade = i * 8;
+      ctx.fillStyle = `rgb(${baseGreen[0]-shade},${baseGreen[1]-shade},${baseGreen[2]-shade})`;
+      ctx.beginPath();
+      ctx.arc(ox, oy, r, 0, Math.PI*2);
+      ctx.fill();
+    }
+    // Subtle highlight
+    ctx.fillStyle = `rgba(${baseGreen[0]+20},${baseGreen[1]+20},${baseGreen[2]+10},0.3)`;
+    ctx.beginPath();
+    ctx.arc(-t.size*0.15, -t.size*0.7, t.size*0.25, 0, Math.PI*2);
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
+// ============================================================
+// TERRAIN
+// ============================================================
+function drawTerrain() {
+  // Base grass - rich gradient
+  const baseGrad = ctx.createLinearGradient(0, 0, 0, H*0.82);
+  baseGrad.addColorStop(0, '#2a4a16');
+  baseGrad.addColorStop(0.3, '#325218');
+  baseGrad.addColorStop(0.6, '#2e4e18');
+  baseGrad.addColorStop(1, '#3a5a1e');
+  ctx.fillStyle = baseGrad;
+  ctx.fillRect(0, 0, W, H);
+
+  // Grass variation patches - subtle, natural
+  for (let i = 0; i < 40; i++) {
+    const gx = ((i * 137 + level * 53) % 100) / 100 * W;
+    const gy = ((i * 89 + level * 31) % 100) / 100 * (H * 0.82);
+    const shade = i % 3;
+    ctx.fillStyle = shade === 0 ? 'rgba(60,90,30,0.15)' : shade === 1 ? 'rgba(40,65,18,0.12)' : 'rgba(50,80,25,0.1)';
+    ctx.beginPath();
+    ctx.ellipse(gx, gy, 25+i*2.5, 15+i*1.5, i*0.3, 0, Math.PI*2);
+    ctx.fill();
+  }
+
+  // Scattered small rocks on grass
+  for (let i = 0; i < 8; i++) {
+    const rx = ((i * 197 + level * 71) % 100) / 100 * W;
+    const ry = ((i * 127 + level * 43) % 80) / 100 * H * 0.75;
+    ctx.fillStyle = 'rgba(90,85,75,0.25)';
+    ctx.beginPath();
+    ctx.ellipse(rx, ry, 4+i%3, 3+i%2, i*0.7, 0, Math.PI*2);
+    ctx.fill();
+  }
+
+  // Beach at bottom - layered transition
+  const beachY = H * 0.82;
+  const beachGrad = ctx.createLinearGradient(0, beachY - 40, 0, H);
+  beachGrad.addColorStop(0, '#3a5a1e');
+  beachGrad.addColorStop(0.08, '#6a7a3a');
+  beachGrad.addColorStop(0.15, '#b0a068');
+  beachGrad.addColorStop(0.35, '#c2a86b');
+  beachGrad.addColorStop(0.55, '#a89050');
+  beachGrad.addColorStop(0.7, '#3a6878');
+  beachGrad.addColorStop(0.85, '#1a5a7c');
+  beachGrad.addColorStop(1, '#0e3a50');
+  ctx.fillStyle = beachGrad;
+  ctx.fillRect(0, beachY - 40, W, H - beachY + 40);
+
+  // Sand speckle texture
+  for (let i = 0; i < 30; i++) {
+    const sx = ((i * 83 + level * 19) % 100) / 100 * W;
+    const sy = beachY + ((i * 47 + level * 29) % 40);
+    ctx.fillStyle = `rgba(180,160,100,${0.08 + (i%3)*0.03})`;
+    ctx.beginPath();
+    ctx.arc(sx, sy, 2 + i%3, 0, Math.PI*2);
+    ctx.fill();
+  }
+
+  // Water - soft animated waves
+  for (let i = 0; i < 6; i++) {
+    const wy = H - 20 + i * 5;
+    const waveAlpha = 0.06 + i * 0.04;
+    ctx.fillStyle = `rgba(10,50,70,${waveAlpha})`;
+    ctx.beginPath();
+    ctx.moveTo(0, wy);
+    for (let x = 0; x <= W; x += 20) {
+      ctx.lineTo(x, wy + Math.sin(gameTime*1.2 + x*0.02 + i*0.8)*3);
+    }
+    ctx.lineTo(W, H); ctx.lineTo(0, H);
+    ctx.fill();
+  }
+  // Wave foam
+  ctx.strokeStyle = 'rgba(200,210,220,0.08)';
+  ctx.lineWidth = 1.5;
+  const foamY = H * 0.92;
+  ctx.beginPath();
+  ctx.moveTo(0, foamY);
+  for (let x = 0; x <= W; x += 10) {
+    ctx.lineTo(x, foamY + Math.sin(gameTime*1.5 + x*0.03)*2);
+  }
+  ctx.stroke();
+
+  // Dirt path - worn and textured
+  const pathGrad = ctx.createLinearGradient(W/2 - 25, 0, W/2 + 25, 0);
+  pathGrad.addColorStop(0, 'rgba(75,55,30,0.7)');
+  pathGrad.addColorStop(0.3, 'rgba(90,65,35,0.8)');
+  pathGrad.addColorStop(0.7, 'rgba(90,65,35,0.8)');
+  pathGrad.addColorStop(1, 'rgba(75,55,30,0.7)');
+  ctx.fillStyle = pathGrad;
+  ctx.beginPath();
+  ctx.moveTo(W/2 - 28, H * 0.82);
+  ctx.quadraticCurveTo(W/2 - 18, H * 0.5, W/2 + 8, villageCenterY + 80);
+  ctx.lineTo(W/2 + 38, villageCenterY + 80);
+  ctx.quadraticCurveTo(W/2 + 22, H * 0.5, W/2 + 28, H * 0.82);
+  ctx.fill();
+  // Path edge wear
+  ctx.strokeStyle = 'rgba(50,38,20,0.2)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(W/2 - 28, H * 0.82);
+  ctx.quadraticCurveTo(W/2 - 18, H * 0.5, W/2 + 8, villageCenterY + 80);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(W/2 + 28, H * 0.82);
+  ctx.quadraticCurveTo(W/2 + 22, H * 0.5, W/2 + 38, villageCenterY + 80);
+  ctx.stroke();
+
+  // Village area - path leads to gate
+  if (villageWall) {
+    const pathEndY = villageWall.y + villageWall.h;
+    // Adjust path to end at gate
+    ctx.fillStyle = 'rgba(75,55,30,0.5)';
+    ctx.beginPath();
+    ctx.moveTo(W/2 - 20, pathEndY);
+    ctx.lineTo(W/2 + 20, pathEndY);
+    ctx.lineTo(W/2 + 25, pathEndY + 30);
+    ctx.lineTo(W/2 - 25, pathEndY + 30);
+    ctx.fill();
+  }
+}
+
+// ============================================================
+// PARTICLES & BLOOD
+// ============================================================
+function spawnBlood(x, y, count) {
+  for (let i = 0; i < count; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const speed = 1 + Math.random() * 4;
+    particles.push({ x, y, vx:Math.cos(angle)*speed, vy:Math.sin(angle)*speed, life:0.5+Math.random()*0.5, maxLife:0.5+Math.random()*0.5, size:2+Math.random()*3, color:Math.random()>0.3?COLORS.blood:COLORS.bloodDark, type:'blood' });
+  }
+  // Blood pool
+  bloodPools.push({ x:x+Math.random()*10-5, y:y+Math.random()*10-5, size:8+Math.random()*15, life:8+Math.random()*4, maxLife:8+Math.random()*4, color:Math.random()>0.5?'rgba(139,26,26,0.4)':'rgba(90,10,10,0.35)' });
+}
+
+function spawnGoldParticle(x, y) {
+  for (let i = 0; i < 5; i++) {
+    const angle = Math.random()*Math.PI*2, speed = 1+Math.random()*2;
+    particles.push({ x, y, vx:Math.cos(angle)*speed, vy:Math.sin(angle)*speed-2, life:0.8, maxLife:0.8, size:3, color:BRAND.gold, type:'sparkle' });
+  }
+}
+
+function spawnHitSparks(x, y) {
+  for (let i = 0; i < 3; i++) {
+    const angle = Math.random()*Math.PI*2, speed = 2+Math.random()*3;
+    particles.push({ x, y, vx:Math.cos(angle)*speed, vy:Math.sin(angle)*speed, life:0.3, maxLife:0.3, size:2, color:'#ff8', type:'spark' });
+  }
+}
+
+// ============================================================
+// ATTACK LOGIC
+// ============================================================
+function attackAction() {
+  if (attackCooldown > 0 || !player) return;
+  const wep = WEAPONS[currentWeapon];
+  attackCooldown = wep.cooldown;
+  player.attackAnim = 0.25;
+  playSound(wep.name.toLowerCase().includes('hammer') ? 'thunder' : wep.name === 'Fire Blade' ? 'damage' : currentWeapon < 4 ? WEAPONS[currentWeapon].name.toLowerCase() : 'hit');
+
+  if (wep.projectile) {
+    // Bow - shoot arrow toward mouse cursor (or facing direction on touch)
+    let aimAngle = player.facing;
+    if (!isTouchDevice && (mouseX !== 0 || mouseY !== 0)) {
+      aimAngle = Math.atan2(mouseY - player.y, mouseX - player.x);
+      player.facing = aimAngle; // face toward cursor when shooting
+    }
+    projectiles.push({ x:player.x, y:player.y, vx:Math.cos(aimAngle)*7, vy:Math.sin(aimAngle)*7, damage:wep.damage + upgrades.damage*5, size:4, life:2, owner:'player', type:'arrow' });
+  } else {
+    // Melee
+    const dmg = wep.damage + upgrades.damage * 5;
+
+    // Check gate hit — must kill all enemies first!
+    if (villageGate && !villageGate.broken) {
+      const gx = villageGate.x + villageGate.w/2;
+      const gy = villageGate.y + villageGate.h/2;
+      const gdx = gx - player.x, gdy = gy - player.y;
+      const gdist = Math.sqrt(gdx*gdx + gdy*gdy);
+      if (gdist < wep.range + 30) {
+        let angleToGate = Math.atan2(gdy, gdx);
+        let angleDiff = angleToGate - player.facing;
+        while (angleDiff > Math.PI) angleDiff -= Math.PI*2;
+        while (angleDiff < -Math.PI) angleDiff += Math.PI*2;
+        if (Math.abs(angleDiff) < wep.arc/2 + 0.3) {
+          if (enemies.length > 0) {
+            // Gate is protected — enemies still alive!
+            spawnHitSparks(gx, gy);
+            if (!gateBlockedMsg || gateBlockedMsg <= 0) gateBlockedMsg = 2.0;
+          } else if (currentWeapon === 1 || wep.breaksWalls) { // Axe or Sword of Summer
+            villageGate.hp -= dmg;
+            spawnHitSparks(gx, gy);
+            playSound('axe');
+            if (villageGate.hp <= 0) {
+              villageGate.broken = true;
+              playSound('thunder');
+              shakeTimer = 0.3;
+              shakeIntensity = 8;
+            }
+          } else {
+            spawnHitSparks(gx, gy);
+          }
+        }
+      }
+    }
+
+    // AOE attack for Thor's Hammer
+    if (wep.aoe) {
+      for (let e of enemies) {
+        const dx = e.x - player.x, dy = e.y - player.y;
+        const dist = Math.sqrt(dx*dx + dy*dy);
+        if (dist < wep.aoeRadius) {
+          e.hp -= dmg;
+          e.hitFlash = 0.1;
+          spawnHitSparks(e.x, e.y);
+          if (e.hp <= 0) { spawnBlood(e.x, e.y, 12); score += 100; enemiesKilled++; }
+        }
+      }
+      flashTimer = 0.15;
+      flashColor = 'rgba(100,150,255,0.2)';
+      shakeTimer = 0.2;
+      shakeIntensity = 6;
+      playSound('thunder');
+    } else {
+      // Regular melee attacks
+      let hitCount = 0;
+      for (let e of enemies) {
+        if (wep.multiHit && hitCount >= wep.multiHit) break;
+        const dx = e.x - player.x, dy = e.y - player.y;
+        const dist = Math.sqrt(dx*dx + dy*dy);
+        if (dist < wep.range + e.size) {
+          let angleToEnemy = Math.atan2(dy, dx);
+          let angleDiff = angleToEnemy - player.facing;
+          while (angleDiff > Math.PI) angleDiff -= Math.PI*2;
+          while (angleDiff < -Math.PI) angleDiff += Math.PI*2;
+          if (Math.abs(angleDiff) < wep.arc/2 + 0.3) {
+            e.hp -= dmg;
+            e.hitFlash = 0.1;
+            e.stagger = 0.15;
+            const knockback = 5;
+            e.x += (dx/dist) * knockback;
+            e.y += (dy/dist) * knockback;
+            spawnHitSparks(e.x, e.y);
+            playSound('hit');
+            hitCount++;
+            if (e.hp <= 0) {
+              spawnBlood(e.x, e.y, 12);
+              score += e.type === 'chief' ? 500 : e.type === 'armored' ? 150 : 100;
+              enemiesKilled++;
+              if (Math.random() < 0.15) {
+                healthPickups.push({ x:e.x, y:e.y, amount:15+level*2, time:0, size:10 });
+              }
+            }
+          }
+        }
+      }
+    }
+    enemies = enemies.filter(e => e.hp > 0);
+  }
+}
+
+
+// Key-based weapon switching
+window.addEventListener('keydown', e => {
+  if (gameState === STATE.PLAYING) {
+    if (e.code === 'Digit1' && WEAPONS[0].unlocked) currentWeapon = 0;
+    if (e.code === 'Digit2' && WEAPONS[1].unlocked) currentWeapon = 1;
+    if (e.code === 'Digit3' && WEAPONS[2].unlocked) currentWeapon = 2;
+    if (e.code === 'Digit4' && WEAPONS[3].unlocked) currentWeapon = 3;
+    if (e.code === 'Digit5' && WEAPONS[4].unlocked) currentWeapon = 4;
+    if (e.code === 'Digit6' && WEAPONS[5].unlocked) currentWeapon = 5;
+    if (e.code === 'Digit7' && WEAPONS[6].unlocked) currentWeapon = 6;
+    if (e.code === 'Space') attackAction();
+  }
+});
+
+// ============================================================
+// UPDATE
+// ============================================================
+function update(dt) {
+  gameTime += dt;
+
+  if (gameState === STATE.LANDING) {
+    landingTimer -= dt;
+    if (landingTimer <= 0) { gameState = STATE.PLAYING; }
+    return;
+  }
+
+  if (gameState === STATE.LEVEL_TRANSITION) {
+    transitionTimer -= dt;
+    if (transitionTimer <= 0) gameState = STATE.SHOP;
+    return;
+  }
+
+  if (gameState !== STATE.PLAYING) return;
+
+  if (attackCooldown > 0) attackCooldown -= dt;
+  if (player.attackAnim > 0) player.attackAnim -= dt;
+  if (player.invuln > 0) player.invuln -= dt;
+  if (player.shieldTimer > 0) player.shieldTimer -= dt;
+  if (flashTimer > 0) flashTimer -= dt;
+  if (shakeTimer > 0) shakeTimer -= dt;
+  if (gateBlockedMsg > 0) gateBlockedMsg -= dt;
+
+  // Touch attack
+  if (touchAttacking) attackAction();
+
+  // Player movement
+  let mx = 0, my = 0;
+  if (keys['KeyW'] || keys['ArrowUp']) my = -1;
+  if (keys['KeyS'] || keys['ArrowDown']) my = 1;
+  if (keys['KeyA'] || keys['ArrowLeft']) mx = -1;
+  if (keys['KeyD'] || keys['ArrowRight']) mx = 1;
+
+  if (isTouchDevice && joystickMag > 0.2) {
+    mx = Math.cos(joystickAngle) * joystickMag;
+    my = Math.sin(joystickAngle) * joystickMag;
+  }
+
+  if (mx !== 0 || my !== 0) {
+    const mag = Math.sqrt(mx*mx+my*my);
+    mx /= mag; my /= mag;
+    player.x += mx * player.speed;
+    player.y += my * player.speed;
+    player.facing = Math.atan2(my, mx);
+    player.moving = true;
+  } else {
+    player.moving = false;
+  }
+
+  // Clamp player
+  player.x = Math.max(player.size, Math.min(W - player.size, player.x));
+  player.y = Math.max(player.size, Math.min(H - player.size, player.y));
+
+  // Wall collision
+  if (villageWall && !insideVillage) {
+    // Check if player is trying to enter from the gate
+    if (villageGate.broken && player.y > villageGate.y - 30 && player.y < villageGate.y + 50 &&
+        player.x > villageGate.x - 30 && player.x < villageGate.x + villageGate.w + 30) {
+      insideVillage = true;
+    }
+    // Block movement through walls
+    if (!villageGate.broken || player.y <= villageGate.y - 30 || player.y >= villageGate.y + 50) {
+      // Check collision with walls
+      const vx = villageWall.x, vy = villageWall.y, vw = villageWall.w, vh = villageWall.h;
+      if (player.x - player.size < vx + vw && player.x + player.size > vx &&
+          player.y - player.size < vy + vh && player.y + player.size > vy) {
+        // Push player out based on closest wall
+        const cx = vx + vw/2, cy = vy + vh/2;
+        const dx = player.x - cx, dy = player.y - cy;
+        if (Math.abs(dx) > Math.abs(dy)) {
+          player.x = dx > 0 ? vx + vw + player.size : vx - player.size;
+        } else {
+          player.y = dy > 0 ? vy + vh + player.size : vy - player.size;
+        }
+      }
+    }
+  }
+
+  // Enemy spawning — stops after enough kills so player can clear and bash gate
+  const killTarget = 10 + level * 5; // enemies to kill before spawning stops
+  const allEnemiesSpawned = enemiesKilled >= killTarget;
+  spawnTimer -= dt;
+  if (!allEnemiesSpawned && spawnTimer <= 0 && enemies.length < 15 + level * 2) {
+    spawnEnemy(null);
+    spawnTimer = Math.max(1.5, 4 - level * 0.3) + Math.random() * 2;
+    // Boss spawns once near kill target
+    if (!bossSpawned && enemiesKilled >= killTarget - 3) {
+      spawnEnemy('chief');
+      bossSpawned = true;
+    }
+    // Power-up chance
+    if (Math.random() < 0.08) {
+      const type = Math.random() < 0.5 ? 'hammer' : 'shield';
+      powerups.push({ x: W*0.1+Math.random()*W*0.8, y: H*0.2+Math.random()*H*0.5, type, time:0, size:16 });
+    }
+  }
+
+  // Enemy AI
+  for (let e of enemies) {
+    if (e.hitFlash > 0) e.hitFlash -= dt;
+    if (e.stagger > 0) { e.stagger -= dt; continue; }
+
+    const dx = player.x - e.x, dy = player.y - e.y;
+    const dist = Math.sqrt(dx*dx + dy*dy);
+    e.facing = Math.atan2(dy, dx);
+
+    if (e.type === 'archer' && dist < e.attackRange && dist > 60) {
+      // Archer: stay at range and shoot
+      e.attackTimer -= dt;
+      if (e.attackTimer <= 0) {
+        e.attackTimer = e.attackCd;
+        const angle = Math.atan2(dy, dx);
+        projectiles.push({ x:e.x, y:e.y, vx:Math.cos(angle)*4, vy:Math.sin(angle)*4, damage:e.damage, size:3, life:3, owner:'enemy', type:'arrow' });
+      }
+    } else if (dist > e.attackRange) {
+      // Move toward player (swarming)
+      const spd = e.speed;
+      // Add slight variation for natural swarming
+      const wobble = Math.sin(gameTime * 3 + e.x * 0.1) * 0.3;
+      e.x += (dx/dist) * spd + Math.cos(e.facing + Math.PI/2) * wobble;
+      e.y += (dy/dist) * spd + Math.sin(e.facing + Math.PI/2) * wobble;
+    } else {
+      // Melee attack
+      e.attackTimer -= dt;
+      if (e.attackTimer <= 0) {
+        e.attackTimer = e.attackCd;
+        if (player.shieldTimer <= 0 && player.invuln <= 0) {
+          const dmg = Math.max(1, e.damage - upgrades.armor * 3);
+          player.hp -= dmg;
+          player.invuln = 0.3;
+          playSound('damage');
+          flashTimer = 0.15;
+          flashColor = 'rgba(200,0,0,0.3)';
+          shakeTimer = 0.15;
+          shakeIntensity = 5;
+          if (player.hp <= 0) {
+            gameState = STATE.GAME_OVER;
+            playSound('gameover');
+            saveToLeaderboard();
+          }
+        }
+      }
+    }
+
+    // Enemy-enemy separation
+    for (let other of enemies) {
+      if (other === e) continue;
+      const ox = e.x - other.x, oy = e.y - other.y;
+      const od = Math.sqrt(ox*ox + oy*oy);
+      if (od < e.size + other.size && od > 0) {
+        e.x += (ox/od) * 0.8;
+        e.y += (oy/od) * 0.8;
+      }
+    }
+  }
+
+  // Projectiles
+  for (let p of projectiles) {
+    p.x += p.vx; p.y += p.vy; p.life -= dt;
+
+    if (p.owner === 'player') {
+      for (let e of enemies) {
+        const dx = e.x-p.x, dy = e.y-p.y;
+        if (Math.sqrt(dx*dx+dy*dy) < e.size + p.size) {
+          e.hp -= p.damage;
+          e.hitFlash = 0.1;
+          p.life = 0;
+          spawnHitSparks(p.x, p.y);
+          playSound('hit');
+          if (e.hp <= 0) {
+            spawnBlood(e.x, e.y, 12);
+            score += e.type === 'chief' ? 500 : e.type === 'armored' ? 150 : 100;
+            enemiesKilled++;
+            if (Math.random() < 0.15) healthPickups.push({ x:e.x, y:e.y, amount:15+level*2, time:0, size:10 });
+          }
+          break;
+        }
+      }
+      // Player arrows can destroy catapults (only after enemies are cleared)
+      if (p.life > 0 && enemies.length === 0) {
+        for (let c of catapults) {
+          const dx = c.x-p.x, dy = c.y-p.y;
+          if (Math.sqrt(dx*dx+dy*dy) < c.size + p.size) {
+            c.hp -= p.damage;
+            c.hitFlash = 0.15;
+            p.life = 0;
+            spawnHitSparks(p.x, p.y);
+            playSound('hit');
+            if (c.hp <= 0) {
+              // Catapult destroyed — wood debris particles
+              for (let i = 0; i < 8; i++) {
+                particles.push({ x:c.x, y:c.y, vx:(Math.random()-0.5)*4, vy:(Math.random()-0.5)*4, life:0.8, color:'#8b6914', size:3, type:'spark' });
+              }
+              score += 200;
+            }
+            break;
+          }
+        }
+      }
+    } else if (p.owner === 'catapult') {
+      // Catapult rocks hit player
+      const dx = player.x-p.x, dy = player.y-p.y;
+      if (Math.sqrt(dx*dx+dy*dy) < player.size + p.size) {
+        if (player.shieldTimer <= 0 && player.invuln <= 0) {
+          const dmg = Math.max(1, p.damage - upgrades.armor * 3);
+          player.hp -= dmg;
+          player.invuln = 0.3;
+          playSound('damage');
+          flashTimer = 0.15;
+          flashColor = 'rgba(200,0,0,0.3)';
+        }
+        p.life = 0;
+        spawnHitSparks(p.x, p.y);
+        if (player.hp <= 0) { gameState = STATE.GAME_OVER; playSound('gameover'); saveToLeaderboard(); }
+      }
+      // Catapult rocks also hit allies
+      if (p.life > 0) {
+        for (let a of allies) {
+          const adx = a.x-p.x, ady = a.y-p.y;
+          if (Math.sqrt(adx*adx+ady*ady) < a.size + p.size) {
+            a.hp -= p.damage;
+            a.hitFlash = 0.1;
+            p.life = 0;
+            spawnHitSparks(p.x, p.y);
+            if (a.hp <= 0) spawnBlood(a.x, a.y, 10);
+            break;
+          }
+        }
+      }
+      // Catapult rocks also hit wolves
+      if (p.life > 0) {
+        for (let w of wolves) {
+          const wdx = w.x-p.x, wdy = w.y-p.y;
+          if (Math.sqrt(wdx*wdx+wdy*wdy) < w.size + p.size) {
+            w.hp -= p.damage;
+            w.hitFlash = 0.1;
+            p.life = 0;
+            spawnHitSparks(p.x, p.y);
+            if (w.hp <= 0) spawnBlood(w.x, w.y, 6);
+            break;
+          }
+        }
+      }
+    } else if (p.owner === 'enemy') {
+      const dx = player.x-p.x, dy = player.y-p.y;
+      if (Math.sqrt(dx*dx+dy*dy) < player.size + p.size) {
+        if (player.shieldTimer <= 0 && player.invuln <= 0) {
+          const dmg = Math.max(1, p.damage - upgrades.armor * 3);
+          player.hp -= dmg;
+          player.invuln = 0.3;
+          playSound('damage');
+          flashTimer = 0.15;
+          flashColor = 'rgba(200,0,0,0.3)';
+        }
+        p.life = 0;
+        if (player.hp <= 0) { gameState = STATE.GAME_OVER; playSound('gameover'); saveToLeaderboard(); }
+      }
+      // Enemy arrows can also hit wolves
+      if (p.life > 0) {
+        for (let w of wolves) {
+          const wdx = w.x-p.x, wdy = w.y-p.y;
+          if (Math.sqrt(wdx*wdx+wdy*wdy) < w.size + p.size) {
+            w.hp -= p.damage;
+            w.hitFlash = 0.1;
+            p.life = 0;
+            if (w.hp <= 0) spawnBlood(w.x, w.y, 6);
+            break;
+          }
+        }
+      }
+    }
+  }
+  enemies = enemies.filter(e => e.hp > 0);
+  projectiles = projectiles.filter(p => p.life > 0 && p.x > -50 && p.x < W+50 && p.y > -50 && p.y < H+50);
+
+  // Power-ups
+  for (let i = powerups.length-1; i >= 0; i--) {
+    const p = powerups[i];
+    p.time += dt;
+    const dx = player.x-p.x, dy = player.y-p.y;
+    if (Math.sqrt(dx*dx+dy*dy) < player.size + p.size) {
+      if (p.type === 'hammer') {
+        // Thor's hammer - kill only enemies currently on screen
+        playSound('thunder');
+        flashTimer = 0.3;
+        flashColor = 'rgba(255,255,200,0.5)';
+        shakeTimer = 0.4;
+        shakeIntensity = 10;
+        const onScreen = enemies.filter(e => e.x > 0 && e.x < W && e.y > 0 && e.y < H);
+        for (let e of onScreen) { spawnBlood(e.x, e.y, 8); score += 50; enemiesKilled++; }
+        enemies = enemies.filter(e => !(e.x > 0 && e.x < W && e.y > 0 && e.y < H));
+      } else if (p.type === 'shield') {
+        player.shieldTimer = 8;
+        playSound('powerup');
+      }
+      powerups.splice(i, 1);
+    }
+  }
+
+  // Health pickups
+  for (let i = healthPickups.length-1; i >= 0; i--) {
+    const h = healthPickups[i];
+    h.time += dt;
+    const dx = player.x-h.x, dy = player.y-h.y;
+    if (Math.sqrt(dx*dx+dy*dy) < player.size + h.size) {
+      player.hp = Math.min(player.maxHp, player.hp + h.amount);
+      playSound('powerup');
+      healthPickups.splice(i, 1);
+    } else if (h.time > 10) {
+      healthPickups.splice(i, 1);
+    }
+  }
+
+  // Ally AI
+  for (let a of allies) {
+    if (a.hitFlash > 0) a.hitFlash -= dt;
+    if (a.stagger > 0) { a.stagger -= dt; continue; }
+    if (a.attackAnim > 0) a.attackAnim -= dt;
+
+    // Find nearest enemy
+    let nearestEnemy = null, nearestDist = Infinity;
+    for (let e of enemies) {
+      const dx = e.x - a.x, dy = e.y - a.y;
+      const d = Math.sqrt(dx*dx + dy*dy);
+      if (d < nearestDist) { nearestDist = d; nearestEnemy = e; }
+    }
+
+    if (nearestEnemy && nearestDist < 300) {
+      // Chase enemy
+      const dx = nearestEnemy.x - a.x, dy = nearestEnemy.y - a.y;
+      a.facing = Math.atan2(dy, dx);
+      if (nearestDist > a.attackRange) {
+        a.x += (dx/nearestDist) * a.speed;
+        a.y += (dy/nearestDist) * a.speed;
+      } else {
+        // Attack!
+        a.attackTimer -= dt;
+        if (a.attackTimer <= 0) {
+          a.attackTimer = a.attackCd;
+          a.attackAnim = 0.2;
+          nearestEnemy.hp -= a.damage;
+          nearestEnemy.hitFlash = 0.1;
+          nearestEnemy.stagger = 0.1;
+          const kb = 3;
+          nearestEnemy.x += (dx/nearestDist) * kb;
+          nearestEnemy.y += (dy/nearestDist) * kb;
+          spawnHitSparks(nearestEnemy.x, nearestEnemy.y);
+          playSound('sword');
+          if (nearestEnemy.hp <= 0) {
+            spawnBlood(nearestEnemy.x, nearestEnemy.y, 10);
+            score += nearestEnemy.type === 'chief' ? 500 : 100;
+            enemiesKilled++;
+            if (Math.random() < 0.12) healthPickups.push({ x:nearestEnemy.x, y:nearestEnemy.y, amount:15+level*2, time:0, size:10 });
+          }
+        }
+      }
+    } else {
+      // Follow player loosely
+      const pdx = player.x - a.x + (allies.indexOf(a)) * 25 - 12;
+      const pdy = player.y - a.y + 25;
+      const pdist = Math.sqrt(pdx*pdx + pdy*pdy);
+      if (pdist > 50) {
+        a.x += (pdx/pdist) * a.speed * 0.8;
+        a.y += (pdy/pdist) * a.speed * 0.8;
+        a.facing = Math.atan2(pdy, pdx);
+      }
+    }
+
+    // Enemy attacks hurt allies too
+    for (let e of enemies) {
+      if (e.stagger > 0) continue;
+      const edx = a.x - e.x, edy = a.y - e.y;
+      const edist = Math.sqrt(edx*edx + edy*edy);
+      if (edist < e.attackRange + a.size) {
+        e.attackTimer -= dt;
+        if (e.attackTimer <= 0) {
+          e.attackTimer = e.attackCd;
+          a.hp -= e.damage;
+          a.hitFlash = 0.1;
+          a.stagger = 0.1;
+          if (a.hp <= 0) {
+            spawnBlood(a.x, a.y, 15);
+          }
+        }
+      }
+    }
+
+    // Clamp ally to screen
+    a.x = Math.max(a.size, Math.min(W - a.size, a.x));
+    a.y = Math.max(a.size, Math.min(H - a.size, a.y));
+  }
+  // Remove dead allies
+  allies = allies.filter(a => a.hp > 0);
+
+  // Wolf AI — same idea as allies but faster and uses bite attacks
+  for (let w of wolves) {
+    if (w.hitFlash > 0) w.hitFlash -= dt;
+    if (w.biteAnim > 0) w.biteAnim -= dt;
+    if (w.stagger > 0) { w.stagger -= dt; continue; }
+    if (w.attackAnim > 0) w.attackAnim -= dt;
+
+    // Find nearest enemy (same pattern as ally AI)
+    let nearestEnemy = null, nearestDist = Infinity;
+    for (let e of enemies) {
+      const dx = e.x - w.x, dy = e.y - w.y;
+      const d = Math.sqrt(dx*dx + dy*dy);
+      if (d < nearestDist) { nearestDist = d; nearestEnemy = e; }
+    }
+
+    if (nearestEnemy && nearestDist < 250) {
+      // Chase enemy — wolves are fast!
+      const dx = nearestEnemy.x - w.x, dy = nearestEnemy.y - w.y;
+      w.facing = Math.atan2(dy, dx);
+      if (nearestDist > w.attackRange) {
+        w.x += (dx/nearestDist) * w.speed;
+        w.y += (dy/nearestDist) * w.speed;
+      } else {
+        // Bite attack!
+        w.attackTimer -= dt;
+        if (w.attackTimer <= 0) {
+          w.attackTimer = w.attackCd;
+          w.attackAnim = 0.15;
+          w.biteAnim = 0.2; // jaw opens for drawing
+          nearestEnemy.hp -= w.damage;
+          nearestEnemy.hitFlash = 0.1;
+          nearestEnemy.stagger = 0.08;
+          const kb = 2;
+          nearestEnemy.x += (dx/nearestDist) * kb;
+          nearestEnemy.y += (dy/nearestDist) * kb;
+          spawnHitSparks(nearestEnemy.x, nearestEnemy.y);
+          playSound('sword'); // reuse sword sound for bite
+          if (nearestEnemy.hp <= 0) {
+            spawnBlood(nearestEnemy.x, nearestEnemy.y, 8);
+            score += nearestEnemy.type === 'chief' ? 500 : 100;
+            enemiesKilled++;
+            if (Math.random() < 0.1) healthPickups.push({ x:nearestEnemy.x, y:nearestEnemy.y, amount:10+level*2, time:0, size:10 });
+          }
+        }
+      }
+    } else {
+      // Follow player loosely — wolves spread out a bit
+      const pdx = player.x - w.x + (wolves.indexOf(w)) * 18 - 9;
+      const pdy = player.y - w.y + 35;
+      const pdist = Math.sqrt(pdx*pdx + pdy*pdy);
+      if (pdist > 40) {
+        w.x += (pdx/pdist) * w.speed * 0.85;
+        w.y += (pdy/pdist) * w.speed * 0.85;
+        w.facing = Math.atan2(pdy, pdx);
+      }
+    }
+
+    // Enemies can hurt wolves too
+    for (let e of enemies) {
+      if (e.stagger > 0) continue;
+      const edx = w.x - e.x, edy = w.y - e.y;
+      const edist = Math.sqrt(edx*edx + edy*edy);
+      if (edist < e.attackRange + w.size) {
+        e.attackTimer -= dt;
+        if (e.attackTimer <= 0) {
+          e.attackTimer = e.attackCd;
+          w.hp -= e.damage;
+          w.hitFlash = 0.1;
+          w.stagger = 0.08;
+          if (w.hp <= 0) {
+            spawnBlood(w.x, w.y, 8);
+          }
+        }
+      }
+    }
+
+    // Keep wolves on screen
+    w.x = Math.max(w.size, Math.min(W - w.size, w.x));
+    w.y = Math.max(w.size, Math.min(H - w.size, w.y));
+  }
+  // Remove dead wolves
+  wolves = wolves.filter(w => w.hp > 0);
+
+  // Catapult AI — only activates after all enemies are defeated (village's last defense!)
+  for (let c of catapults) {
+    if (c.hitFlash > 0) c.hitFlash -= dt;
+    // Catapults stay dormant while enemies are alive
+    if (enemies.length > 0) continue;
+    c.fireTimer -= dt;
+    if (c.fireTimer <= 0) {
+      c.fireTimer = c.fireCd;
+      // Find nearest target (player, ally, or wolf)
+      let tx = player.x, ty = player.y;
+      let bestDist = Math.sqrt((player.x-c.x)**2 + (player.y-c.y)**2);
+      for (let a of allies) {
+        const ad = Math.sqrt((a.x-c.x)**2 + (a.y-c.y)**2);
+        if (ad < bestDist) { bestDist = ad; tx = a.x; ty = a.y; }
+      }
+      for (let w of wolves) {
+        const wd = Math.sqrt((w.x-c.x)**2 + (w.y-c.y)**2);
+        if (wd < bestDist) { bestDist = wd; tx = w.x; ty = w.y; }
+      }
+      if (bestDist < c.range) {
+        // Fire a slow rock projectile
+        const angle = Math.atan2(ty - c.y, tx - c.x);
+        const speed = 2.5;
+        projectiles.push({
+          x: c.x, y: c.y,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed,
+          damage: c.damage,
+          size: 8,
+          life: 4,
+          owner: 'catapult',
+          color: '#7a6a5a'
+        });
+      }
+    }
+  }
+  // Remove destroyed catapults
+  catapults = catapults.filter(c => c.hp > 0);
+
+  // Particles
+  for (let p of particles) {
+    p.x += p.vx; p.y += p.vy;
+    p.vx *= 0.95; p.vy *= 0.95;
+    if (p.type === 'blood') p.vy += 2 * dt;
+    p.life -= dt;
+  }
+  particles = particles.filter(p => p.life > 0);
+
+  // Blood pools fade
+  for (let b of bloodPools) b.life -= dt;
+  bloodPools = bloodPools.filter(b => b.life > 0);
+
+  // Check level completion — player entered village through broken gate
+  if (insideVillage && !villagePillaged) {
+    villagePillaged = true;
+    // Gold reward increases each level
+    gold += levelGoldReward;
+    totalGold += levelGoldReward;
+    score += 1000 + level * 200;
+    // Bonus health
+    player.hp = Math.min(player.maxHp, player.hp + 30);
+    // Gold particles from each building
+    for (let b of buildings) {
+      spawnGoldParticle(b.x, b.y);
+    }
+    playSound('levelup');
+    playSound('gold');
+    transitionTimer = 3;
+    gameState = STATE.LEVEL_TRANSITION;
+  }
+}
+
+// ============================================================
+// DRAW GAME
+// ============================================================
+function drawGame() {
+  ctx.save();
+
+  // Screen shake
+  if (shakeTimer > 0) {
+    ctx.translate(
+      (Math.random()-0.5) * shakeIntensity * (shakeTimer/0.15),
+      (Math.random()-0.5) * shakeIntensity * (shakeTimer/0.15)
+    );
+  }
+
+  drawTerrain();
+
+  // Blood pools
+  for (let b of bloodPools) {
+    ctx.globalAlpha = Math.min(1, b.life / b.maxLife * 2) * 0.6;
+    ctx.fillStyle = b.color;
+    ctx.beginPath();
+    ctx.ellipse(b.x, b.y, b.size, b.size*0.6, 0, 0, Math.PI*2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  // Trees (behind)
+  for (let t of trees) if (t.y < player.y) drawTree(t);
+
+  // Village walls
+  if (villageWall) {
+    const vw = villageWall;
+    // Wall shadow
+    ctx.fillStyle = 'rgba(0,0,0,0.25)';
+    ctx.fillRect(vw.x + 4, vw.y + 4, vw.w, vw.h);
+    // Stone wall - thick border
+    ctx.strokeStyle = '#5a5040';
+    ctx.lineWidth = 12;
+    ctx.strokeRect(vw.x, vw.y, vw.w, vw.h);
+    // Wall inner edge
+    ctx.strokeStyle = '#3a3028';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(vw.x - 6, vw.y - 6, vw.w + 12, vw.h + 12);
+    ctx.strokeRect(vw.x + 6, vw.y + 6, vw.w - 12, vw.h - 12);
+    // Stone texture on walls
+    ctx.fillStyle = 'rgba(80,70,55,0.3)';
+    for (let i = 0; i < 20; i++) {
+      const sx = vw.x + ((i * 137 + level * 7) % 100) / 100 * vw.w;
+      const sy = vw.y + ((i * 89 + level * 11) % 100) / 100 * vw.h;
+      // Only draw on the wall border, not inside
+      const onWall = sx < vw.x + 8 || sx > vw.x + vw.w - 8 || sy < vw.y + 8 || sy > vw.y + vw.h - 8;
+      if (onWall) {
+        ctx.fillRect(sx - 4, sy - 3, 8, 6);
+      }
+    }
+
+    // Gate
+    if (villageGate) {
+      const g = villageGate;
+      if (!g.broken) {
+        // Wooden gate
+        const gateGrad = ctx.createLinearGradient(g.x, g.y, g.x + g.w, g.y);
+        gateGrad.addColorStop(0, '#5a3a18');
+        gateGrad.addColorStop(0.5, '#7a5a28');
+        gateGrad.addColorStop(1, '#5a3a18');
+        ctx.fillStyle = gateGrad;
+        ctx.fillRect(g.x, g.y, g.w, g.h);
+        // Planks
+        ctx.strokeStyle = '#3a2008';
+        ctx.lineWidth = 1;
+        for (let i = 1; i < 5; i++) {
+          ctx.beginPath();
+          ctx.moveTo(g.x + g.w * i / 5, g.y);
+          ctx.lineTo(g.x + g.w * i / 5, g.y + g.h);
+          ctx.stroke();
+        }
+        // Iron bands
+        ctx.fillStyle = '#505058';
+        ctx.fillRect(g.x, g.y + 4, g.w, 3);
+        ctx.fillRect(g.x, g.y + g.h - 7, g.w, 3);
+        // Damage cracks
+        const dmgRatio = 1 - g.hp / g.maxHp;
+        if (dmgRatio > 0.15) {
+          ctx.strokeStyle = '#1a0a02';
+          ctx.lineWidth = 1.5;
+          const numCracks = Math.floor(dmgRatio * 8);
+          for (let i = 0; i < numCracks; i++) {
+            const cx = g.x + 10 + (i * 37 % (g.w - 20));
+            const cy = g.y + 3 + (i * 23 % (g.h - 6));
+            ctx.beginPath();
+            ctx.moveTo(cx, cy);
+            ctx.lineTo(cx + (i % 5) - 2, cy + 6 + (i % 3));
+            ctx.stroke();
+          }
+        }
+        // Gate HP bar when player is nearby
+        const gdx = (g.x + g.w/2) - player.x, gdy = (g.y + g.h/2) - player.y;
+        if (Math.sqrt(gdx*gdx + gdy*gdy) < 150) {
+          const barW = g.w + 20;
+          const barX = g.x - 10, barY = g.y - 18;
+          ctx.fillStyle = 'rgba(0,0,0,0.7)';
+          ctx.fillRect(barX, barY, barW, 10);
+          ctx.fillStyle = dmgRatio > 0.6 ? '#c84020' : '#8a6a30';
+          ctx.fillRect(barX + 1, barY + 1, (barW - 2) * (g.hp / g.maxHp), 8);
+          ctx.strokeStyle = '#333';
+          ctx.lineWidth = 1;
+          ctx.strokeRect(barX, barY, barW, 10);
+          ctx.fillStyle = '#fff';
+          ctx.font = 'bold 9px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText('GATE', g.x + g.w/2, barY + 8);
+        }
+      } else {
+        // Broken gate - splintered wood debris
+        ctx.fillStyle = '#4a2a08';
+        ctx.fillRect(g.x, g.y, 8, g.h);
+        ctx.fillRect(g.x + g.w - 8, g.y, 8, g.h);
+        // Debris on ground
+        ctx.fillStyle = 'rgba(90,60,20,0.4)';
+        for (let i = 0; i < 6; i++) {
+          ctx.save();
+          ctx.translate(g.x + 10 + i * 10, g.y + g.h/2 + (i%3)*4 - 4);
+          ctx.rotate(i * 0.8);
+          ctx.fillRect(-6, -2, 12, 3);
+          ctx.restore();
+        }
+        // Glow indicating entry
+        const pulse = 0.3 + Math.sin(gameTime * 3) * 0.15;
+        ctx.fillStyle = `rgba(212,168,67,${pulse})`;
+        ctx.beginPath();
+        ctx.ellipse(g.x + g.w/2, g.y + g.h/2, g.w/2 - 8, g.h, 0, 0, Math.PI*2);
+        ctx.fill();
+      }
+    }
+  }
+
+  // Buildings
+  for (let b of buildings) drawBuilding(b);
+
+  // Health pickups - potion vial
+  for (let h of healthPickups) {
+    ctx.save();
+    ctx.translate(h.x, h.y);
+    const hBob = Math.sin(gameTime*3 + h.x)*2;
+    // Ground glow
+    ctx.fillStyle = 'rgba(30,120,50,0.12)';
+    ctx.beginPath();
+    ctx.arc(0, hBob+2, h.size+4, 0, Math.PI*2);
+    ctx.fill();
+    // Vial body
+    ctx.fillStyle = '#1a6a30';
+    ctx.fillRect(-3, hBob-6, 6, 10);
+    // Vial top
+    ctx.fillStyle = '#2a8a40';
+    ctx.fillRect(-4, hBob-8, 8, 4);
+    // Cork
+    ctx.fillStyle = '#8a6a30';
+    ctx.fillRect(-2, hBob-10, 4, 3);
+    // Shine
+    ctx.fillStyle = 'rgba(150,255,150,0.3)';
+    ctx.fillRect(-1, hBob-5, 2, 6);
+    ctx.restore();
+  }
+
+  // Power-ups
+  for (let p of powerups) {
+    const bob = Math.sin(p.time * 2.5) * 3;
+    ctx.save();
+    ctx.translate(p.x, p.y + bob);
+    if (p.type === 'hammer') {
+      // Mjolnir - detailed
+      // Ground glow
+      ctx.fillStyle = `rgba(80,120,200,${0.08+Math.sin(p.time*3)*0.04})`;
+      ctx.beginPath(); ctx.arc(0, 4, 22, 0, Math.PI*2); ctx.fill();
+      // Handle - wrapped leather
+      ctx.fillStyle = '#4a3a20';
+      ctx.fillRect(-3, -4, 6, 18);
+      ctx.strokeStyle = '#6a5a30';
+      ctx.lineWidth = 0.8;
+      for (let i = 0; i < 5; i++) {
+        ctx.beginPath();
+        ctx.moveTo(-3, i*3); ctx.lineTo(3, i*3+1);
+        ctx.stroke();
+      }
+      // Head - iron block
+      const headGrad = ctx.createLinearGradient(-11, -14, 11, -6);
+      headGrad.addColorStop(0, '#606068');
+      headGrad.addColorStop(0.5, '#808088');
+      headGrad.addColorStop(1, '#505058');
+      ctx.fillStyle = headGrad;
+      ctx.fillRect(-11, -16, 22, 14);
+      ctx.strokeStyle = '#3a3a40';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(-11, -16, 22, 14);
+      // Rune engravings on head
+      ctx.strokeStyle = 'rgba(100,150,220,0.5)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(-6, -13); ctx.lineTo(-4, -6);
+      ctx.moveTo(-6, -9); ctx.lineTo(-2, -9);
+      ctx.moveTo(3, -13); ctx.lineTo(5, -6);
+      ctx.moveTo(3, -9); ctx.lineTo(7, -12);
+      ctx.stroke();
+      // Lightning aura
+      ctx.strokeStyle = `rgba(100,160,255,${0.2+Math.sin(p.time*5)*0.15})`;
+      ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.arc(0, -4, 18, 0, Math.PI*2); ctx.stroke();
+    } else {
+      // Golden shield - ornate
+      // Ground glow
+      ctx.fillStyle = `rgba(180,150,40,${0.08+Math.sin(p.time*3)*0.03})`;
+      ctx.beginPath(); ctx.arc(0, 4, 20, 0, Math.PI*2); ctx.fill();
+      // Shield body
+      const shieldGrad = ctx.createRadialGradient(0, 0, 2, 0, 0, 14);
+      shieldGrad.addColorStop(0, '#e8c840');
+      shieldGrad.addColorStop(0.6, '#c8a030');
+      shieldGrad.addColorStop(1, '#907020');
+      ctx.fillStyle = shieldGrad;
+      ctx.beginPath(); ctx.arc(0, 0, 14, 0, Math.PI*2); ctx.fill();
+      // Rim
+      ctx.strokeStyle = '#705010';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      // Center boss
+      ctx.fillStyle = '#d8b830';
+      ctx.beginPath(); ctx.arc(0, 0, 5, 0, Math.PI*2); ctx.fill();
+      ctx.strokeStyle = '#a08020';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      // Cross pattern
+      ctx.strokeStyle = 'rgba(160,120,20,0.5)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(0, -11); ctx.lineTo(0, 11);
+      ctx.moveTo(-11, 0); ctx.lineTo(11, 0);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  // Draw village walls and gate
+  if (villageWall) {
+    // Stone walls
+    ctx.fillStyle = '#5a5a6a';
+    ctx.fillRect(villageWall.x, villageWall.y, villageWall.w, villageWall.h);
+    ctx.strokeStyle = '#3a3a4a';
+    ctx.lineWidth = 8;
+    ctx.strokeRect(villageWall.x, villageWall.y, villageWall.w, villageWall.h);
+
+    // Draw gate
+    if (villageGate) {
+      if (villageGate.broken) {
+        ctx.fillStyle = 'rgba(90,70,50,0.3)';
+      } else {
+        ctx.fillStyle = '#8a6a4a';
+      }
+      ctx.fillRect(villageGate.x, villageGate.y, villageGate.w, villageGate.h);
+
+      if (!villageGate.broken) {
+        // Gate HP bar
+        const playerDist = Math.sqrt((player.x - (villageGate.x + villageGate.w/2))**2 + (player.y - (villageGate.y + villageGate.h/2))**2);
+        if (playerDist < 150) {
+          ctx.fillStyle = '#c0392b';
+          ctx.fillRect(villageGate.x - 15, villageGate.y - 15, villageGate.w + 30, 8);
+          ctx.fillStyle = '#27ae60';
+          ctx.fillRect(villageGate.x - 15, villageGate.y - 15, (villageGate.hp / villageGate.maxHp) * (villageGate.w + 30), 8);
+        }
+      } else {
+        // Draw open gate
+        ctx.strokeStyle = '#6a5a3a';
+        ctx.lineWidth = 2;
+        ctx.setLineDash([5, 5]);
+        ctx.strokeRect(villageGate.x, villageGate.y, villageGate.w, villageGate.h);
+        ctx.setLineDash([]);
+      }
+    }
+  }
+
+  // Catapults on village walls
+  for (let c of catapults) {
+    ctx.save();
+    ctx.translate(c.x, c.y);
+    const cs = c.size;
+
+    // Flash when hit
+    if (c.hitFlash > 0) {
+      ctx.fillStyle = '#ffffff';
+    } else {
+      ctx.fillStyle = '#6a5020'; // wooden base
+    }
+    // Base platform
+    ctx.fillRect(-cs*0.7, -cs*0.4, cs*1.4, cs*0.8);
+    // Arm (vertical piece)
+    ctx.fillStyle = c.hitFlash > 0 ? '#ffffff' : '#8b6914';
+    ctx.fillRect(-cs*0.15, -cs*0.9, cs*0.3, cs*0.7);
+    // Bucket/scoop at top
+    ctx.fillStyle = c.hitFlash > 0 ? '#ffffff' : '#5a4a20';
+    ctx.beginPath();
+    ctx.arc(0, -cs*0.9, cs*0.3, 0, Math.PI*2);
+    ctx.fill();
+    // Wheels
+    ctx.fillStyle = '#4a3a1a';
+    ctx.beginPath(); ctx.arc(-cs*0.5, cs*0.4, cs*0.2, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(cs*0.5, cs*0.4, cs*0.2, 0, Math.PI*2); ctx.fill();
+    ctx.restore();
+
+    // HP bar
+    if (c.hp < c.maxHp) {
+      const barW = cs * 2, barH = 3;
+      ctx.fillStyle = 'rgba(0,0,0,0.55)';
+      ctx.fillRect(c.x - barW/2 - 1, c.y - cs - 8, barW + 2, barH + 2);
+      ctx.fillStyle = c.hp / c.maxHp > 0.5 ? '#c0a030' : '#c04030';
+      ctx.fillRect(c.x - barW/2, c.y - cs - 7, barW * (c.hp / c.maxHp), barH);
+    }
+  }
+
+  // Wolves — gray wolf shapes with bite animation
+  for (let w of wolves) {
+    if (w.hitFlash > 0 && Math.floor(gameTime*20)%2===0) continue; // flash when hit
+    ctx.save();
+    ctx.translate(w.x, w.y);
+    ctx.rotate(w.facing);
+    const s = w.size;
+
+    // Shadow
+    ctx.fillStyle = 'rgba(0,0,0,0.25)';
+    ctx.beginPath(); ctx.ellipse(0, s*0.3, s*0.9, s*0.25, 0, 0, Math.PI*2); ctx.fill();
+
+    // Body — gray fur with darker back
+    ctx.fillStyle = w.hitFlash > 0 ? '#fff' : '#8a8a90';
+    ctx.beginPath(); ctx.ellipse(0, 0, s*1.0, s*0.5, 0, 0, Math.PI*2); ctx.fill();
+    // Darker stripe on back
+    ctx.fillStyle = '#6a6a70';
+    ctx.beginPath(); ctx.ellipse(0, -s*0.15, s*0.7, s*0.2, 0, 0, Math.PI*2); ctx.fill();
+
+    // Tail — sticks out behind the wolf
+    ctx.strokeStyle = '#7a7a80';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(-s*0.8, 0);
+    ctx.quadraticCurveTo(-s*1.4, -s*0.3 + Math.sin(gameTime*6+w.x)*2, -s*1.2, -s*0.5);
+    ctx.stroke();
+
+    // Legs (4 little legs running)
+    const legOff = Math.sin(gameTime*12 + w.x)*2;
+    ctx.fillStyle = '#707076';
+    ctx.fillRect(s*0.3, s*0.2+legOff, s*0.15, s*0.35);
+    ctx.fillRect(s*0.05, s*0.2-legOff, s*0.15, s*0.35);
+    ctx.fillRect(-s*0.3, s*0.2+legOff, s*0.15, s*0.35);
+    ctx.fillRect(-s*0.55, s*0.2-legOff, s*0.15, s*0.35);
+
+    // Head
+    ctx.fillStyle = w.hitFlash > 0 ? '#fff' : '#9a9aa0';
+    ctx.beginPath(); ctx.ellipse(s*0.7, -s*0.1, s*0.4, s*0.32, 0, 0, Math.PI*2); ctx.fill();
+
+    // Snout/muzzle
+    ctx.fillStyle = '#b0b0b8';
+    const jawOpen = w.biteAnim > 0 ? Math.sin(w.biteAnim * Math.PI * 8) * 3 : 0;
+    // Upper jaw
+    ctx.beginPath();
+    ctx.moveTo(s*0.9, -s*0.15);
+    ctx.lineTo(s*1.3, -s*0.08 - jawOpen*0.5);
+    ctx.lineTo(s*0.9, -s*0.0);
+    ctx.fill();
+    // Lower jaw
+    ctx.beginPath();
+    ctx.moveTo(s*0.9, s*0.0);
+    ctx.lineTo(s*1.25, s*0.05 + jawOpen);
+    ctx.lineTo(s*0.9, s*0.1);
+    ctx.fill();
+
+    // Eye — small and bright
+    ctx.fillStyle = '#e8c820';
+    ctx.beginPath(); ctx.arc(s*0.75, -s*0.18, s*0.08, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#111';
+    ctx.beginPath(); ctx.arc(s*0.76, -s*0.18, s*0.04, 0, Math.PI*2); ctx.fill();
+
+    // Ears — pointed triangles
+    ctx.fillStyle = '#7a7a80';
+    ctx.beginPath();
+    ctx.moveTo(s*0.5, -s*0.35); ctx.lineTo(s*0.65, -s*0.6); ctx.lineTo(s*0.75, -s*0.3);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(s*0.6, -s*0.35); ctx.lineTo(s*0.8, -s*0.55); ctx.lineTo(s*0.85, -s*0.25);
+    ctx.fill();
+
+    ctx.restore();
+
+    // Wolf HP bar (only show when damaged)
+    if (w.hp < w.maxHp) {
+      const barW = s * 1.8, barH = 2;
+      const barY = w.y - s - 8;
+      ctx.fillStyle = 'rgba(0,0,0,0.55)';
+      ctx.fillRect(w.x - barW/2 - 1, barY - 1, barW + 2, barH + 2);
+      ctx.fillStyle = w.hp / w.maxHp > 0.5 ? '#8a8a9a' : '#aa6a4a';
+      ctx.fillRect(w.x - barW/2, barY, barW * (w.hp / w.maxHp), barH);
+    }
+    // "WOLF" label
+    ctx.fillStyle = '#8a8a9a';
+    ctx.font = 'bold 7px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('WOLF', w.x, w.y - s - 11);
+  }
+
+  // Allies (drawn before enemies so they layer properly)
+  for (let a of allies) {
+    if (a.hitFlash > 0 && Math.floor(gameTime*20)%2===0) continue; // flash when hit
+    // Draw ally as a Viking with a green-tinted cloak
+    ctx.save();
+    ctx.translate(a.x, a.y);
+    ctx.rotate(a.facing + Math.PI/2);
+    const s = a.size;
+
+    // Shadow
+    ctx.fillStyle = 'rgba(0,0,0,0.3)';
+    ctx.beginPath(); ctx.ellipse(0, s*0.5, s*0.85, s*0.3, 0, 0, Math.PI*2); ctx.fill();
+
+    // Legs
+    const legOff = Math.sin(gameTime*10 + a.x)*2;
+    ctx.fillStyle = '#4a3520';
+    ctx.fillRect(-s*0.32, s*0.2+legOff, s*0.22, s*0.45);
+    ctx.fillRect(s*0.1, s*0.2-legOff, s*0.22, s*0.45);
+    ctx.fillStyle = '#2a1a0a';
+    ctx.fillRect(-s*0.35, s*0.55+legOff, s*0.28, s*0.12);
+    ctx.fillRect(s*0.07, s*0.55-legOff, s*0.28, s*0.12);
+
+    // Torso — chainmail
+    const tGrad = ctx.createRadialGradient(0, 0, s*0.1, 0, 0, s);
+    tGrad.addColorStop(0, '#6a7a62');
+    tGrad.addColorStop(0.5, '#506048');
+    tGrad.addColorStop(1, '#38483e');
+    ctx.fillStyle = tGrad;
+    ctx.beginPath(); ctx.ellipse(0, 0, s*0.75, s*0.6, 0, 0, Math.PI*2); ctx.fill();
+
+    // Green cloak (ally identifier)
+    ctx.fillStyle = 'rgba(40,100,50,0.6)';
+    ctx.beginPath();
+    ctx.moveTo(-s*0.5, s*0.1);
+    ctx.quadraticCurveTo(-s*0.3, s*1.1+Math.sin(gameTime*3)*2, s*0.3, s*1.1+Math.sin(gameTime*3+1)*2);
+    ctx.quadraticCurveTo(s*0.5, s*0.5, s*0.5, s*0.1);
+    ctx.fill();
+
+    // Belt
+    ctx.fillStyle = '#5a3a1a';
+    ctx.fillRect(-s*0.65, -s*0.04, s*1.3, s*0.1);
+
+    // Shoulders
+    ctx.fillStyle = '#58685e';
+    ctx.beginPath(); ctx.ellipse(-s*0.6, -s*0.1, s*0.22, s*0.18, -0.2, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(s*0.6, -s*0.1, s*0.22, s*0.18, 0.2, 0, Math.PI*2); ctx.fill();
+
+    // Head
+    const hGrad = ctx.createRadialGradient(0, -s*0.5, 1, 0, -s*0.5, s*0.4);
+    hGrad.addColorStop(0, '#d4aa70');
+    hGrad.addColorStop(1, '#a07848');
+    ctx.fillStyle = hGrad;
+    ctx.beginPath(); ctx.arc(0, -s*0.5, s*0.36, 0, Math.PI*2); ctx.fill();
+
+    // Helmet — iron with green trim
+    ctx.fillStyle = '#607068';
+    ctx.beginPath(); ctx.arc(0, -s*0.55, s*0.38, Math.PI, 0); ctx.fill();
+    ctx.fillStyle = '#406048';
+    ctx.fillRect(-s*0.4, -s*0.56, s*0.8, s*0.07);
+
+    // Horns
+    ctx.strokeStyle = '#d8ccb0';
+    ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(-s*0.36, -s*0.55); ctx.quadraticCurveTo(-s*0.9, -s*1.0, -s*0.55, -s*1.35); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(s*0.36, -s*0.55); ctx.quadraticCurveTo(s*0.9, -s*1.0, s*0.55, -s*1.35); ctx.stroke();
+
+    // Beard
+    ctx.fillStyle = '#7a5a2a';
+    ctx.beginPath();
+    ctx.moveTo(-s*0.2, -s*0.25); ctx.quadraticCurveTo(0, s*0.1, s*0.2, -s*0.25);
+    ctx.fill();
+
+    ctx.rotate(-(a.facing + Math.PI/2));
+
+    // Weapon swing
+    if (a.attackAnim > 0) {
+      const swAng = a.facing + (Math.PI/3) * Math.sin(a.attackAnim * Math.PI * 4);
+      const hx = Math.cos(a.facing)*s*0.4, hy = Math.sin(a.facing)*s*0.4;
+      const wx = Math.cos(swAng) * (s + 30), wy = Math.sin(swAng) * (s + 30);
+      ctx.strokeStyle = '#c0c0c8';
+      ctx.lineWidth = 3.5;
+      ctx.beginPath(); ctx.moveTo(hx, hy); ctx.lineTo(wx, wy); ctx.stroke();
+      // Cross guard
+      const mx = (hx+wx)*0.3, my = (hy+wy)*0.3;
+      const px = Math.cos(swAng+Math.PI/2)*5, py = Math.sin(swAng+Math.PI/2)*5;
+      ctx.strokeStyle = '#8a7a30'; ctx.lineWidth = 2.5;
+      ctx.beginPath(); ctx.moveTo(mx-px, my-py); ctx.lineTo(mx+px, my+py); ctx.stroke();
+      // Trail
+      ctx.strokeStyle = 'rgba(200,200,220,0.15)'; ctx.lineWidth = 6;
+      ctx.beginPath(); ctx.arc(0, 0, s + 20, swAng-0.4, swAng+0.4); ctx.stroke();
+    } else {
+      const idleAng = a.facing - 0.3;
+      ctx.strokeStyle = '#a0a0a8'; ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(Math.cos(a.facing)*s*0.3, Math.sin(a.facing)*s*0.3);
+      ctx.lineTo(Math.cos(idleAng)*s*1.1, Math.sin(idleAng)*s*1.1);
+      ctx.stroke();
+    }
+
+    ctx.restore();
+
+    // Ally HP bar
+    if (a.hp < a.maxHp) {
+      const barW = s * 2.2, barH = 3;
+      const barY = a.y - s - 12;
+      ctx.fillStyle = 'rgba(0,0,0,0.55)';
+      ctx.fillRect(a.x - barW/2 - 1, barY - 1, barW + 2, barH + 2);
+      ctx.fillStyle = a.hp / a.maxHp > 0.5 ? '#2a8a3a' : '#8a8a2a';
+      ctx.fillRect(a.x - barW/2, barY, barW * (a.hp / a.maxHp), barH);
+    }
+    // "ALLY" label
+    ctx.fillStyle = '#4a8a4a';
+    ctx.font = 'bold 8px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('ALLY', a.x, a.y - s - 16);
+  }
+
+  // Enemies
+  for (let e of enemies) drawEnemy(e);
+
+  // Player
+  if (player) {
+    if (player.invuln <= 0 || Math.floor(gameTime*20)%2===0) {
+      drawViking(player.x, player.y, player.size, player.facing, player.attackAnim, player.shieldTimer > 0);
+    }
+  }
+
+  // Trees (in front)
+  for (let t of trees) if (t.y >= player.y) drawTree(t);
+
+  // Projectiles
+  for (let p of projectiles) {
+    ctx.save();
+    ctx.translate(p.x, p.y);
+    ctx.rotate(Math.atan2(p.vy, p.vx));
+    if (p.owner === 'catapult') {
+      // Rock/boulder projectile
+      ctx.fillStyle = '#7a6a5a';
+      ctx.beginPath(); ctx.arc(0, 0, p.size, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = '#5a4a3a';
+      ctx.beginPath(); ctx.arc(-2, -2, p.size*0.5, 0, Math.PI*2); ctx.fill();
+    } else if (p.type === 'arrow') {
+      // Shaft
+      ctx.fillStyle = p.owner === 'player' ? '#7a6a40' : '#5a3a18';
+      ctx.fillRect(-10, -1, 18, 2);
+      // Arrowhead - metal
+      ctx.fillStyle = p.owner === 'player' ? '#b0b0b8' : '#707078';
+      ctx.beginPath();
+      ctx.moveTo(8, -3.5);
+      ctx.lineTo(14, 0);
+      ctx.lineTo(8, 3.5);
+      ctx.fill();
+      // Fletching
+      ctx.fillStyle = p.owner === 'player' ? 'rgba(180,180,190,0.5)' : 'rgba(100,60,30,0.5)';
+      ctx.beginPath();
+      ctx.moveTo(-10, -2.5); ctx.lineTo(-7, 0); ctx.lineTo(-10, 2.5);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  // Particles
+  for (let p of particles) {
+    ctx.globalAlpha = p.life / p.maxLife;
+    ctx.fillStyle = p.color;
+    if (p.type === 'sparkle') {
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size * (p.life/p.maxLife), 0, Math.PI*2);
+      ctx.fill();
+    } else {
+      ctx.fillRect(p.x-p.size/2, p.y-p.size/2, p.size, p.size);
+    }
+  }
+  ctx.globalAlpha = 1;
+
+  // Flash effect
+  if (flashTimer > 0) {
+    ctx.fillStyle = flashColor;
+    ctx.fillRect(-20, -20, W+40, H+40);
+  }
+
+  ctx.restore();
+
+  // ---- HUD ----
+  if (player) {
+    // HP Bar
+    const barX = 15, barY = 15, barW = 180, barH = 18;
+    ctx.fillStyle = 'rgba(0,0,0,0.6)';
+    ctx.fillRect(barX-2, barY-2, barW+4, barH+4);
+    const hpRatio = player.hp / player.maxHp;
+    ctx.fillStyle = hpRatio > 0.5 ? '#2a8' : hpRatio > 0.25 ? '#da2' : '#d22';
+    ctx.fillRect(barX, barY, barW * hpRatio, barH);
+    ctx.strokeStyle = '#444';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(barX-2, barY-2, barW+4, barH+4);
+    ctx.fillStyle = '#fff';
+    ctx.font = `bold ${Math.max(11,13*SCALE)}px sans-serif`;
+    ctx.textAlign = 'left';
+    ctx.fillText(`HP: ${Math.ceil(player.hp)}/${player.maxHp}`, barX+5, barY+14);
+
+    // Shield timer
+    if (player.shieldTimer > 0) {
+      ctx.fillStyle = BRAND.gold;
+      ctx.font = `bold ${Math.max(12,14*SCALE)}px sans-serif`;
+      ctx.fillText(`🛡 ${player.shieldTimer.toFixed(1)}s`, barX, barY + 35);
+    }
+
+    // Score & Gold
+    ctx.fillStyle = '#fff';
+    ctx.textAlign = 'right';
+    ctx.font = `bold ${Math.max(14,16*SCALE)}px 'NorseBold', sans-serif`;
+    ctx.fillText(`Score: ${score}`, W-15, 28);
+    ctx.fillStyle = BRAND.gold;
+    ctx.fillText(`Gold: ${gold}`, W-15, 50);
+
+    // Level & Gate status
+    ctx.fillStyle = BRAND.cream;
+    ctx.textAlign = 'center';
+    ctx.font = `${Math.max(13,15*SCALE)}px 'Norse', sans-serif`;
+    let gateStatus = '';
+    if (villageGate) {
+      if (villageGate.broken) gateStatus = ' — Gate Broken! Enter Village!';
+      else if (enemies.length > 0) gateStatus = ` — Defeat all enemies to unlock gate (${enemies.length} remaining)`;
+      else gateStatus = ` — Gate unlocked! Bash it! (${Math.ceil(villageGate.hp)}/${villageGate.maxHp})`;
+    }
+    ctx.fillText(`Level ${level}${gateStatus}`, W/2, 25);
+
+    // "Kill enemies first" flash message
+    if (gateBlockedMsg > 0) {
+      ctx.save();
+      ctx.globalAlpha = Math.min(1, gateBlockedMsg);
+      ctx.fillStyle = '#ff4444';
+      ctx.font = `bold ${Math.max(18,24*SCALE)}px 'NorseBold', sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.fillText('DEFEAT ALL ENEMIES FIRST!', W/2, H * 0.45);
+      ctx.restore();
+    }
+
+    // Squad indicator — show allies and wolves count
+    if (allies.length > 0 || wolves.length > 0) {
+      ctx.save();
+      ctx.fillStyle = '#8a9a8a';
+      ctx.font = `bold ${Math.max(11,13*SCALE)}px sans-serif`;
+      ctx.textAlign = 'right';
+      let squadText = 'Squad:';
+      if (allies.length > 0) squadText += ` ${allies.length} raider${allies.length>1?'s':''}`;
+      if (wolves.length > 0) squadText += `${allies.length>0?' +':''} ${wolves.length} wolf${wolves.length>1?'ves':''}`;
+      ctx.fillText(squadText, W - 15, 42);
+      ctx.restore();
+    }
+
+    // Catapult warning
+    if (catapults.length > 0) {
+      ctx.save();
+      ctx.fillStyle = '#cc8833';
+      ctx.font = `bold ${Math.max(11,13*SCALE)}px sans-serif`;
+      ctx.textAlign = 'right';
+      const catMsg = enemies.length > 0
+        ? `⚠ Catapults: ${catapults.length} (dormant — kill enemies first)`
+        : `⚠ Catapults: ${catapults.length} ACTIVE — shoot with arrows!`;
+      ctx.fillStyle = enemies.length > 0 ? '#887744' : '#cc8833';
+      ctx.fillText(catMsg, W - 15, 55);
+      ctx.restore();
+    }
+
+    // Weapon indicator - all 7 weapons
+    const wepY = H - (isTouchDevice ? 230 : 50);
+    const wepSlotW = Math.min(52, (W - 30) / WEAPONS.length);
+    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+    ctx.fillRect(8, wepY - 5, wepSlotW * WEAPONS.length + 14, 35);
+    for (let i = 0; i < WEAPONS.length; i++) {
+      const wx = 12 + i * wepSlotW;
+      if (!WEAPONS[i].unlocked) {
+        ctx.fillStyle = 'rgba(60,60,60,0.4)';
+        ctx.fillRect(wx, wepY, wepSlotW - 4, 25);
+        ctx.fillStyle = '#444';
+        ctx.font = '9px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('🔒', wx+(wepSlotW-4)/2, wepY+17);
+      } else {
+        const isCurrent = i === currentWeapon;
+        ctx.fillStyle = isCurrent ? 'rgba(212,168,67,0.5)' : 'rgba(80,80,80,0.5)';
+        ctx.fillRect(wx, wepY, wepSlotW - 4, 25);
+        ctx.strokeStyle = isCurrent ? BRAND.gold : '#555';
+        ctx.lineWidth = isCurrent ? 2 : 1;
+        ctx.strokeRect(wx, wepY, wepSlotW - 4, 25);
+        ctx.fillStyle = isCurrent ? '#fff' : '#aaa';
+        ctx.font = `bold ${Math.max(8, 10*SCALE)}px sans-serif`;
+        ctx.textAlign = 'center';
+        const shortName = WEAPONS[i].name.length > 6 ? WEAPONS[i].name.substring(0,6) : WEAPONS[i].name;
+        ctx.fillText(`${i+1}:${shortName}`, wx+(wepSlotW-4)/2, wepY+17);
+      }
+    }
+  }
+}
+
+// ============================================================
+// SPLASH SCREEN
+// ============================================================
+function drawSplash(time) {
+  // Dark atmospheric background
+  const bgGrad = ctx.createRadialGradient(W/2, H*0.4, 50, W/2, H*0.5, Math.max(W,H)*0.8);
+  bgGrad.addColorStop(0, '#1a1a12');
+  bgGrad.addColorStop(0.5, '#0e0e08');
+  bgGrad.addColorStop(1, '#060604');
+  ctx.fillStyle = bgGrad;
+  ctx.fillRect(0, 0, W, H);
+
+  // Atmospheric fog/mist
+  for (let i = 0; i < 8; i++) {
+    const fx = W*0.2 + ((i*173) % 100)/100*W*0.6;
+    const fy = H*0.6 + ((i*89) % 50)/100*H*0.3;
+    ctx.fillStyle = `rgba(30,35,25,${0.03+Math.sin(time*0.5+i)*0.01})`;
+    ctx.beginPath();
+    ctx.ellipse(fx + Math.sin(time*0.3+i)*20, fy, 80+i*15, 20+i*5, 0, 0, Math.PI*2);
+    ctx.fill();
+  }
+
+  // Logo with subtle glow
+  const logoSize = Math.min(W, H) * 0.38;
+  ctx.globalAlpha = 0.06 + Math.sin(time*1.5)*0.02;
+  ctx.fillStyle = BRAND.gold;
+  ctx.beginPath();
+  ctx.arc(W/2, H*0.3, logoSize*0.5, 0, Math.PI*2);
+  ctx.fill();
+  ctx.globalAlpha = 1;
+  drawLogo(W/2, H * 0.3, logoSize);
+
+  // Title
+  ctx.fillStyle = BRAND.cream;
+  ctx.textAlign = 'center';
+  ctx.font = `bold ${Math.max(30, 46*SCALE)}px 'NorseBold', serif`;
+  ctx.fillText('LAND RAID', W/2, H * 0.57);
+  // Title shadow
+  ctx.fillStyle = 'rgba(0,0,0,0.4)';
+  ctx.fillText('LAND RAID', W/2 + 2, H * 0.57 + 2);
+  // Re-draw on top
+  ctx.fillStyle = BRAND.cream;
+  ctx.fillText('LAND RAID', W/2, H * 0.57);
+
+  // Subtitle - understated
+  ctx.fillStyle = 'rgba(180,150,80,0.7)';
+  ctx.font = `${Math.max(13, 16*SCALE)}px 'Norse', serif`;
+  ctx.fillText('Pillage the Villages', W/2, H * 0.63);
+
+  // Divider line
+  ctx.strokeStyle = 'rgba(180,150,80,0.2)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(W/2 - 80, H * 0.66);
+  ctx.lineTo(W/2 + 80, H * 0.66);
+  ctx.stroke();
+
+  // Start prompt
+  const pulse = 0.35 + Math.sin(time * 2.5) * 0.35;
+  ctx.globalAlpha = pulse;
+  ctx.fillStyle = 'rgba(220,210,190,0.9)';
+  ctx.font = `${Math.max(14, 16*SCALE)}px 'Norse', sans-serif`;
+  ctx.fillText(isTouchDevice ? 'TAP TO START' : 'PRESS ENTER TO START', W/2, H * 0.72);
+  ctx.globalAlpha = 1;
+
+  // Leaderboard
+  if (leaderboard.length > 0) {
+    ctx.fillStyle = 'rgba(180,150,80,0.6)';
+    ctx.font = `bold ${Math.max(13,15*SCALE)}px 'NorseBold', sans-serif`;
+    ctx.fillText('HALL OF FAME', W/2, H * 0.80);
+    ctx.font = `${Math.max(11,13*SCALE)}px sans-serif`;
+    const top5 = leaderboard.slice(0, 5);
+    for (let i = 0; i < top5.length; i++) {
+      ctx.fillStyle = i === 0 ? 'rgba(180,150,80,0.7)' : 'rgba(200,200,200,0.4)';
+      ctx.fillText(`${i+1}. ${top5[i].name} — ${top5[i].score}`, W/2, H*0.84 + i*Math.max(15,17*SCALE));
+    }
+  }
+
+  // Branding
+  ctx.fillStyle = 'rgba(255,255,255,0.12)';
+  ctx.font = `${Math.max(10,11*SCALE)}px sans-serif`;
+  ctx.fillText('surfvikings.com', W/2, H * 0.97);
+}
+
+// ============================================================
+// NAME ENTRY
+// ============================================================
+function drawNameEntry(time) {
+  ctx.fillStyle = '#1a1a0e';
+  ctx.fillRect(0, 0, W, H);
+
+  ctx.fillStyle = BRAND.cream;
+  ctx.textAlign = 'center';
+  ctx.font = `bold ${Math.max(24,32*SCALE)}px 'NorseBold', serif`;
+  ctx.fillText('ENTER YOUR NAME, WARRIOR', W/2, H*0.3);
+
+  // Name box
+  const boxW = 300, boxH = 50;
+  ctx.fillStyle = 'rgba(50,50,40,0.8)';
+  ctx.fillRect(W/2-boxW/2, H*0.4, boxW, boxH);
+  ctx.strokeStyle = BRAND.gold;
+  ctx.lineWidth = 2;
+  ctx.strokeRect(W/2-boxW/2, H*0.4, boxW, boxH);
+
+  ctx.fillStyle = '#fff';
+  ctx.font = `bold ${Math.max(20,24*SCALE)}px sans-serif`;
+  const cursor = Math.floor(time*2)%2===0 ? '|' : '';
+  ctx.fillText(playerName + cursor, W/2, H*0.4 + 34);
+
+  if (nameError) {
+    ctx.fillStyle = '#f44';
+    ctx.font = `${Math.max(12,14*SCALE)}px sans-serif`;
+    ctx.fillText(nameError, W/2, H*0.4 + 70);
+  }
+
+  ctx.fillStyle = 'rgba(255,255,255,0.5)';
+  ctx.font = `${Math.max(13,15*SCALE)}px sans-serif`;
+  ctx.fillText('Press ENTER to begin your raid', W/2, H*0.65);
+}
+
+// ============================================================
+// LANDING SCENE
+// ============================================================
+function drawLanding() {
+  drawTerrain();
+
+  // Viking ship at beach
+  const shipX = W/2, shipY = H * 0.9 - (3 - landingTimer) * 20;
+  ctx.save();
+  ctx.translate(shipX, shipY);
+  // Hull
+  ctx.fillStyle = '#6b4226';
+  ctx.beginPath();
+  ctx.moveTo(-40, 0);
+  ctx.quadraticCurveTo(-50, 15, -35, 20);
+  ctx.lineTo(35, 20);
+  ctx.quadraticCurveTo(50, 15, 40, 0);
+  ctx.quadraticCurveTo(0, -10, -40, 0);
+  ctx.fill();
+  ctx.strokeStyle = '#3a2010';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  // Mast
+  ctx.fillStyle = '#4a2a0a';
+  ctx.fillRect(-2, -40, 4, 40);
+  // Sail
+  ctx.fillStyle = '#c8b898';
+  ctx.beginPath();
+  ctx.moveTo(-20, -38);
+  ctx.lineTo(20, -38);
+  ctx.lineTo(15, -10);
+  ctx.lineTo(-15, -10);
+  ctx.fill();
+  // Dragon head
+  ctx.fillStyle = '#8B6914';
+  ctx.beginPath();
+  ctx.moveTo(40, 0);
+  ctx.quadraticCurveTo(55, -15, 50, -25);
+  ctx.quadraticCurveTo(45, -20, 40, -5);
+  ctx.fill();
+  ctx.restore();
+
+  // Text
+  ctx.fillStyle = BRAND.cream;
+  ctx.textAlign = 'center';
+  ctx.font = `bold ${Math.max(22,30*SCALE)}px 'NorseBold', serif`;
+  ctx.fillText(`LEVEL ${level}: VILLAGE RAID`, W/2, H * 0.15);
+
+  ctx.fillStyle = BRAND.gold;
+  ctx.font = `${Math.max(14,18*SCALE)}px 'Norse', serif`;
+  ctx.fillText('The warriors approach the shore...', W/2, H * 0.22);
+}
+
+// ============================================================
+// SHOP
+// ============================================================
+let shopSelection = 0;
+const shopItems = [
+  { name:'Weapon Damage', key:'damage', cost:60, desc:'+5 damage per hit', max:5, type:'upgrade' },
+  { name:'Armor', key:'armor', cost:50, desc:'+3 damage reduction', max:5, type:'upgrade' },
+  { name:'Speed', key:'speed', cost:40, desc:'+0.5 movement speed', max:5, type:'upgrade' },
+  { name:'Max Health', key:'maxHp', cost:70, desc:'+25 max HP', max:5, type:'upgrade' },
+  { name:'Fire Blade', weaponIdx:6, cost:6000, desc:'One-hit kills on any enemy', type:'weapon' },
+  { name:'Sword of Summer', weaponIdx:5, cost:7000, desc:'Breaks walls, kills 3 per swipe', type:'weapon' },
+  { name:"Thor's Hammer", weaponIdx:4, cost:9000, desc:'Devastating AoE radius attack', type:'weapon' },
+  { name:'Hire Viking Raider', cost:750, desc:'Sword-wielding ally fights beside you', type:'ally' },
+  { name:'Raider Horde', cost:2025, desc:'Summon 5 raiders to overwhelm the enemy!', type:'horde' },
+  { name:'Hire Wolf', cost:370, desc:'Fast gray wolf — bites enemies, quick on its feet', type:'wolf' },
+  { name:'Wolf Pack', cost:870, desc:'Summon 4 wolves to hunt as a pack!', type:'wolfpack' }
+];
+
+function drawShop() {
+  ctx.fillStyle = 'rgba(15,15,10,0.95)';
+  ctx.fillRect(0, 0, W, H);
+
+  ctx.fillStyle = BRAND.cream;
+  ctx.textAlign = 'center';
+  ctx.font = `bold ${Math.max(28,36*SCALE)}px 'NorseBold', serif`;
+  ctx.fillText('VIKING ARMORY', W/2, H*0.08);
+
+  ctx.fillStyle = BRAND.gold;
+  ctx.font = `bold ${Math.max(18,22*SCALE)}px 'Norse', serif`;
+  ctx.fillText(`Gold: ${gold}`, W/2, H*0.14);
+
+  // Section headers
+  ctx.fillStyle = 'rgba(180,150,80,0.5)';
+  ctx.font = `${Math.max(12,14*SCALE)}px 'Norse', sans-serif`;
+  ctx.fillText('— UPGRADES —', W/2, H*0.19);
+
+  const startY = H * 0.21;
+  const itemH = Math.min(55, (H * 0.6) / shopItems.length);
+
+  for (let i = 0; i < shopItems.length; i++) {
+    const item = shopItems[i];
+    const y = startY + i * itemH;
+    const isSelected = i === shopSelection;
+
+    // Section dividers
+    if (i === 4 && item.type === 'weapon') {
+      ctx.fillStyle = 'rgba(180,150,80,0.5)';
+      ctx.font = `${Math.max(12,14*SCALE)}px 'Norse', sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.fillText('— PREMIUM WEAPONS —', W/2, y - 2);
+    }
+    if (item.type === 'wolf' && (i === 0 || shopItems[i-1].type !== 'wolf')) {
+      ctx.fillStyle = 'rgba(140,140,170,0.5)';
+      ctx.font = `${Math.max(12,14*SCALE)}px 'Norse', sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.fillText('— WOLF COMPANIONS —', W/2, y + 4);
+    }
+
+    if (item.type === 'upgrade') {
+      const lvl = upgrades[item.key];
+      const maxed = lvl >= item.max;
+      const canBuy = gold >= item.cost && !maxed;
+
+      ctx.fillStyle = isSelected ? 'rgba(212,168,67,0.15)' : 'rgba(50,50,40,0.4)';
+      ctx.fillRect(W/2 - 200, y, 400, itemH - 6);
+      if (isSelected) { ctx.strokeStyle = BRAND.gold; ctx.lineWidth = 2; ctx.strokeRect(W/2 - 200, y, 400, itemH - 6); }
+
+      ctx.fillStyle = isSelected ? '#fff' : '#aaa';
+      ctx.textAlign = 'left';
+      ctx.font = `bold ${Math.max(13,15*SCALE)}px 'NorseBold', sans-serif`;
+      ctx.fillText(item.name, W/2 - 185, y + 18);
+
+      for (let j = 0; j < item.max; j++) {
+        ctx.fillStyle = j < lvl ? BRAND.gold : '#333';
+        ctx.fillRect(W/2 - 185 + j * 16, y + 26, 10, 6);
+      }
+
+      ctx.textAlign = 'right';
+      if (maxed) { ctx.fillStyle = '#888'; ctx.font = `bold ${Math.max(11,13*SCALE)}px sans-serif`; ctx.fillText('MAXED', W/2 + 185, y + 18); }
+      else { ctx.fillStyle = canBuy ? BRAND.gold : '#666'; ctx.font = `bold ${Math.max(11,13*SCALE)}px sans-serif`; ctx.fillText(`${item.cost}g`, W/2 + 185, y + 18); }
+
+      ctx.fillStyle = '#777'; ctx.textAlign = 'left'; ctx.font = `${Math.max(10,12*SCALE)}px sans-serif`; ctx.fillText(item.desc, W/2 - 185, y + 42);
+    } else if (item.type === 'weapon') {
+      // Weapon item
+      const owned = WEAPONS[item.weaponIdx].unlocked;
+      const canBuy = gold >= item.cost && !owned;
+      const weaponColor = WEAPONS[item.weaponIdx].color;
+
+      ctx.fillStyle = isSelected ? 'rgba(212,168,67,0.15)' : 'rgba(40,35,25,0.5)';
+      ctx.fillRect(W/2 - 200, y + 8, 400, itemH - 6);
+      if (isSelected) { ctx.strokeStyle = weaponColor; ctx.lineWidth = 2; ctx.strokeRect(W/2 - 200, y + 8, 400, itemH - 6); }
+
+      // Weapon color indicator
+      ctx.fillStyle = weaponColor;
+      ctx.fillRect(W/2 - 195, y + 14, 4, itemH - 18);
+
+      ctx.fillStyle = isSelected ? '#fff' : '#ccc';
+      ctx.textAlign = 'left';
+      ctx.font = `bold ${Math.max(13,15*SCALE)}px 'NorseBold', sans-serif`;
+      ctx.fillText(item.name, W/2 - 180, y + 26);
+
+      ctx.textAlign = 'right';
+      if (owned) { ctx.fillStyle = '#4a8'; ctx.font = `bold ${Math.max(11,13*SCALE)}px sans-serif`; ctx.fillText('OWNED', W/2 + 185, y + 26); }
+      else { ctx.fillStyle = canBuy ? BRAND.gold : '#666'; ctx.font = `bold ${Math.max(11,13*SCALE)}px sans-serif`; ctx.fillText(`${item.cost.toLocaleString()}g`, W/2 + 185, y + 26); }
+
+      ctx.fillStyle = '#888'; ctx.textAlign = 'left'; ctx.font = `${Math.max(10,12*SCALE)}px sans-serif`; ctx.fillText(item.desc, W/2 - 180, y + 42);
+    } else if (item.type === 'ally') {
+      // Ally hire item
+      const canBuy = gold >= item.cost;
+
+      ctx.fillStyle = isSelected ? 'rgba(100,180,120,0.15)' : 'rgba(35,50,35,0.5)';
+      ctx.fillRect(W/2 - 200, y + 8, 400, itemH - 6);
+      if (isSelected) { ctx.strokeStyle = '#4a8a4a'; ctx.lineWidth = 2; ctx.strokeRect(W/2 - 200, y + 8, 400, itemH - 6); }
+
+      // Green ally indicator
+      ctx.fillStyle = '#4a8a4a';
+      ctx.fillRect(W/2 - 195, y + 14, 4, itemH - 18);
+
+      ctx.fillStyle = isSelected ? '#fff' : '#ccc';
+      ctx.textAlign = 'left';
+      ctx.font = `bold ${Math.max(13,15*SCALE)}px 'NorseBold', sans-serif`;
+      ctx.fillText(item.name, W/2 - 180, y + 26);
+
+      ctx.textAlign = 'right';
+      ctx.fillStyle = canBuy ? BRAND.gold : '#666';
+      ctx.font = `bold ${Math.max(11,13*SCALE)}px sans-serif`;
+      ctx.fillText(`${item.cost.toLocaleString()}g`, W/2 + 185, y + 26);
+
+      // Show current ally count
+      if (allies.length > 0) {
+        ctx.fillStyle = '#4a8a4a';
+        ctx.fillText(`(${allies.length} active)`, W/2 + 185, y + 40);
+      }
+
+      ctx.fillStyle = '#888'; ctx.textAlign = 'left'; ctx.font = `${Math.max(10,12*SCALE)}px sans-serif`; ctx.fillText(item.desc, W/2 - 180, y + 42);
+    } else if (item.type === 'horde') {
+      // Horde hire item
+      const canBuy = gold >= item.cost;
+
+      ctx.fillStyle = isSelected ? 'rgba(180,100,40,0.2)' : 'rgba(50,35,20,0.5)';
+      ctx.fillRect(W/2 - 200, y + 8, 400, itemH - 6);
+      if (isSelected) { ctx.strokeStyle = '#c87830'; ctx.lineWidth = 2; ctx.strokeRect(W/2 - 200, y + 8, 400, itemH - 6); }
+
+      // Orange horde indicator
+      ctx.fillStyle = '#c87830';
+      ctx.fillRect(W/2 - 195, y + 14, 4, itemH - 18);
+
+      ctx.fillStyle = isSelected ? '#fff' : '#ccc';
+      ctx.textAlign = 'left';
+      ctx.font = `bold ${Math.max(13,15*SCALE)}px 'NorseBold', sans-serif`;
+      ctx.fillText(item.name, W/2 - 180, y + 26);
+
+      ctx.textAlign = 'right';
+      ctx.fillStyle = canBuy ? BRAND.gold : '#666';
+      ctx.font = `bold ${Math.max(11,13*SCALE)}px sans-serif`;
+      ctx.fillText(`${item.cost.toLocaleString()}g`, W/2 + 185, y + 26);
+
+      if (allies.length > 0) {
+        ctx.fillStyle = '#c87830';
+        ctx.fillText(`(${allies.length} active)`, W/2 + 185, y + 40);
+      }
+
+      ctx.fillStyle = '#888'; ctx.textAlign = 'left'; ctx.font = `${Math.max(10,12*SCALE)}px sans-serif`; ctx.fillText(item.desc, W/2 - 180, y + 42);
+    } else if (item.type === 'wolf' || item.type === 'wolfpack') {
+      // Wolf items — silver/gray themed
+      const canBuy = gold >= item.cost;
+      const isWolfPack = item.type === 'wolfpack';
+      const wolfColor = isWolfPack ? '#7a7aa0' : '#8a8a9a';
+
+      ctx.fillStyle = isSelected ? 'rgba(130,130,160,0.15)' : 'rgba(40,40,50,0.5)';
+      ctx.fillRect(W/2 - 200, y + 8, 400, itemH - 6);
+      if (isSelected) { ctx.strokeStyle = wolfColor; ctx.lineWidth = 2; ctx.strokeRect(W/2 - 200, y + 8, 400, itemH - 6); }
+
+      // Silver wolf indicator
+      ctx.fillStyle = wolfColor;
+      ctx.fillRect(W/2 - 195, y + 14, 4, itemH - 18);
+
+      ctx.fillStyle = isSelected ? '#fff' : '#ccc';
+      ctx.textAlign = 'left';
+      ctx.font = `bold ${Math.max(13,15*SCALE)}px 'NorseBold', sans-serif`;
+      ctx.fillText(item.name, W/2 - 180, y + 26);
+
+      ctx.textAlign = 'right';
+      ctx.fillStyle = canBuy ? BRAND.gold : '#666';
+      ctx.font = `bold ${Math.max(11,13*SCALE)}px sans-serif`;
+      ctx.fillText(`${item.cost.toLocaleString()}g`, W/2 + 185, y + 26);
+
+      // Show current wolf count
+      if (wolves.length > 0) {
+        ctx.fillStyle = wolfColor;
+        ctx.fillText(`(${wolves.length} wolves)`, W/2 + 185, y + 40);
+      }
+
+      ctx.fillStyle = '#888'; ctx.textAlign = 'left'; ctx.font = `${Math.max(10,12*SCALE)}px sans-serif`; ctx.fillText(item.desc, W/2 - 180, y + 42);
+    }
+  }
+
+  // Controls hint
+  ctx.fillStyle = 'rgba(255,255,255,0.4)';
+  ctx.textAlign = 'center';
+  ctx.font = `${Math.max(13,15*SCALE)}px sans-serif`;
+  const hint = isTouchDevice ? 'TAP item to buy • TAP "CONTINUE" to proceed' : 'W/S to select • ENTER to buy • SPACE to continue';
+  ctx.fillText(hint, W/2, H * 0.82);
+
+  // Continue button
+  const btnY = H * 0.87;
+  ctx.fillStyle = 'rgba(26,107,124,0.6)';
+  ctx.fillRect(W/2 - 80, btnY, 160, 40);
+  ctx.strokeStyle = BRAND.tealLight;
+  ctx.lineWidth = 2;
+  ctx.strokeRect(W/2 - 80, btnY, 160, 40);
+  ctx.fillStyle = '#fff';
+  ctx.font = `bold ${Math.max(15,18*SCALE)}px 'NorseBold', sans-serif`;
+  ctx.fillText('CONTINUE ➤', W/2, btnY + 27);
+}
+
+// Shop input
+canvas.addEventListener('click', e => {
+  if (gameState === STATE.SHOP) {
+    const rect = canvas.getBoundingClientRect();
+    const mx = e.clientX - rect.left, my = e.clientY - rect.top;
+    const startY = H * 0.21;
+    const itemH = Math.min(55, (H * 0.6) / shopItems.length);
+
+    // Check items
+    for (let i = 0; i < shopItems.length; i++) {
+      const y = startY + i * itemH;
+      if (mx > W/2-200 && mx < W/2+200 && my > y && my < y+itemH) {
+        shopSelection = i;
+        buyShopItem();
+        return;
+      }
+    }
+
+    // Continue button
+    const btnY = H * 0.87;
+    if (mx > W/2-80 && mx < W/2+80 && my > btnY && my < btnY+40) {
+      startNextLevel();
+    }
+  }
+});
+
+function buyShopItem() {
+  const item = shopItems[shopSelection];
+  if (item.type === 'upgrade') {
+    if (gold >= item.cost && upgrades[item.key] < item.max) {
+      gold -= item.cost;
+      upgrades[item.key]++;
+      playSound('gold');
+    }
+  } else if (item.type === 'weapon') {
+    if (gold >= item.cost && !WEAPONS[item.weaponIdx].unlocked) {
+      gold -= item.cost;
+      WEAPONS[item.weaponIdx].unlocked = true;
+      playSound('powerup');
+    }
+  } else if (item.type === 'ally') {
+    if (gold >= item.cost) {
+      gold -= item.cost;
+      spawnAlly();
+      playSound('powerup');
+    }
+  } else if (item.type === 'horde') {
+    if (gold >= item.cost) {
+      gold -= item.cost;
+      for (let i = 0; i < 5; i++) spawnAlly();
+      playSound('powerup');
+      playSound('levelup');
+    }
+  } else if (item.type === 'wolf') {
+    if (gold >= item.cost) {
+      gold -= item.cost;
+      spawnWolf();
+      playSound('powerup');
+    }
+  } else if (item.type === 'wolfpack') {
+    if (gold >= item.cost) {
+      gold -= item.cost;
+      for (let i = 0; i < 4; i++) spawnWolf();
+      playSound('powerup');
+      playSound('levelup');
+    }
+  }
+}
+
+function spawnAlly() {
+  const allyHp = 120 + level * 20; // a bit more HP than the enemy boss chief
+  allies.push({
+    x: player ? player.x + 30 + Math.random()*40 - 20 : W/2 + 30,
+    y: player ? player.y + 20 + Math.random()*20 : H*0.85,
+    hp: allyHp,
+    maxHp: allyHp,
+    facing: 0,
+    speed: 2.8,
+    size: 16,
+    damage: 30 + level * 3,
+    attackRange: 45,
+    attackCd: 0.8,
+    attackTimer: 0,
+    attackAnim: 0,
+    hitFlash: 0,
+    stagger: 0,
+    target: null
+  });
+}
+
+// Spawn a wolf — half the HP of a raider, 1/3 less damage, but faster!
+function spawnWolf() {
+  const wolfHp = 60 + level * 10; // half of raider HP
+  wolves.push({
+    x: player ? player.x + 20 + Math.random()*30 - 15 : W/2 + 20,
+    y: player ? player.y + 15 + Math.random()*15 : H*0.85,
+    hp: wolfHp,
+    maxHp: wolfHp,
+    facing: 0,
+    speed: 3.8,         // faster than raiders (2.8)
+    size: 12,            // smaller than raiders
+    damage: 20 + level * 2, // 2/3 of raider damage
+    attackRange: 30,     // short bite range
+    attackCd: 0.55,      // faster bite cooldown
+    attackTimer: 0,
+    attackAnim: 0,
+    hitFlash: 0,
+    stagger: 0,
+    biteAnim: 0          // jaw open/close animation timer
+  });
+}
+
+function startNextLevel() {
+  level++;
+  generateLevel(level);
+  landingTimer = 3;
+  gameState = STATE.LANDING;
+  playSound('levelup');
+}
+
+// ============================================================
+// LEVEL TRANSITION
+// ============================================================
+function drawLevelTransition() {
+  drawGame();
+  ctx.fillStyle = 'rgba(0,0,0,0.6)';
+  ctx.fillRect(0, 0, W, H);
+
+  ctx.fillStyle = BRAND.gold;
+  ctx.textAlign = 'center';
+  ctx.font = `bold ${Math.max(30,40*SCALE)}px 'NorseBold', serif`;
+  ctx.fillText('VILLAGE CONQUERED!', W/2, H*0.35);
+
+  ctx.fillStyle = BRAND.cream;
+  ctx.font = `${Math.max(18,24*SCALE)}px 'Norse', serif`;
+  ctx.fillText(`Level ${level} Complete`, W/2, H*0.44);
+
+  ctx.fillStyle = BRAND.gold;
+  ctx.font = `bold ${Math.max(16,20*SCALE)}px 'Norse', sans-serif`;
+  ctx.fillText(`+${levelGoldReward} Gold Pillaged`, W/2, H*0.53);
+  ctx.fillText(`Score: ${score}`, W/2, H*0.60);
+}
+
+// ============================================================
+// GAME OVER
+// ============================================================
+function drawGameOver(time) {
+  drawGame();
+  ctx.fillStyle = 'rgba(20,0,0,0.7)';
+  ctx.fillRect(0, 0, W, H);
+
+  ctx.fillStyle = BRAND.red;
+  ctx.textAlign = 'center';
+  ctx.font = `bold ${Math.max(34,48*SCALE)}px 'NorseBold', serif`;
+  ctx.fillText('FALLEN IN BATTLE', W/2, H*0.3);
+
+  ctx.fillStyle = BRAND.cream;
+  ctx.font = `${Math.max(18,22*SCALE)}px 'Norse', serif`;
+  ctx.fillText(`Score: ${score}`, W/2, H*0.42);
+  ctx.fillText(`Gold Pillaged: ${totalGold}`, W/2, H*0.49);
+  ctx.fillText(`Level Reached: ${level}`, W/2, H*0.56);
+
+  const pulse = 0.5 + Math.sin(time*3)*0.5;
+  ctx.globalAlpha = pulse;
+  ctx.fillStyle = '#fff';
+  ctx.font = `${Math.max(15,18*SCALE)}px sans-serif`;
+  ctx.fillText(isTouchDevice ? 'TAP TO RAID AGAIN' : 'PRESS ENTER TO RAID AGAIN', W/2, H*0.70);
+  ctx.globalAlpha = 1;
+
+  // Leaderboard
+  if (leaderboard.length > 0) {
+    ctx.fillStyle = BRAND.gold;
+    ctx.font = `bold ${Math.max(14,16*SCALE)}px 'NorseBold', sans-serif`;
+    ctx.fillText('HALL OF FAME', W/2, H*0.78);
+    ctx.font = `${Math.max(12,14*SCALE)}px sans-serif`;
+    const top5 = leaderboard.slice(0,5);
+    for (let i = 0; i < top5.length; i++) {
+      ctx.fillStyle = i===0 ? BRAND.gold : 'rgba(255,255,255,0.6)';
+      ctx.fillText(`${i+1}. ${top5[i].name} — ${top5[i].score}`, W/2, H*0.82 + i*Math.max(16,18*SCALE));
+    }
+  }
+}
+
+// ============================================================
+// LEADERBOARD
+// ============================================================
+function saveToLeaderboard() {
+  const existing = leaderboard.find(e => e.name.toLowerCase() === playerName.toLowerCase());
+  if (existing) {
+    if (score > existing.score) { existing.score = score; existing.level = level; }
+  } else {
+    leaderboard.push({ name:playerName, score, level });
+  }
+  leaderboard.sort((a,b) => b.score - a.score);
+  if (leaderboard.length > 10) leaderboard.length = 10;
+  localStorage.setItem('lrLeaderboard', JSON.stringify(leaderboard));
+  highScore = leaderboard.length > 0 ? leaderboard[0].score : 0;
+}
+
+// ============================================================
+// GLOBAL INPUT
+// ============================================================
+function startGame() {
+  initAudio();
+  if (gameState === STATE.SPLASH) {
+    gameState = STATE.NAME_ENTRY;
+    playerName = '';
+  }
+}
+
+window.addEventListener('keydown', e => {
+  if (gameState === STATE.SPLASH && e.code === 'Enter') {
+    startGame();
+  } else if (gameState === STATE.NAME_ENTRY) {
+    if (e.code === 'Enter') {
+      handleNameSubmit();
+    } else if (e.code === 'Backspace') {
+      playerName = playerName.slice(0, -1);
+      nameError = '';
+    } else if (e.key.length === 1 && playerName.length < 12) {
+      playerName += e.key;
+      nameError = '';
+    }
+  } else if (gameState === STATE.GAME_OVER && e.code === 'Enter') {
+    gameState = STATE.SPLASH;
+  } else if (gameState === STATE.SHOP) {
+    if (e.code === 'KeyW' || e.code === 'ArrowUp') shopSelection = (shopSelection - 1 + shopItems.length) % shopItems.length;
+    if (e.code === 'KeyS' || e.code === 'ArrowDown') shopSelection = (shopSelection + 1) % shopItems.length;
+    if (e.code === 'Enter') buyShopItem();
+    if (e.code === 'Space') startNextLevel();
+  }
+});
+
+// Start the actual game from NAME_ENTRY — used by both keyboard Enter and touch prompt
+function handleNameSubmit() {
+  if (playerName.length < 2) return;
+  score = 0; gold = 0; totalGold = 0; level = 1;
+  upgrades = { damage:0, armor:0, speed:0, maxHp:0 };
+  for (let i = 0; i < WEAPONS.length; i++) WEAPONS[i].unlocked = i < 4;
+  currentWeapon = 0;
+  allies = [];
+  wolves = [];
+  generateLevel(1);
+  landingTimer = 3;
+  gameState = STATE.LANDING;
+}
+
+// Touch: splash start, name entry prompt, game over restart
+canvas.addEventListener('touchstart', e => {
+  initAudio();
+  if (gameState === STATE.SPLASH) {
+    startGame();
+  } else if (gameState === STATE.NAME_ENTRY) {
+    // On mobile, the on-screen keyboard won't appear for canvas — use browser prompt instead
+    const name = prompt('Enter your Viking name:');
+    if (name && name.trim().length >= 2) {
+      playerName = name.trim().slice(0, 12);
+      handleNameSubmit();
+    }
+  } else if (gameState === STATE.GAME_OVER) {
+    gameState = STATE.SPLASH;
+  }
+});
+
+// ============================================================
+// MAIN LOOP
+// ============================================================
+let lastTime = 0;
+function gameLoop(timestamp) {
+  const dt = Math.min((timestamp - lastTime) / 1000, 0.05);
+  lastTime = timestamp;
+
+  ctx.clearRect(0, 0, W, H);
+
+  switch(gameState) {
+    case STATE.SPLASH: drawSplash(timestamp/1000); break;
+    case STATE.NAME_ENTRY: drawNameEntry(timestamp/1000); break;
+    case STATE.LANDING: update(dt); drawLanding(); break;
+    case STATE.PLAYING: update(dt); drawGame(); break;
+    case STATE.LEVEL_TRANSITION: update(dt); drawLevelTransition(); break;
+    case STATE.SHOP: drawShop(); break;
+    case STATE.GAME_OVER: drawGameOver(timestamp/1000); break;
+  }
+
+  requestAnimationFrame(gameLoop);
+}
+requestAnimationFrame(gameLoop);
+
+</script>
+</body>
+</html>

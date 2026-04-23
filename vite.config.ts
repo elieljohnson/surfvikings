@@ -18,8 +18,10 @@ export default defineConfig({
         background_color: '#08090B',
         display: 'standalone',
         orientation: 'portrait',
-        start_url: '/',
-        scope: '/',
+        // Scoped to /app/ so the install prompt only fires on PWA pages
+        // and the installed app launches into the forecast, not the landing.
+        start_url: '/app/',
+        scope: '/app/',
         categories: ['weather', 'sports', 'lifestyle'],
         icons: [
           { src: 'icon-192.png', sizes: '192x192', type: 'image/png' },
