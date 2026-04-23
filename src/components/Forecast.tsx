@@ -21,7 +21,7 @@ export function Forecast(_props: ForecastProps) {
   return (
     <Screen>
       <div style={{ padding: '52px 20px 14px', borderBottom: `1px solid ${TOKENS.border}` }}>
-        <div style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 11, letterSpacing: '0.18em', color: TOKENS.textMute, textTransform: 'uppercase' }}>Forecast · 48h</div>
+        <div style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 13, letterSpacing: '0.18em', color: TOKENS.textMute, textTransform: 'uppercase' }}>Forecast · 48h</div>
         <div style={{ fontSize: 22, fontWeight: 600, letterSpacing: '-0.02em', marginTop: 4 }}>Outlook</div>
       </div>
 
@@ -37,15 +37,15 @@ export function Forecast(_props: ForecastProps) {
               color: on ? TOKENS.text : TOKENS.textDim,
               cursor: 'pointer', display: 'flex', gap: 6, alignItems: 'center', flexShrink: 0,
             }}>
-              <span style={{ fontSize: 11, fontWeight: on ? 500 : 400 }}>{s.name.replace('The ', '')}</span>
-              <span style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 11, color: scoreColor(score), fontWeight: 500 }}>{Math.round(score)}</span>
+              <span style={{ fontSize: 13, fontWeight: on ? 500 : 400 }}>{s.name.replace('The ', '')}</span>
+              <span style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 13, color: scoreColor(score), fontWeight: 500 }}>{Math.round(score)}</span>
             </button>
           );
         })}
       </div>
 
       <div style={{ padding: '8px 20px 16px' }}>
-        <div style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 11, letterSpacing: '0.18em', color: TOKENS.textMute, textTransform: 'uppercase', marginBottom: 10 }}>
+        <div style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 13, letterSpacing: '0.18em', color: TOKENS.textMute, textTransform: 'uppercase', marginBottom: 10 }}>
           Hourly quality · {spot.name}
         </div>
         <HourlyHeatmap timeline={timeline}/>
@@ -53,10 +53,10 @@ export function Forecast(_props: ForecastProps) {
 
       <div style={{ padding: '0 20px 16px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-          <div style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 11, letterSpacing: '0.18em', color: TOKENS.textMute, textTransform: 'uppercase' }}>
+          <div style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 13, letterSpacing: '0.18em', color: TOKENS.textMute, textTransform: 'uppercase' }}>
             Conditions · raw readings
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase', color: TOKENS.textDim }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 12, letterSpacing: '0.12em', textTransform: 'uppercase', color: TOKENS.textDim }}>
             <span>Fit for {spot.name.replace('The ', '')}</span>
             <span style={{ width: 42, height: 6, background: `linear-gradient(90deg, ${TOKENS.flat}, ${TOKENS.poor}, ${TOKENS.fair}, ${TOKENS.good}, ${TOKENS.epic})`, borderRadius: 1 }}/>
           </div>
@@ -70,7 +70,7 @@ export function Forecast(_props: ForecastProps) {
       </div>
 
       <div style={{ padding: '0 20px 16px' }}>
-        <div style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 11, letterSpacing: '0.18em', color: TOKENS.textMute, textTransform: 'uppercase', marginBottom: 10 }}>
+        <div style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 13, letterSpacing: '0.18em', color: TOKENS.textMute, textTransform: 'uppercase', marginBottom: 10 }}>
           Swell & wind vectors · now
         </div>
         <div style={{ background: TOKENS.surface, border: `1px solid ${TOKENS.border}`, borderRadius: 10, padding: 16, display: 'flex', alignItems: 'center', gap: 16 }}>
@@ -101,14 +101,14 @@ function HourlyHeatmap({ timeline }: { timeline: ForecastHour[] }) {
         {[0, 6, 12, 18].map((h) => (
           <div key={h} style={{
             gridColumn: 'span 6',
-            fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 10, color: TOKENS.textMute,
+            fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 12, color: TOKENS.textMute,
             letterSpacing: '0.1em',
           }}>{h === 0 ? '12a' : h === 12 ? '12p' : h < 12 ? `${h}a` : `${h - 12}p`}</div>
         ))}
       </div>
       {rows.map((row, ri) => (
         <div key={row.label} style={{ display: 'grid', gridTemplateColumns: '36px repeat(24, 1fr)', gap: 1, marginBottom: 2 }}>
-          <div style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 10, color: TOKENS.textDim, letterSpacing: '0.1em', display: 'flex', alignItems: 'center' }}>{row.label}</div>
+          <div style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 12, color: TOKENS.textDim, letterSpacing: '0.1em', display: 'flex', alignItems: 'center' }}>{row.label}</div>
           {row.data.map((t, i) => {
             const color = scoreColor(t.score);
             const opacity = 0.25 + (t.score / 100) * 0.75;
@@ -123,7 +123,7 @@ function HourlyHeatmap({ timeline }: { timeline: ForecastHour[] }) {
           })}
         </div>
       ))}
-      <div style={{ display: 'flex', gap: 8, marginTop: 10, alignItems: 'center', fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 10, color: TOKENS.textMute, letterSpacing: '0.1em' }}>
+      <div style={{ display: 'flex', gap: 8, marginTop: 10, alignItems: 'center', fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 12, color: TOKENS.textMute, letterSpacing: '0.1em' }}>
         <span>FLAT</span>
         <div style={{ flex: 1, height: 6, background: `linear-gradient(90deg, ${TOKENS.flat}, ${TOKENS.poor}, ${TOKENS.fair}, ${TOKENS.good}, ${TOKENS.epic})`, borderRadius: 1 }}/>
         <span>EPIC</span>
@@ -149,16 +149,16 @@ function MiniMetric({
       <div style={{ width: 56 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
           <span style={{ width: 6, height: 6, borderRadius: '50%', background: nowColor, flexShrink: 0 }}/>
-          <div style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 11, letterSpacing: '0.1em', color: TOKENS.textMute, textTransform: 'uppercase' }}>{label}</div>
+          <div style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 13, letterSpacing: '0.1em', color: TOKENS.textMute, textTransform: 'uppercase' }}>{label}</div>
         </div>
         <div style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 14, color: TOKENS.text, fontWeight: 500, marginTop: 2 }}>
-          {current.toFixed(1)}<span style={{ fontSize: 10, color: TOKENS.textDim, marginLeft: 2 }}>{unit}</span>
+          {current.toFixed(1)}<span style={{ fontSize: 12, color: TOKENS.textDim, marginLeft: 2 }}>{unit}</span>
         </div>
       </div>
       <div style={{ flex: 1 }}>
         <ForecastChart timeline={timeline} metric={metric} spot={spot} width={220} height={28} showAxis={false}/>
       </div>
-      <div style={{ width: 50, textAlign: 'right', fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 11, color: TOKENS.textMute }}>
+      <div style={{ width: 50, textAlign: 'right', fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 13, color: TOKENS.textMute }}>
         {min.toFixed(1)}–{max.toFixed(1)}
       </div>
     </div>

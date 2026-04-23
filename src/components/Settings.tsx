@@ -11,7 +11,7 @@ export function Settings() {
   return (
     <Screen>
       <div style={{ padding: '52px 20px 14px', borderBottom: `1px solid ${TOKENS.border}` }}>
-        <div style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 11, letterSpacing: '0.18em', color: TOKENS.textMute, textTransform: 'uppercase' }}>Settings</div>
+        <div style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 13, letterSpacing: '0.18em', color: TOKENS.textMute, textTransform: 'uppercase' }}>Settings</div>
         <div style={{ fontSize: 22, fontWeight: 600, letterSpacing: '-0.02em', marginTop: 4 }}>Surf Vikings</div>
       </div>
 
@@ -55,7 +55,7 @@ export function Settings() {
 function Group({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div style={{ padding: '18px 20px 0' }}>
-      <div style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 11, letterSpacing: '0.18em', color: TOKENS.textMute, textTransform: 'uppercase', marginBottom: 8 }}>{title}</div>
+      <div style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 13, letterSpacing: '0.18em', color: TOKENS.textMute, textTransform: 'uppercase', marginBottom: 8 }}>{title}</div>
       <div style={{ background: TOKENS.surface, border: `1px solid ${TOKENS.border}`, borderRadius: 10 }}>
         {children}
       </div>
@@ -71,12 +71,12 @@ function Row({ label, value, hint, mono, color }: { label: string; value: React.
       display: 'flex', justifyContent: 'space-between', alignItems: 'center',
     }}>
       <div>
-        <div style={{ fontSize: 13, color: TOKENS.text }}>{label}</div>
-        {hint && <div style={{ fontSize: 10, color: TOKENS.textMute, marginTop: 2 }}>{hint}</div>}
+        <div style={{ fontSize: 14, color: TOKENS.text }}>{label}</div>
+        {hint && <div style={{ fontSize: 12, color: TOKENS.textMute, marginTop: 2 }}>{hint}</div>}
       </div>
       <div style={{
         fontFamily: mono ? 'JetBrains Mono, ui-monospace, monospace' : 'inherit',
-        fontSize: 12, color: color || TOKENS.textDim,
+        fontSize: 13, color: color || TOKENS.textDim,
       }}>{value}</div>
     </div>
   );
@@ -89,8 +89,8 @@ function Toggle({ label, hint, on, onChange }: { label: string; hint?: string; o
       display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12,
     }}>
       <div style={{ flex: 1 }}>
-        <div style={{ fontSize: 13, color: TOKENS.text }}>{label}</div>
-        {hint && <div style={{ fontSize: 10, color: TOKENS.textMute, marginTop: 2 }}>{hint}</div>}
+        <div style={{ fontSize: 14, color: TOKENS.text }}>{label}</div>
+        {hint && <div style={{ fontSize: 12, color: TOKENS.textMute, marginTop: 2 }}>{hint}</div>}
       </div>
       <div onClick={() => onChange(!on)} style={{
         width: 38, height: 22, borderRadius: 11,
@@ -112,8 +112,8 @@ function Slider({ label, value, onChange, min, max }: { label: string; value: nu
   return (
     <div style={{ padding: '12px 14px', borderBottom: `1px solid ${TOKENS.border}` }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 8 }}>
-        <span style={{ fontSize: 13, color: TOKENS.text }}>{label}</span>
-        <span style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 13, color: scoreColor(value), fontWeight: 500 }}>{value}</span>
+        <span style={{ fontSize: 14, color: TOKENS.text }}>{label}</span>
+        <span style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 14, color: scoreColor(value), fontWeight: 500 }}>{value}</span>
       </div>
       <input type="range" min={min} max={max} value={value} onChange={(e) => onChange(+e.target.value)}
         style={{ width: '100%', accentColor: TOKENS.pacific }}/>
@@ -126,14 +126,14 @@ function Segmented<T extends string>({
 }: { label: string; value: T; onChange: (v: T) => void; options: [T, string][] }) {
   return (
     <div style={{ padding: '12px 14px', borderBottom: `1px solid ${TOKENS.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
-      <span style={{ fontSize: 13, color: TOKENS.text }}>{label}</span>
+      <span style={{ fontSize: 14, color: TOKENS.text }}>{label}</span>
       <div style={{ display: 'flex', background: TOKENS.surface2, borderRadius: 6, padding: 2, border: `1px solid ${TOKENS.border}` }}>
         {options.map(([v, l]) => (
           <button key={v} onClick={() => onChange(v)} style={{
             padding: '4px 10px', borderRadius: 4,
             background: value === v ? TOKENS.surface3 : 'transparent',
             border: 'none', color: value === v ? TOKENS.text : TOKENS.textDim,
-            fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 10, letterSpacing: '0.1em',
+            fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 12, letterSpacing: '0.1em',
             cursor: 'pointer', textTransform: 'uppercase',
           }}>{l}</button>
         ))}

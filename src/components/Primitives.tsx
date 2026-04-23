@@ -24,10 +24,10 @@ export function ScoreBadge({
 }: { score: number; rating?: string; size?: 'sm' | 'md' | 'lg'; watchOnly?: boolean }) {
   const color = scoreColor(score, watchOnly);
   const dims = size === 'lg'
-    ? { n: 56, d: 22, l: 11 }
+    ? { n: 56, d: 22, l: 13 }
     : size === 'sm'
-      ? { n: 26, d: 0, l: 10 }
-      : { n: 36, d: 14, l: 11 };
+      ? { n: 26, d: 0, l: 12 }
+      : { n: 36, d: 14, l: 13 };
   const showDenom = dims.d > 0;
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', lineHeight: 1 }}>
@@ -119,7 +119,7 @@ export function ForecastChart({
       })}
       {showAxis && [0, 6, 12, 18, 24, 30, 36, 42].map((h) => (
         <text key={h} x={h * barW} y={height + 11}
-          fontFamily="JetBrains Mono, ui-monospace, monospace" fontSize="10" fill={TOKENS.textMute}>
+          fontFamily="JetBrains Mono, ui-monospace, monospace" fontSize="12" fill={TOKENS.textMute}>
           {hourLabel(h, baseHour)}
         </text>
       ))}
@@ -149,14 +149,14 @@ export function ScoreTimeline({
       </defs>
       <line x1="0" x2={width} y1={epicY} y2={epicY} stroke={TOKENS.epic} strokeWidth="0.5" strokeDasharray="2 3" opacity="0.5"/>
       <line x1="0" x2={width} y1={goodY} y2={goodY} stroke={TOKENS.good} strokeWidth="0.5" strokeDasharray="2 3" opacity="0.35"/>
-      <text x={width - 2} y={epicY - 2} textAnchor="end" fontFamily="JetBrains Mono, ui-monospace, monospace" fontSize="9" fill={TOKENS.epic} opacity="0.8">EPIC 75</text>
-      <text x={width - 2} y={goodY - 2} textAnchor="end" fontFamily="JetBrains Mono, ui-monospace, monospace" fontSize="9" fill={TOKENS.good} opacity="0.65">GOOD 55</text>
+      <text x={width - 2} y={epicY - 2} textAnchor="end" fontFamily="JetBrains Mono, ui-monospace, monospace" fontSize="11" fill={TOKENS.epic} opacity="0.8">EPIC 75</text>
+      <text x={width - 2} y={goodY - 2} textAnchor="end" fontFamily="JetBrains Mono, ui-monospace, monospace" fontSize="11" fill={TOKENS.good} opacity="0.65">GOOD 55</text>
       <path d={areaPath} fill="url(#score-ln)"/>
       <path d={path} stroke={TOKENS.pacific} strokeWidth="1.75" fill="none" strokeLinecap="round"/>
       <circle cx={pts[0][0]} cy={pts[0][1]} r="3.5" fill={TOKENS.pacific} stroke={TOKENS.bg} strokeWidth="2"/>
       {[0, 6, 12, 18, 24, 30, 36, 42].map((h) => (
         <text key={h} x={(h / (timeline.length - 1)) * width} y={height + 11}
-          fontFamily="JetBrains Mono, ui-monospace, monospace" fontSize="10" fill={TOKENS.textMute}>
+          fontFamily="JetBrains Mono, ui-monospace, monospace" fontSize="12" fill={TOKENS.textMute}>
           {hourLabel(h, baseHour)}
         </text>
       ))}
@@ -171,13 +171,13 @@ export function Stat({
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: align === 'right' ? 'flex-end' : 'flex-start', gap: 2 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexDirection: align === 'right' ? 'row-reverse' : 'row' }}>
         {color && <span style={{ width: 6, height: 6, borderRadius: '50%', background: color, flexShrink: 0 }}/>}
-        <div style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 11, letterSpacing: '0.12em', color: TOKENS.textMute, textTransform: 'uppercase' }}>{label}</div>
+        <div style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 13, letterSpacing: '0.12em', color: TOKENS.textMute, textTransform: 'uppercase' }}>{label}</div>
       </div>
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 3 }}>
         <span style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontWeight: 500, fontSize: 20, color: color || TOKENS.text, letterSpacing: '-0.02em', fontVariantNumeric: 'tabular-nums' }}>{value}</span>
-        {unit && <span style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 10, color: TOKENS.textDim }}>{unit}</span>}
+        {unit && <span style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 12, color: TOKENS.textDim }}>{unit}</span>}
       </div>
-      {hint && <div style={{ fontSize: 11, color: TOKENS.textMute }}>{hint}</div>}
+      {hint && <div style={{ fontSize: 13, color: TOKENS.textMute }}>{hint}</div>}
     </div>
   );
 }
@@ -187,7 +187,7 @@ export function Rule({ label }: { label?: string }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '4px 0' }}>
       <div style={{ flex: 1, height: 1, background: TOKENS.border }}/>
-      <span style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 11, letterSpacing: '0.15em', color: TOKENS.textMute, textTransform: 'uppercase' }}>{label}</span>
+      <span style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 13, letterSpacing: '0.15em', color: TOKENS.textMute, textTransform: 'uppercase' }}>{label}</span>
       <div style={{ flex: 1, height: 1, background: TOKENS.border }}/>
     </div>
   );
@@ -218,7 +218,7 @@ export function TabBar({ active, onChange }: { active: TabId; onChange: (id: Tab
             color: on ? TOKENS.text : TOKENS.textMute,
           }}>
             <span style={{ fontSize: 18, lineHeight: 1 }}>{t.icon}</span>
-            <span style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 11, letterSpacing: '0.12em', textTransform: 'uppercase' }}>{t.label}</span>
+            <span style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 13, letterSpacing: '0.12em', textTransform: 'uppercase' }}>{t.label}</span>
           </button>
         );
       })}
@@ -272,7 +272,7 @@ export function Screen({ children }: { children: React.ReactNode }) {
       width: '100%', height: '100%',
       background: TOKENS.bg, color: TOKENS.text,
       fontFamily: '-apple-system, BlinkMacSystemFont, SF Pro Text, Inter, system-ui, sans-serif',
-      overflow: 'auto', position: 'relative', fontSize: 13,
+      overflow: 'auto', position: 'relative', fontSize: 14,
     }}>
       {children}
     </div>
