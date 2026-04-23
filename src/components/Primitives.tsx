@@ -23,14 +23,24 @@ export function ScoreBadge({
   score, rating, size = 'md', watchOnly,
 }: { score: number; rating?: string; size?: 'sm' | 'md' | 'lg'; watchOnly?: boolean }) {
   const color = scoreColor(score, watchOnly);
-  const dims = size === 'lg' ? { n: 56, l: 11 } : size === 'sm' ? { n: 26, l: 8 } : { n: 36, l: 9 };
+  const dims = size === 'lg'
+    ? { n: 56, d: 22, l: 11 }
+    : size === 'sm'
+      ? { n: 26, d: 0, l: 8 }
+      : { n: 36, d: 14, l: 9 };
+  const showDenom = dims.d > 0;
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', lineHeight: 1 }}>
       <span style={{
+        display: 'inline-flex', alignItems: 'baseline',
         fontFamily: 'JetBrains Mono, ui-monospace, monospace',
-        fontWeight: 700, fontSize: dims.n, color,
-        letterSpacing: '-0.04em', fontVariantNumeric: 'tabular-nums',
-      }}>{Math.round(score)}</span>
+        color, letterSpacing: '-0.04em', fontVariantNumeric: 'tabular-nums',
+      }}>
+        <span style={{ fontWeight: 700, fontSize: dims.n }}>{Math.round(score)}</span>
+        {showDenom && (
+          <span style={{ fontWeight: 500, fontSize: dims.d, opacity: 0.7 }}>/100</span>
+        )}
+      </span>
       {rating && (
         <span style={{
           fontFamily: 'JetBrains Mono, ui-monospace, monospace',
