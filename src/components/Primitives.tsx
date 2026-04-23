@@ -28,7 +28,7 @@ export function ScoreBadge({
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', lineHeight: 1 }}>
       <span style={{
         fontFamily: 'JetBrains Mono, ui-monospace, monospace',
-        fontWeight: 500, fontSize: dims.n, color,
+        fontWeight: 700, fontSize: dims.n, color,
         letterSpacing: '-0.04em', fontVariantNumeric: 'tabular-nums',
       }}>{Math.round(score)}</span>
       {rating && (
