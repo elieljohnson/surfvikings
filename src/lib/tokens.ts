@@ -14,9 +14,9 @@ export const TOKENS = {
   amber:     '#F5A524',
   orange:    '#F97316',
   red:       '#EF4444',
-  epic:      '#14B8A6', // teal-500
-  good:      '#84CC16', // lime-500
-  fair:      '#A3E635', // lime-400 (bright yellow-green)
+  epic:      '#05F772', // electric green
+  good:      '#8EF705', // electric lime
+  fair:      '#BAF705', // bright yellow-lime
   mediocre:  '#EAB308', // yellow-500
   meh:       '#F97316', // orange-500
   poor:      '#EF4444', // red-500
