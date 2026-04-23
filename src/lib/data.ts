@@ -249,14 +249,14 @@ export interface Rating {
 export function scoreToRating(score: number, watchOnly?: boolean): Rating {
   if (watchOnly) {
     if (score >= 75) return { label: 'FIRING', tone: 'mavericks', color: '#FF6D00' };
-    if (score >= 35) return { label: 'WATCH', tone: 'watch', color: '#E6B800' };
-    return { label: 'FLAT', tone: 'flat', color: '#6b7280' };
+    if (score >= 35) return { label: 'WATCH', tone: 'watch', color: '#EAB308' };
+    return { label: 'FLAT', tone: 'flat', color: '#4B5058' };
   }
-  if (score >= 75) return { label: 'EPIC', tone: 'epic', color: '#22c55e' };
-  if (score >= 55) return { label: 'GOOD', tone: 'good', color: '#eab308' };
-  if (score >= 35) return { label: 'FAIR', tone: 'fair', color: '#f97316' };
-  if (score >= 15) return { label: 'POOR', tone: 'poor', color: '#ef4444' };
-  return { label: 'FLAT', tone: 'flat', color: '#6b7280' };
+  if (score >= 75) return { label: 'EPIC', tone: 'epic', color: '#22C55E' };
+  if (score >= 55) return { label: 'GOOD', tone: 'good', color: '#84CC16' };
+  if (score >= 35) return { label: 'FAIR', tone: 'fair', color: '#EAB308' };
+  if (score >= 15) return { label: 'POOR', tone: 'poor', color: '#EF4444' };
+  return { label: 'FLAT', tone: 'flat', color: '#4B5058' };
 }
 
 export interface BestWindow {

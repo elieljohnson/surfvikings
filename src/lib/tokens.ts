@@ -12,11 +12,12 @@ export const TOKENS = {
   teal:      '#2DD4BF',
   phosphor:  '#7EE787',
   amber:     '#F5A524',
-  red:       '#FF5D5D',
-  epic:      '#22c55e',
-  good:      '#E6B800',
-  fair:      '#FF8A3D',
-  poor:      '#FF5D5D',
+  orange:    '#F97316',
+  red:       '#EF4444',
+  epic:      '#22C55E',
+  good:      '#84CC16',
+  fair:      '#EAB308',
+  poor:      '#EF4444',
   flat:      '#4B5058',
   maverick:  '#FF6D00',
   cData:     '#3FB8FF',
@@ -37,9 +38,9 @@ export function scoreColor(score: number, watchOnly?: boolean): string {
 }
 
 export function qualityColor(q: number): string {
-  if (q >= 0.78) return '#7DFF9E';
-  if (q >= 0.58) return '#C8F56B';
-  if (q >= 0.40) return '#E6B800';
-  if (q >= 0.22) return '#E8833A';
-  return '#B84545';
+  if (q >= 0.78) return TOKENS.epic;   // #22C55E green
+  if (q >= 0.58) return TOKENS.good;   // #84CC16 lime
+  if (q >= 0.40) return TOKENS.fair;   // #EAB308 yellow
+  if (q >= 0.22) return TOKENS.orange; // #F97316 orange (transition)
+  return TOKENS.poor;                   // #EF4444 red
 }
