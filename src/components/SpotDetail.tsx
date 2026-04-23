@@ -33,15 +33,17 @@ export function SpotDetail({ spotId, onBack }: SpotDetailProps) {
 
   return (
     <Screen>
-      <BackButton onClick={onBack}/>
       {/* Hero */}
       <div style={{
-        padding: '68px 20px 16px',
+        padding: '50px 20px 16px',
         background: `linear-gradient(180deg, ${TOKENS.surface2} 0%, ${TOKENS.bg} 100%)`,
         borderBottom: `1px solid ${TOKENS.border}`,
       }}>
-        <div style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 13, letterSpacing: '0.18em', color: TOKENS.textMute, textTransform: 'uppercase', marginBottom: 10 }}>
-          {activeSpot.regionLabel} · {activeSpot.driveMin}min drive
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
+          <BackButton onClick={onBack}/>
+          <div style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 13, letterSpacing: '0.18em', color: TOKENS.textMute, textTransform: 'uppercase' }}>
+            {activeSpot.regionLabel} · {activeSpot.driveMin}min drive
+          </div>
         </div>
         <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16 }}>
           <div style={{ flex: 1, minWidth: 0 }}>

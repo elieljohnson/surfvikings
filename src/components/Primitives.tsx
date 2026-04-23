@@ -6,36 +6,33 @@ import {
 import { qualityColor } from '../lib/tokens';
 
 export function BackButton({ onClick }: { onClick: () => void }) {
+  const setPress = (pressed: boolean) => (e: React.SyntheticEvent<HTMLButtonElement>) => {
+    (e.currentTarget as HTMLButtonElement).style.transform = pressed ? 'scale(0.92)' : 'scale(1)';
+  };
   return (
     <button
       onClick={onClick}
       aria-label="Back"
       style={{
-        position: 'absolute',
-        top: 14,
-        left: 14,
-        zIndex: 20,
-        width: 44,
-        height: 44,
-        borderRadius: 22,
-        background: 'rgba(23, 26, 31, 0.82)',
+        flexShrink: 0,
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        background: TOKENS.surface2,
         border: `1px solid ${TOKENS.borderHi}`,
-        backdropFilter: 'blur(18px)',
-        WebkitBackdropFilter: 'blur(18px)',
-        boxShadow: '0 2px 12px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(255, 255, 255, 0.02) inset',
         color: TOKENS.text,
         cursor: 'pointer',
-        display: 'flex',
+        display: 'inline-flex',
         alignItems: 'center',
         justifyContent: 'center',
         padding: 0,
         transition: 'transform 120ms ease, background 120ms ease',
       }}
-      onMouseDown={(e) => { (e.currentTarget as HTMLButtonElement).style.transform = 'scale(0.92)'; }}
-      onMouseUp={(e) => { (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1)'; }}
-      onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1)'; }}
-      onTouchStart={(e) => { (e.currentTarget as HTMLButtonElement).style.transform = 'scale(0.92)'; }}
-      onTouchEnd={(e) => { (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1)'; }}
+      onMouseDown={setPress(true)}
+      onMouseUp={setPress(false)}
+      onMouseLeave={setPress(false)}
+      onTouchStart={setPress(true)}
+      onTouchEnd={setPress(false)}
     >
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
         <path d="M15 18L9 12L15 6" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round"/>
