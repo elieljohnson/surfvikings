@@ -49,7 +49,7 @@ function Hero() {
   return (
     <section style={{
       position: 'relative',
-      minHeight: 'calc(100vh - 64px)',
+      minHeight: 'calc(100vh - 160px)',
       marginTop: -64, // so hero sits beneath the sticky header, photo bleeds to top
       paddingTop: 64,
       background: '#000',
@@ -77,8 +77,8 @@ function Hero() {
       }}/>
       <div style={{
         maxWidth: 1200, margin: '0 auto',
-        padding: '120px 24px 80px',
-        minHeight: 'calc(100vh - 144px)',
+        padding: '48px 24px 80px',
+        minHeight: 'calc(100vh - 400px)',
         display: 'flex', flexDirection: 'column', justifyContent: 'flex-end',
         color: '#FFFFFF',
       }}>
