@@ -104,6 +104,7 @@ function TopNav({ active, transparent }: { active: NavKey; transparent: boolean 
       WebkitBackdropFilter: overHero ? 'none' : 'blur(16px) saturate(1.6)',
       borderBottom: `1px solid ${borderColor}`,
       color: textColor,
+      paddingTop: 'env(safe-area-inset-top)',
       transition: 'background 180ms ease, border-color 180ms ease, color 180ms ease',
     }}>
       <nav style={{
@@ -118,7 +119,7 @@ function TopNav({ active, transparent }: { active: NavKey; transparent: boolean 
           flexShrink: 0,
         }}>
           <Logo size={isNarrow ? 26 : 30} />
-          {!isNarrow && <span>Surf Vikings</span>}
+          <span>Surf Vikings</span>
         </Link>
 
         {/* Desktop nav — hidden on narrow viewports */}
