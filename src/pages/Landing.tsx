@@ -166,20 +166,28 @@ function FeatureSection({
   eyebrow: string; headline: string; body: string;
   imageSlug: string; imageAlt: string; reversed: boolean;
 }) {
+  const isNarrow = useLandingNarrow();
+  // On narrow viewports, always stack: text on top, phone below.
+  // On wide, honor `reversed` to alternate left/right for visual rhythm.
+  const textOrder = isNarrow ? 1 : (reversed ? 2 : 1);
+  const imageOrder = isNarrow ? 2 : (reversed ? 1 : 2);
+
   return (
     <section id="how-it-works" style={{
-      padding: '100px 24px',
+      padding: isNarrow ? '64px 24px' : '100px 24px',
       background: '#FFFFFF',
       borderTop: '1px solid #F1F5F9',
     }}>
       <div style={{
         maxWidth: 1200, margin: '0 auto',
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 440px), 1fr))',
-        gap: 64, alignItems: 'center',
-        gridAutoFlow: reversed ? 'dense' : undefined,
+        display: 'flex', flexWrap: 'wrap',
+        gap: isNarrow ? 40 : 64, alignItems: 'center',
+        justifyContent: 'center',
       }}>
-        <div style={{ gridColumn: reversed ? 2 : 1 }}>
+        <div style={{
+          flex: '1 1 380px', minWidth: 0,
+          order: textOrder,
+        }}>
           <div style={{
             color: TEAL, fontSize: 14, fontWeight: 600,
             letterSpacing: '0.02em', marginBottom: 12,
@@ -195,14 +203,31 @@ function FeatureSection({
           }}>{body}</p>
         </div>
         <div style={{
-          gridColumn: reversed ? 1 : 2,
+          flex: '0 0 auto',
           display: 'flex', justifyContent: 'center',
+          order: imageOrder,
+          maxWidth: '100%',
         }}>
           <PhoneMockup imageSlug={imageSlug} imageAlt={imageAlt}/>
         </div>
       </div>
     </section>
   );
+}
+
+function useLandingNarrow() {
+  const [narrow, setNarrow] = React.useState(() =>
+    typeof window !== 'undefined' ? window.matchMedia('(max-width: 768px)').matches : false
+  );
+  React.useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const mql = window.matchMedia('(max-width: 768px)');
+    const on = () => setNarrow(mql.matches);
+    on();
+    mql.addEventListener('change', on);
+    return () => mql.removeEventListener('change', on);
+  }, []);
+  return narrow;
 }
 
 /**
