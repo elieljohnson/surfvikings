@@ -29,6 +29,10 @@ await mkdir(OUT, { recursive: true });
 
 const iPhone = {
   ...devices['iPhone 14 Pro'],
+  // Override the device's Safari-chrome-adjusted viewport with the full
+  // iPhone 14 Pro CSS viewport (393×852) so the captured image has proper
+  // 9:19.5 iPhone proportions, not the stubby 9:15 Safari sees.
+  viewport: { width: 393, height: 852 },
   // Capture at 2x for crisp retina images without ballooning file size to 3x
   deviceScaleFactor: 2,
 };
