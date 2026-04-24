@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { TOKENS, scoreColor, qualityColor } from '../lib/tokens';
 import {
   SPOTS, FAVORITES, Spot, ForecastHour, BestWindow,
@@ -10,6 +10,70 @@ import { useLocalStorage } from '../hooks/useLocalStorage';
 import { useNow } from '../hooks/useNow';
 import { greetingForHour, formatHeaderDate } from '../lib/greeting';
 import { Screen, ScoreBadge, ScoreSpark, Stat } from './Primitives';
+
+// Reset the UA's default <button> chrome so it looks like plain text but still
+// gets the touch-target + a11y benefits of a real button.
+const RESET_BUTTON: React.CSSProperties = {
+  background: 'none',
+  border: 'none',
+  padding: 0,
+  margin: 0,
+  font: 'inherit',
+  color: 'inherit',
+  cursor: 'pointer',
+  appearance: 'none',
+  WebkitTapHighlightColor: 'transparent',
+};
+
+// Tiny inline text editor. Autofocuses, selects all, commits on Enter/blur,
+// cancels on Escape. Swaps in place for a label so the header never jumps.
+function InlineEdit({
+  initial,
+  placeholder,
+  onCommit,
+  onCancel,
+  style,
+}: {
+  initial: string;
+  placeholder?: string;
+  onCommit: (value: string) => void;
+  onCancel: () => void;
+  style?: React.CSSProperties;
+}) {
+  return (
+    <input
+      type="text"
+      defaultValue={initial}
+      placeholder={placeholder}
+      autoFocus
+      // iOS mobile keyboard niceties
+      autoComplete="off"
+      autoCorrect="off"
+      spellCheck={false}
+      enterKeyHint="done"
+      onFocus={(e) => e.currentTarget.select()}
+      onBlur={(e) => onCommit(e.currentTarget.value.trim())}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          (e.currentTarget as HTMLInputElement).blur();
+        } else if (e.key === 'Escape') {
+          e.preventDefault();
+          onCancel();
+        }
+      }}
+      style={{
+        background: 'transparent',
+        border: `1px dashed ${TOKENS.border}`,
+        borderRadius: 6,
+        padding: '2px 6px',
+        color: TOKENS.text,
+        outline: 'none',
+        ...style,
+      }}
+    />
+  );
+}
 
 interface DashboardProps {
   onOpenSpot: (id: string) => void;
@@ -25,18 +89,11 @@ export function Dashboard({ onOpenSpot }: DashboardProps) {
   const greeting = greetingForHour(now.getHours());
   const headerDate = formatHeaderDate(now);
 
-  // User prefs persist in localStorage. Tap either to edit.
+  // User prefs persist in localStorage. Tap either to edit inline.
   const [name, setName] = useLocalStorage<string>('sv:user:name', '');
   const [homeLoc, setHomeLoc] = useLocalStorage<string>('sv:user:location', 'Mill Valley');
-
-  const handleEditName = () => {
-    const next = window.prompt('What should we call you?', name);
-    if (next !== null) setName(next.trim());
-  };
-  const handleEditLocation = () => {
-    const next = window.prompt('Your home base?', homeLoc);
-    if (next !== null && next.trim()) setHomeLoc(next.trim());
-  };
+  const [editingName, setEditingName] = useState(false);
+  const [editingLoc, setEditingLoc] = useState(false);
 
   const ranked = [...favorites].sort(
     (a, b) => (timelines[b.id]?.[0]?.score ?? 0) - (timelines[a.id]?.[0]?.score ?? 0)
@@ -77,25 +134,60 @@ export function Dashboard({ onOpenSpot }: DashboardProps) {
     <Screen>
       {/* Hero header */}
       <div style={{ padding: '52px 20px 20px', background: `linear-gradient(180deg, ${TOKENS.surface} 0%, ${TOKENS.bg} 100%)` }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14 }}>
-          <div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14, gap: 12 }}>
+          <div style={{ minWidth: 0, flex: 1 }}>
             <div style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 13, letterSpacing: '0.2em', color: TOKENS.textMute, textTransform: 'uppercase' }}>{headerDate}</div>
-            <div
-              onClick={handleEditName}
-              title={name ? 'Tap to change your name' : 'Tap to set your name'}
-              style={{ fontSize: 24, fontWeight: 600, letterSpacing: '-0.02em', marginTop: 6, cursor: 'pointer' }}
-            >
-              {name ? `${greeting}, ${name}.` : `${greeting}.`}
-            </div>
+            {editingName ? (
+              <InlineEdit
+                initial={name}
+                placeholder="Your name"
+                onCommit={(v) => { setName(v); setEditingName(false); }}
+                onCancel={() => setEditingName(false)}
+                style={{ fontSize: 24, fontWeight: 600, letterSpacing: '-0.02em', marginTop: 6, width: '100%' }}
+              />
+            ) : (
+              <button
+                type="button"
+                onClick={() => setEditingName(true)}
+                aria-label={name ? 'Change your name' : 'Set your name'}
+                style={{
+                  ...RESET_BUTTON,
+                  fontSize: 24, fontWeight: 600, letterSpacing: '-0.02em', marginTop: 6,
+                  color: TOKENS.text, textAlign: 'left', width: '100%',
+                }}
+              >
+                {name ? `${greeting}, ${name}.` : `${greeting}. Tap to add name`}
+              </button>
+            )}
           </div>
-          <div style={{ textAlign: 'right' }}>
-            <div
-              onClick={handleEditLocation}
-              title="Tap to change your home base"
-              style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 13, letterSpacing: '0.12em', color: TOKENS.textMute, textTransform: 'uppercase', cursor: 'pointer' }}
-            >
-              {homeLoc}
-            </div>
+          <div style={{ textAlign: 'right', minWidth: 0 }}>
+            {editingLoc ? (
+              <InlineEdit
+                initial={homeLoc}
+                placeholder="Home base"
+                onCommit={(v) => { if (v) setHomeLoc(v); setEditingLoc(false); }}
+                onCancel={() => setEditingLoc(false)}
+                style={{
+                  fontFamily: 'JetBrains Mono, ui-monospace, monospace',
+                  fontSize: 13, letterSpacing: '0.12em', textTransform: 'uppercase',
+                  textAlign: 'right', width: 160,
+                }}
+              />
+            ) : (
+              <button
+                type="button"
+                onClick={() => setEditingLoc(true)}
+                aria-label="Change your home base"
+                style={{
+                  ...RESET_BUTTON,
+                  fontFamily: 'JetBrains Mono, ui-monospace, monospace',
+                  fontSize: 13, letterSpacing: '0.12em',
+                  color: TOKENS.textMute, textTransform: 'uppercase',
+                }}
+              >
+                {homeLoc}
+              </button>
+            )}
             <div style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 14, fontWeight: 500, color: TOKENS.text, marginTop: 4 }}>
               {localTempStr}{localWindStr ? ` · ${localWindStr}` : ''}
             </div>
