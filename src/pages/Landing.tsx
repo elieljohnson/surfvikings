@@ -15,7 +15,7 @@ export function Landing() {
       <FeatureSection
         eyebrow="Per-spot bathymetry"
         headline="Every break has its own profile."
-        body="28 NorCal surf spots — Salt Point to Santa Cruz. Each with hardcoded coefficients for bathymetry, swell shadow, tide dependency, and wind exposure. Generic models say &ldquo;4ft at 12s.&rdquo; Surf Vikings tells you what that swell does at The Patch vs The Groin vs Ocean Beach. Different math, different answers, one app."
+        body="28 NorCal surf spots, Salt Point to Santa Cruz. Each with hardcoded coefficients for bathymetry, swell shadow, tide dependency, and wind exposure. Generic models say &ldquo;4ft at 12s.&rdquo; Surf Vikings tells you what that swell does at The Patch vs The Groin vs Ocean Beach. Different math, different answers, one app."
         imageAlt="Spot detail screen showing Why This Score breakdown"
         imageSlug="spot-detail"
         reversed={false}
@@ -23,7 +23,7 @@ export function Landing() {
       <FeatureSection
         eyebrow="Best Window detection"
         headline="Know exactly when to paddle out."
-        body="The score engine runs every spot across a 48-hour forecast. When a clean window opens — tide rising into optimal, swell peaking, wind dropping below 10 kts — the app finds it and labels it. No more guessing which hour to set the alarm for."
+        body="The score engine runs every spot across a 48-hour forecast. When a clean window opens, the app finds it and labels it: tide rising into optimal, swell peaking, wind dropping below 10 kts. No more guessing which hour to set the alarm for."
         imageSlug="dashboard"
         imageAlt="Dashboard showing Top Pick and Best Window cards"
         reversed
@@ -326,7 +326,7 @@ function DataProof() {
 
 function FeatureGrid() {
   const features: { title: string; body: string; icon: string }[] = [
-    { icon: '🌊', title: 'Bolinas sub-breaks',     body: 'Patch, Jetty, and Groin scored independently — same swell, three answers.' },
+    { icon: '🌊', title: 'Bolinas sub-breaks',     body: 'Patch, Jetty, and Groin scored independently. Same swell, three answers.' },
     { icon: '⚡', title: 'Mavericks Watch',        body: 'Spectator-mode alerts when the reef is lighting up.' },
     { icon: '🆓', title: 'Free forever',           body: 'No paywall, no premium tier. All data is public.' },
     { icon: '🔒', title: 'Privacy-first',          body: 'No accounts, no tracking, no ads. Your spots stay on your device.' },
