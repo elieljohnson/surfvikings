@@ -75,8 +75,14 @@ function Hero({ products }: { products: MerchProduct[] }) {
           <span style={{ color: TEAL }}>Conquer the waves.</span>
         </h1>
         <p style={{
-          margin: '20px 0 0', fontSize: 'clamp(15px, 1.3vw, 18px)',
-          color: 'rgba(255,255,255,0.75)', maxWidth: 620, lineHeight: 1.5,
+          margin: '24px 0 0', fontSize: 'clamp(16px, 1.4vw, 19px)',
+          color: 'rgba(255,255,255,0.88)', maxWidth: 680, lineHeight: 1.55,
+        }}>
+          Born in the cold waters of Northern California, Surf Vikings represents the spirit of adventure and resilience. Our gear is forged for warriors who face the elements head-on, whether in icy Nordic breaks or tropical paradise.
+        </p>
+        <p style={{
+          margin: '16px 0 0', fontSize: 'clamp(15px, 1.3vw, 18px)',
+          color: 'rgba(255,255,255,0.7)', maxWidth: 620, lineHeight: 1.5,
         }}>
           Tees, hoodies, hats, rash guards, water bottles, stickers. Printed on demand — every order is made fresh in the US, no inventory waste.
         </p>
