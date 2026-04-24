@@ -72,7 +72,7 @@ function Hero({ products }: { products: MerchProduct[] }) {
           maxWidth: 820,
         }}>
           Surf Vikings merch<br/>
-          <span style={{ color: TEAL }}>ships the horn.</span>
+          <span style={{ color: TEAL }}>Conquer the waves.</span>
         </h1>
         <p style={{
           margin: '20px 0 0', fontSize: 'clamp(15px, 1.3vw, 18px)',
