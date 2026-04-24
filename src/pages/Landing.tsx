@@ -174,14 +174,14 @@ function FeatureSection({
 
   return (
     <section id="how-it-works" style={{
-      padding: isNarrow ? '64px 24px' : '100px 24px',
+      padding: isNarrow ? '40px 20px' : '100px 24px',
       background: '#FFFFFF',
       borderTop: '1px solid #F1F5F9',
     }}>
       <div style={{
         maxWidth: 1200, margin: '0 auto',
         display: 'flex', flexWrap: 'wrap',
-        gap: isNarrow ? 40 : 64, alignItems: 'center',
+        gap: isNarrow ? 20 : 64, alignItems: 'center',
         justifyContent: 'center',
       }}>
         <div style={{
