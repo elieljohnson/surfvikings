@@ -6,6 +6,9 @@ import {
   hourLabel, degToCardinal, angleDelta, metricQuality,
 } from '../lib/data';
 import { useConditions } from '../hooks/useConditions';
+import { useLocalStorage } from '../hooks/useLocalStorage';
+import { useNow } from '../hooks/useNow';
+import { greetingForHour, formatHeaderDate } from '../lib/greeting';
 import { Screen, ScoreBadge, ScoreSpark, Stat } from './Primitives';
 
 interface DashboardProps {
@@ -16,6 +19,24 @@ export function Dashboard({ onOpenSpot }: DashboardProps) {
   const favorites = FAVORITES.map((id) => SPOTS.find((s) => s.id === id)).filter(Boolean) as Spot[];
   const tracked = useMemo(() => [...FAVORITES, 'mavericks'], []);
   const { timelines, response, loading, error, stale } = useConditions(tracked);
+
+  // Live clock, updates every minute.
+  const now = useNow(60_000);
+  const greeting = greetingForHour(now.getHours());
+  const headerDate = formatHeaderDate(now);
+
+  // User prefs persist in localStorage. Tap either to edit.
+  const [name, setName] = useLocalStorage<string>('sv:user:name', '');
+  const [homeLoc, setHomeLoc] = useLocalStorage<string>('sv:user:location', 'Mill Valley');
+
+  const handleEditName = () => {
+    const next = window.prompt('What should we call you?', name);
+    if (next !== null) setName(next.trim());
+  };
+  const handleEditLocation = () => {
+    const next = window.prompt('Your home base?', homeLoc);
+    if (next !== null && next.trim()) setHomeLoc(next.trim());
+  };
 
   const ranked = [...favorites].sort(
     (a, b) => (timelines[b.id]?.[0]?.score ?? 0) - (timelines[a.id]?.[0]?.score ?? 0)
@@ -43,6 +64,12 @@ export function Dashboard({ onOpenSpot }: DashboardProps) {
   const updatedAgoMin = response ? Math.max(0, Math.round((Date.now() - response.updatedAt) / 60000)) : null;
   const buoyId = response ? Object.keys(response.buoys)[0] ?? '46026' : '46026';
   const tideId = response ? Object.keys(response.tides)[0] ?? '9414958' : '9414958';
+
+  // Local weather readout in the header: air temp from the nearest buoy,
+  // wind from the top-ranked favorite (same regional conditions as the user).
+  const buoyAirF = response?.buoys[buoyId]?.airTempF;
+  const localTempStr = typeof buoyAirF === 'number' ? `${Math.round(buoyAirF)}°F` : '—°F';
+  const localWindStr = now0 ? `${degToCardinal(now0.windDirection)} ${Math.round(now0.windSpeed)}kts` : '';
   const dataBadge = loading ? 'SYNCING' : error ? 'OFFLINE' : stale ? 'STALE' : response?.meta.source === 'partial' ? 'PARTIAL' : 'LIVE';
   const dataBadgeColor = loading ? TOKENS.textDim : error || stale ? TOKENS.fair : response?.meta.source === 'partial' ? TOKENS.good : TOKENS.phosphor;
 
@@ -52,12 +79,26 @@ export function Dashboard({ onOpenSpot }: DashboardProps) {
       <div style={{ padding: '52px 20px 20px', background: `linear-gradient(180deg, ${TOKENS.surface} 0%, ${TOKENS.bg} 100%)` }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14 }}>
           <div>
-            <div style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 13, letterSpacing: '0.2em', color: TOKENS.textMute, textTransform: 'uppercase' }}>Thu · Apr 22 · 06:14</div>
-            <div style={{ fontSize: 24, fontWeight: 600, letterSpacing: '-0.02em', marginTop: 6 }}>Morning, Eliel.</div>
+            <div style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 13, letterSpacing: '0.2em', color: TOKENS.textMute, textTransform: 'uppercase' }}>{headerDate}</div>
+            <div
+              onClick={handleEditName}
+              title={name ? 'Tap to change your name' : 'Tap to set your name'}
+              style={{ fontSize: 24, fontWeight: 600, letterSpacing: '-0.02em', marginTop: 6, cursor: 'pointer' }}
+            >
+              {name ? `${greeting}, ${name}.` : `${greeting}.`}
+            </div>
           </div>
           <div style={{ textAlign: 'right' }}>
-            <div style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 13, letterSpacing: '0.12em', color: TOKENS.textMute, textTransform: 'uppercase' }}>Mill Valley</div>
-            <div style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 14, fontWeight: 500, color: TOKENS.text, marginTop: 4 }}>58°F · NE 6kts</div>
+            <div
+              onClick={handleEditLocation}
+              title="Tap to change your home base"
+              style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 13, letterSpacing: '0.12em', color: TOKENS.textMute, textTransform: 'uppercase', cursor: 'pointer' }}
+            >
+              {homeLoc}
+            </div>
+            <div style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 14, fontWeight: 500, color: TOKENS.text, marginTop: 4 }}>
+              {localTempStr}{localWindStr ? ` · ${localWindStr}` : ''}
+            </div>
           </div>
         </div>
 
