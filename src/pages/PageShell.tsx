@@ -229,18 +229,19 @@ function HamburgerIcon({ open }: { open: boolean }) {
 }
 
 function Footer() {
+  const isNarrow = useMediaQuery('(max-width: 768px)');
   return (
     <footer style={{
       background: '#0F172A',
       color: '#CBD5E1',
-      padding: '64px 24px 32px',
+      padding: isNarrow ? '48px 20px 24px' : '64px 24px 32px',
     }}>
       <div style={{ maxWidth: 1200, margin: '0 auto' }}>
         <div style={{
           display: 'grid',
-          gridTemplateColumns: 'minmax(220px, 1.5fr) repeat(3, 1fr)',
-          gap: 40,
-          marginBottom: 48,
+          gridTemplateColumns: isNarrow ? '1fr' : 'minmax(220px, 1.5fr) repeat(3, 1fr)',
+          gap: isNarrow ? 32 : 40,
+          marginBottom: isNarrow ? 32 : 48,
         }}>
           <div>
             <Link to="/" style={{
