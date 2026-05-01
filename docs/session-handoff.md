@@ -32,16 +32,15 @@ Both the renderer and the output PNG are committed (commits `1b76814` and `da325
 - **"Use the user's attached logo PNG for the brand mark."** Ruled out by the user mid-task ("Pull the actual assets"). Final approach reads `src/components/Logo.tsx` and extracts the SVG `path d="..."` via regex at render time, so any future change to the brand mark propagates automatically.
 - **"Tilted phones with cyan glow look right."** Ruled out by aesthetic direction. Final composition is straight-across with a quiet faded photo background.
 
+## Status of the cover
+
+**The user produced the final LinkedIn image manually outside this repo and considers the cover task done.** Do not pick it back up. `scripts/render-linkedin-cover.mjs` and `docs/linkedin-cover.png` are committed for reference but no further iteration is needed unless explicitly asked.
+
 ## Open threads / pick this up first next session
 
-1. **Forecast is still missing from the cover.** User asked for it as a fourth phone. The blocker is `scripts/gen-screenshots.mjs` — it captures Dashboard / Spot Detail / Map but does not navigate to the Forecast tab. To land this:
-   - Extend `gen-screenshots.mjs` to click the Forecast tab (`TabBar` in `src/components/Primitives.tsx`) and capture, output `public/screenshots/forecast.png` + `.webp`.
-   - Run `npm run screenshots:local` (requires `npm run dev` against an allowlisted host — won't work in the current sandbox; the user can run it on their machine, or you can run it if your sandbox allows localhost).
-   - Update `scripts/render-linkedin-cover.mjs` to a four-phone layout. With 4×460=1840px of phones in 2560px width, gap drops from 180px to ~73px — likely too tight at the current phone size; consider scaling phones to 420×910 or staggering two rows.
+1. **`gen-screenshots.mjs` doesn't capture the Forecast tab.** It runs Dashboard / Spot Detail / Map only. Independent of the cover work — this is a real gap if anyone wants a complete set of marketing screenshots in the future. Fix would be: navigate to Forecast (`TabBar` in `src/components/Primitives.tsx`) and capture `public/screenshots/forecast.png` + `.webp`. Requires a reachable dev server or production deploy (sandbox firewall blocks the latter — see hypotheses above).
 
-2. **Wordmark letter-spacing mismatch.** Cover renderer uses `-0.03em` (`scripts/render-linkedin-cover.mjs` `.brand-text` rule). Brand spec in `src/pages/PageShell.tsx:118` is `-0.02em`. Trivial one-line fix; we noticed it but the user said "ignore we are done for this session" before changing it. Decide whether the cover should match the live header exactly.
-
-3. **`gen-screenshots.mjs` never had the Forecast capture added** — it's a real gap, not just a cover concern. Worth fixing on principle so future PWA marketing assets cover all four PWA tabs.
+Nothing else from this session is actionable.
 
 ## Useful state to keep in mind
 
