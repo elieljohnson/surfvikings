@@ -4,7 +4,9 @@ import {
   SPOTS, FAVORITES, Spot, ForecastHour, BestWindow,
   findBestWindows, scoreToRating,
   hourLabel, degToCardinal, angleDelta, metricQuality,
+  wetsuitForWaterF,
 } from '../lib/data';
+import { BUOY_MAP_BY_SPOT } from '../lib/buoyMapping';
 import { useConditions } from '../hooks/useConditions';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { useNow } from '../hooks/useNow';
@@ -125,6 +127,19 @@ export function Dashboard({ onOpenSpot }: DashboardProps) {
 
   const mavTimeline = timelines['mavericks'] ?? [];
   const mavScore = mavTimeline[0]?.score ?? 0;
+  // Find the largest peak in the next 72h to drive the watch panel copy.
+  // Falls back to current hour if the timeline is empty (still loading).
+  const mavPeak = mavTimeline.length
+    ? mavTimeline.reduce((best, h) => (h.swellHeight > best.swellHeight ? h : best), mavTimeline[0])
+    : null;
+  const mavHeadline = mavPeak
+    ? mavPeak.hour === 0
+      ? `${Math.round(mavPeak.swellHeight)}ft now`
+      : `Building to ${Math.round(mavPeak.swellHeight)}ft+ by ${hourLabel(mavPeak.hour)}`
+    : '—';
+  const mavSubline = mavPeak
+    ? `${Math.round(mavPeak.swellPeriod)}s ${degToCardinal(mavPeak.swellDirection)} groundswell · Spectator advisory`
+    : 'Loading';
 
   const allWindows: (BestWindow & { spot: Spot })[] = favorites
     .flatMap((s) => {
@@ -236,7 +251,13 @@ export function Dashboard({ onOpenSpot }: DashboardProps) {
         </div>
       </div>
 
-      <TopPickCard spot={ranked[0]} timeline={timelines[ranked[0].id]} driveMin={driveTime(ranked[0])} onOpen={() => onOpenSpot(ranked[0].id)}/>
+      <TopPickCard
+        spot={ranked[0]}
+        timeline={timelines[ranked[0].id]}
+        driveMin={driveTime(ranked[0])}
+        waterTempF={response?.buoys[BUOY_MAP_BY_SPOT[ranked[0].id]?.primaryBuoy ?? '']?.waterTempF}
+        onOpen={() => onOpenSpot(ranked[0].id)}
+      />
 
       <BestWindowsStrip windows={allWindows} onOpen={onOpenSpot}/>
 
@@ -265,8 +286,8 @@ export function Dashboard({ onOpenSpot }: DashboardProps) {
                 <div style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 13, letterSpacing: '0.2em', color: mavScore >= 75 ? TOKENS.maverick : TOKENS.good, textTransform: 'uppercase' }}>
                   {mavScore >= 75 ? '⚡ Mavericks Firing' : '◉ Mavericks Watch'}
                 </div>
-                <div style={{ fontSize: 14, fontWeight: 500, marginTop: 4 }}>Building to 20ft+ by Friday 4am</div>
-                <div style={{ fontSize: 13, color: TOKENS.textDim, marginTop: 2 }}>18s NW groundswell · Spectator advisory</div>
+                <div style={{ fontSize: 14, fontWeight: 500, marginTop: 4 }}>{mavHeadline}</div>
+                <div style={{ fontSize: 13, color: TOKENS.textDim, marginTop: 2 }}>{mavSubline}</div>
               </div>
               <ScoreBadge score={mavScore} watchOnly/>
             </div>
@@ -279,7 +300,9 @@ export function Dashboard({ onOpenSpot }: DashboardProps) {
   );
 }
 
-function TopPickCard({ spot, timeline, driveMin, onOpen }: { spot: Spot; timeline: ForecastHour[]; driveMin: number; onOpen: () => void }) {
+function TopPickCard({ spot, timeline, driveMin, waterTempF, onOpen }: { spot: Spot; timeline: ForecastHour[]; driveMin: number; waterTempF?: number; onOpen: () => void }) {
+  const waterStr = typeof waterTempF === 'number' ? Math.round(waterTempF).toString() : '—';
+  const wetsuit = wetsuitForWaterF(waterTempF) ?? '—';
   const current = timeline[0];
   const rating = scoreToRating(current.score, spot.watchOnly);
   const best = findBestWindows(timeline)[0];
@@ -304,7 +327,7 @@ function TopPickCard({ spot, timeline, driveMin, onOpen }: { spot: Spot; timelin
         <Stat label="Swell" value={current.swellHeight.toFixed(1)} unit="ft" hint={`${Math.round(current.swellPeriod)}s ${degToCardinal(current.swellDirection)}`}/>
         <Stat label="Wind" value={Math.round(current.windSpeed)} unit="kts" hint={`${degToCardinal(current.windDirection)} • offshore`}/>
         <Stat label="Tide" value={current.tideHeight.toFixed(1)} unit="ft" hint={current.tideRising ? 'rising ↑' : 'falling ↓'}/>
-        <Stat label="Water" value="54" unit="°F" hint="4/3 mm"/>
+        <Stat label="Water" value={waterStr} unit="°F" hint={wetsuit}/>
       </div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 14 }}>
         <div>

@@ -310,6 +310,19 @@ export function degToCardinal(deg: number): string {
   return CARDINALS[Math.round(deg / 22.5) % 16];
 }
 
+// NorCal-tuned wetsuit recommendation by water temp (°F). Returns the
+// suit thickness label surfers actually use ("4/3", "3/2", etc.). Returns
+// null when we don't have a temp reading and the caller should hide the
+// recommendation rather than guess.
+export function wetsuitForWaterF(waterF: number | undefined | null): string | null {
+  if (typeof waterF !== 'number' || !Number.isFinite(waterF)) return null;
+  if (waterF < 52) return '5/4 + boots';
+  if (waterF < 58) return '4/3 mm';
+  if (waterF < 63) return '3/2 mm';
+  if (waterF < 68) return '2mm spring';
+  return 'trunks';
+}
+
 export type MetricKey = 'swellHeight' | 'swellPeriod' | 'windSpeed' | 'tideHeight';
 
 export function metricQuality(spot: Spot, c: ForecastHour, metric: MetricKey): number {
