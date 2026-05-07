@@ -8,7 +8,9 @@ import {
 import { useConditions } from '../hooks/useConditions';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { useNow } from '../hooks/useNow';
+import { useDriveTimes } from '../hooks/useDriveTimes';
 import { greetingForHour, formatHeaderDate } from '../lib/greeting';
+import { geocode, type HomeBase } from '../lib/routing';
 import { Screen, ScoreBadge, ScoreSpark, Stat } from './Primitives';
 
 // Reset the UA's default <button> chrome so it looks like plain text but still
@@ -91,9 +93,31 @@ export function Dashboard({ onOpenSpot }: DashboardProps) {
 
   // User prefs persist in localStorage. Tap either to edit inline.
   const [name, setName] = useLocalStorage<string>('sv:user:name', '');
+  const [home, setHome] = useLocalStorage<HomeBase | null>('sv:user:home', null);
+  // Legacy string label, kept for the case where the user opened the app
+  // before we had coords. We'll geocode it lazily on first render.
   const [homeLoc, setHomeLoc] = useLocalStorage<string>('sv:user:location', 'Mill Valley');
   const [editingName, setEditingName] = useState(false);
   const [editingLoc, setEditingLoc] = useState(false);
+
+  // If we have a label but no coords yet, kick off a one-time geocode.
+  React.useEffect(() => {
+    if (home || !homeLoc) return;
+    let cancelled = false;
+    geocode(homeLoc).then((g) => { if (!cancelled && g) setHome(g); });
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const driveTime = useDriveTimes(home);
+
+  // Commit a new home-base label: update the display string immediately,
+  // geocode in the background, then store coords (which triggers the
+  // matrix refetch in useDriveTimes).
+  const commitHomeBase = (label: string) => {
+    setHomeLoc(label);
+    geocode(label).then((g) => { if (g) setHome(g); });
+  };
 
   const ranked = [...favorites].sort(
     (a, b) => (timelines[b.id]?.[0]?.score ?? 0) - (timelines[a.id]?.[0]?.score ?? 0)
@@ -165,7 +189,7 @@ export function Dashboard({ onOpenSpot }: DashboardProps) {
               <InlineEdit
                 initial={homeLoc}
                 placeholder="Home base"
-                onCommit={(v) => { if (v) setHomeLoc(v); setEditingLoc(false); }}
+                onCommit={(v) => { if (v) commitHomeBase(v); setEditingLoc(false); }}
                 onCancel={() => setEditingLoc(false)}
                 style={{
                   fontFamily: 'JetBrains Mono, ui-monospace, monospace',
@@ -212,7 +236,7 @@ export function Dashboard({ onOpenSpot }: DashboardProps) {
         </div>
       </div>
 
-      <TopPickCard spot={ranked[0]} timeline={timelines[ranked[0].id]} onOpen={() => onOpenSpot(ranked[0].id)}/>
+      <TopPickCard spot={ranked[0]} timeline={timelines[ranked[0].id]} driveMin={driveTime(ranked[0])} onOpen={() => onOpenSpot(ranked[0].id)}/>
 
       <BestWindowsStrip windows={allWindows} onOpen={onOpenSpot}/>
 
@@ -255,7 +279,7 @@ export function Dashboard({ onOpenSpot }: DashboardProps) {
   );
 }
 
-function TopPickCard({ spot, timeline, onOpen }: { spot: Spot; timeline: ForecastHour[]; onOpen: () => void }) {
+function TopPickCard({ spot, timeline, driveMin, onOpen }: { spot: Spot; timeline: ForecastHour[]; driveMin: number; onOpen: () => void }) {
   const current = timeline[0];
   const rating = scoreToRating(current.score, spot.watchOnly);
   const best = findBestWindows(timeline)[0];
@@ -269,7 +293,7 @@ function TopPickCard({ spot, timeline, onOpen }: { spot: Spot; timeline: Forecas
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14 }}>
         <div>
           <div style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 13, letterSpacing: '0.2em', color: TOKENS.textMute, textTransform: 'uppercase' }}>
-            Top Pick · {spot.driveMin} min drive
+            Top Pick · {driveMin} min drive
           </div>
           <div style={{ fontSize: 20, fontWeight: 600, letterSpacing: '-0.02em', marginTop: 4 }}>{spot.regionLabel} · {spot.name}</div>
           <div style={{ fontSize: 13, color: TOKENS.textDim, marginTop: 2 }}>{spot.subtitle}</div>

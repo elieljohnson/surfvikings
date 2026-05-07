@@ -6,6 +6,9 @@ import {
 } from '../lib/data';
 import { useConditions } from '../hooks/useConditions';
 import { Screen, ScoreBadge, ScoreTimeline, Stat, DifficultyPips, ForecastChart, BackButton, useResponsiveWidth } from './Primitives';
+import { useLocalStorage } from '../hooks/useLocalStorage';
+import { useDriveTimes } from '../hooks/useDriveTimes';
+import type { HomeBase } from '../lib/routing';
 
 interface SpotDetailProps {
   spotId: string;
@@ -16,6 +19,9 @@ export function SpotDetail({ spotId, onBack }: SpotDetailProps) {
   const spot = SPOTS.find((s) => s.id === spotId)!;
   const [subBreak, setSubBreak] = useState(spotId);
   const activeSpot = SPOTS.find((s) => s.id === subBreak) || spot;
+  // Read the same home-base + drive-matrix cache the dashboard writes.
+  const [home] = useLocalStorage<HomeBase | null>('sv:user:home', null);
+  const driveTime = useDriveTimes(home);
   const isBolinasSpot = spot.region === 'bolinas' && spot.id.startsWith('bolinas');
   const requestedSpots = useMemo(
     () => (isBolinasSpot ? SPOTS.filter((s) => s.id.startsWith('bolinas')).map((s) => s.id) : [activeSpot.id]),
@@ -42,7 +48,7 @@ export function SpotDetail({ spotId, onBack }: SpotDetailProps) {
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
           <BackButton onClick={onBack}/>
           <div style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 13, letterSpacing: '0.18em', color: TOKENS.textMute, textTransform: 'uppercase' }}>
-            {activeSpot.regionLabel} · {activeSpot.driveMin}min drive
+            {activeSpot.regionLabel} · {driveTime(activeSpot)}min drive
           </div>
         </div>
         <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16 }}>

@@ -35,6 +35,8 @@ export interface Spot {
   optimalTide: 'low' | 'mid' | 'high' | 'rising';
   lat: number;
   lng: number;
+  /** Fallback estimate (mins). Overridden at runtime by useDriveTimes once
+   * the user's home base is geocoded and the OSRM matrix returns. */
   driveMin: number;
   bathymetry?: BathymetryProfile;
   watchOnly?: boolean;
