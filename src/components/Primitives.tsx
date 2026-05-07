@@ -5,6 +5,38 @@ import {
 } from '../lib/data';
 import { qualityColor } from '../lib/tokens';
 
+// Tracks the rendered width of a wrapper div so SVG charts can fill their
+// container instead of using a hard-coded width. Returns [ref, width].
+// `fallback` is used until the first measurement settles.
+export function useResponsiveWidth(fallback: number) {
+  const ref = React.useRef<HTMLDivElement | null>(null);
+  const [width, setWidth] = React.useState(fallback);
+  React.useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const measure = () => {
+      const w = el.clientWidth;
+      if (w > 0) setWidth(w);
+    };
+    measure();
+    if (typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  return [ref, width] as const;
+}
+
+// Five evenly spaced ticks across a 48h timeline, anchored so the first and
+// last labels never run off the SVG edges and the middles stay centered.
+const AXIS_TICKS: ReadonlyArray<{ h: number; anchor: 'start' | 'middle' | 'end' }> = [
+  { h: 0,  anchor: 'start'  },
+  { h: 12, anchor: 'middle' },
+  { h: 24, anchor: 'middle' },
+  { h: 36, anchor: 'middle' },
+  { h: 47, anchor: 'end'    },
+];
+
 export function BackButton({ onClick }: { onClick: () => void }) {
   const setOpacity = (o: string) => (e: React.SyntheticEvent<HTMLButtonElement>) => {
     (e.currentTarget as HTMLButtonElement).style.opacity = o;
@@ -131,74 +163,93 @@ export function ScoreSpark({
 }
 
 export function ForecastChart({
-  timeline, metric, spot, height = 56, width = 320, showAxis = true, baseHour = 6,
+  timeline, metric, spot, height = 56, width, showAxis = true, baseHour = 6,
 }: {
   timeline: ForecastHour[]; metric: MetricKey; spot?: Spot;
   height?: number; width?: number; showAxis?: boolean; baseHour?: number;
 }) {
+  // If no explicit width: measure the container so the chart fills it.
+  const [wrapRef, measuredW] = useResponsiveWidth(320);
+  const renderW = width ?? measuredW;
   const values = timeline.map((t) => t[metric] as number);
   const max = Math.max(...values) * 1.15;
   const min = metric === 'tideHeight' ? Math.min(...values) * 0.9 : 0;
   const range = max - min || 1;
-  const barW = width / timeline.length;
+  const barW = renderW / timeline.length;
+  const lastIdx = Math.max(0, timeline.length - 1);
   return (
-    <svg width={width} height={height + (showAxis ? 14 : 0)} style={{ display: 'block' }}>
-      {timeline.map((t, i) => {
-        const v = t[metric] as number;
-        const h = ((v - min) / range) * height;
-        const x = i * barW;
-        const y = height - h;
-        const q = spot ? metricQuality(spot, t, metric) : 0.6;
-        const fill = spot ? qualityColor(q) : TOKENS.pacific;
-        const op = i === 0 ? 1 : 0.55 + (1 - i / timeline.length) * 0.35;
-        return (
-          <rect key={i} x={x + 0.5} y={y} width={barW - 1} height={h} fill={fill} opacity={op}/>
-        );
-      })}
-      {showAxis && [0, 6, 12, 18, 24, 30, 36, 42].map((h) => (
-        <text key={h} x={h * barW} y={height + 11}
-          fontFamily="JetBrains Mono, ui-monospace, monospace" fontSize="12" fill={TOKENS.textMute}>
-          {hourLabel(h, baseHour)}
-        </text>
-      ))}
-    </svg>
+    <div ref={wrapRef} style={{ width: width ? undefined : '100%' }}>
+      <svg width={renderW} height={height + (showAxis ? 14 : 0)} style={{ display: 'block' }}>
+        {timeline.map((t, i) => {
+          const v = t[metric] as number;
+          const h = ((v - min) / range) * height;
+          const x = i * barW;
+          const y = height - h;
+          const q = spot ? metricQuality(spot, t, metric) : 0.6;
+          const fill = spot ? qualityColor(q) : TOKENS.pacific;
+          const op = i === 0 ? 1 : 0.55 + (1 - i / timeline.length) * 0.35;
+          return (
+            <rect key={i} x={x + 0.5} y={y} width={barW - 1} height={h} fill={fill} opacity={op}/>
+          );
+        })}
+        {showAxis && AXIS_TICKS.map(({ h, anchor }) => {
+          const tickH = Math.min(h, lastIdx);
+          return (
+            <text key={h} x={tickH * barW + barW / 2} y={height + 11}
+              textAnchor={anchor}
+              fontFamily="JetBrains Mono, ui-monospace, monospace" fontSize="12" fill={TOKENS.textMute}>
+              {hourLabel(tickH, baseHour)}
+            </text>
+          );
+        })}
+      </svg>
+    </div>
   );
 }
 
 export function ScoreTimeline({
-  timeline, width = 320, height = 90, baseHour = 6,
+  timeline, width, height = 90, baseHour = 6,
 }: { timeline: ForecastHour[]; width?: number; height?: number; baseHour?: number }) {
+  const [wrapRef, measuredW] = useResponsiveWidth(320);
+  const renderW = width ?? measuredW;
+  const lastIdx = Math.max(1, timeline.length - 1);
   const pts = timeline.map((t, i) => {
-    const x = (i / (timeline.length - 1)) * width;
+    const x = (i / lastIdx) * renderW;
     const y = height - (t.score / 100) * height;
     return [x, y] as const;
   });
   const path = pts.map(([x, y], i) => (i === 0 ? `M${x},${y}` : `L${x},${y}`)).join(' ');
-  const areaPath = `${path} L${width},${height} L0,${height} Z`;
+  const areaPath = `${path} L${renderW},${height} L0,${height} Z`;
   const epicY = height - 0.80 * height;
   const goodY = height - 0.60 * height;
   return (
-    <svg width={width} height={height + 14} style={{ display: 'block' }}>
-      <defs>
-        <linearGradient id="score-ln" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={TOKENS.pacific} stopOpacity="0.5"/>
-          <stop offset="100%" stopColor={TOKENS.pacific} stopOpacity="0"/>
-        </linearGradient>
-      </defs>
-      <line x1="0" x2={width} y1={epicY} y2={epicY} stroke={TOKENS.epic} strokeWidth="0.5" strokeDasharray="2 3" opacity="0.5"/>
-      <line x1="0" x2={width} y1={goodY} y2={goodY} stroke={TOKENS.good} strokeWidth="0.5" strokeDasharray="2 3" opacity="0.35"/>
-      <text x={width - 2} y={epicY - 2} textAnchor="end" fontFamily="JetBrains Mono, ui-monospace, monospace" fontSize="11" fill={TOKENS.epic} opacity="0.8">EPIC 80</text>
-      <text x={width - 2} y={goodY - 2} textAnchor="end" fontFamily="JetBrains Mono, ui-monospace, monospace" fontSize="11" fill={TOKENS.good} opacity="0.65">GOOD 60</text>
-      <path d={areaPath} fill="url(#score-ln)"/>
-      <path d={path} stroke={TOKENS.pacific} strokeWidth="1.75" fill="none" strokeLinecap="round"/>
-      <circle cx={pts[0][0]} cy={pts[0][1]} r="3.5" fill={TOKENS.pacific} stroke={TOKENS.bg} strokeWidth="2"/>
-      {[0, 6, 12, 18, 24, 30, 36, 42].map((h) => (
-        <text key={h} x={(h / (timeline.length - 1)) * width} y={height + 11}
-          fontFamily="JetBrains Mono, ui-monospace, monospace" fontSize="12" fill={TOKENS.textMute}>
-          {hourLabel(h, baseHour)}
-        </text>
-      ))}
-    </svg>
+    <div ref={wrapRef} style={{ width: width ? undefined : '100%' }}>
+      <svg width={renderW} height={height + 14} style={{ display: 'block' }}>
+        <defs>
+          <linearGradient id="score-ln" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={TOKENS.pacific} stopOpacity="0.5"/>
+            <stop offset="100%" stopColor={TOKENS.pacific} stopOpacity="0"/>
+          </linearGradient>
+        </defs>
+        <line x1="0" x2={renderW} y1={epicY} y2={epicY} stroke={TOKENS.epic} strokeWidth="0.5" strokeDasharray="2 3" opacity="0.5"/>
+        <line x1="0" x2={renderW} y1={goodY} y2={goodY} stroke={TOKENS.good} strokeWidth="0.5" strokeDasharray="2 3" opacity="0.35"/>
+        <text x={renderW - 2} y={epicY - 2} textAnchor="end" fontFamily="JetBrains Mono, ui-monospace, monospace" fontSize="11" fill={TOKENS.epic} opacity="0.8">EPIC 80</text>
+        <text x={renderW - 2} y={goodY - 2} textAnchor="end" fontFamily="JetBrains Mono, ui-monospace, monospace" fontSize="11" fill={TOKENS.good} opacity="0.65">GOOD 60</text>
+        <path d={areaPath} fill="url(#score-ln)"/>
+        <path d={path} stroke={TOKENS.pacific} strokeWidth="1.75" fill="none" strokeLinecap="round"/>
+        <circle cx={pts[0][0]} cy={pts[0][1]} r="3.5" fill={TOKENS.pacific} stroke={TOKENS.bg} strokeWidth="2"/>
+        {AXIS_TICKS.map(({ h, anchor }) => {
+          const tickH = Math.min(h, lastIdx);
+          return (
+            <text key={h} x={(tickH / lastIdx) * renderW} y={height + 11}
+              textAnchor={anchor}
+              fontFamily="JetBrains Mono, ui-monospace, monospace" fontSize="12" fill={TOKENS.textMute}>
+              {hourLabel(tickH, baseHour)}
+            </text>
+          );
+        })}
+      </svg>
+    </div>
   );
 }
 

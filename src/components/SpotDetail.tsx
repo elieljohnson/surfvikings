@@ -5,7 +5,7 @@ import {
   scoreToRating, hourLabel, degToCardinal, angleDelta, MetricKey,
 } from '../lib/data';
 import { useConditions } from '../hooks/useConditions';
-import { Screen, ScoreBadge, ScoreTimeline, Stat, DifficultyPips, ForecastChart, BackButton } from './Primitives';
+import { Screen, ScoreBadge, ScoreTimeline, Stat, DifficultyPips, ForecastChart, BackButton, useResponsiveWidth } from './Primitives';
 
 interface SpotDetailProps {
   spotId: string;
@@ -95,7 +95,7 @@ export function SpotDetail({ spotId, onBack }: SpotDetailProps) {
             </span>
           </div>
         </div>
-        <ScoreTimeline timeline={timeline} width={335}/>
+        <ScoreTimeline timeline={timeline}/>
       </div>
 
       {/* Best window */}
@@ -239,7 +239,7 @@ function ChartRow({
           lo {min.toFixed(1)} · hi {max.toFixed(1)}
         </div>
       </div>
-      <ForecastChart timeline={timeline} metric={metric} spot={spot} width={335} height={40}/>
+      <ForecastChart timeline={timeline} metric={metric} spot={spot} height={40}/>
     </div>
   );
 }
@@ -265,7 +265,8 @@ function BathymetrySection({ spot }: { spot: Spot }) {
 }
 
 function BathymetryCrossSection({ depths, distances }: { depths: number[]; distances: number[] }) {
-  const width = 305, height = 110;
+  const [wrapRef, width] = useResponsiveWidth(305);
+  const height = 110;
   const maxDepth = Math.max(...depths);
   const maxDist = distances[0];
   const pts = depths.map((d, i) => {
@@ -273,37 +274,47 @@ function BathymetryCrossSection({ depths, distances }: { depths: number[]; dista
     const y = (d / maxDepth) * (height - 30) + 14;
     return [x, y] as const;
   });
+  // First label sits at x=0 (offshore-most point) — anchor "start" so it
+  // doesn't clip off the left edge. Last label is at x=width — "end".
+  const labelTicks: { i: number; anchor: 'start' | 'middle' | 'end' }[] = [
+    { i: 0, anchor: 'start'  },
+    { i: 2, anchor: 'middle' },
+    { i: 4, anchor: 'middle' },
+    { i: 5, anchor: 'end'    },
+  ];
   return (
-    <svg width={width} height={height} style={{ display: 'block' }}>
-      <defs>
-        <linearGradient id="bath-water" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={TOKENS.pacific} stopOpacity="0.14"/>
-          <stop offset="100%" stopColor={TOKENS.pacific} stopOpacity="0.04"/>
-        </linearGradient>
-        <linearGradient id="bath-bottom" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={TOKENS.surface3}/>
-          <stop offset="100%" stopColor={TOKENS.surface2}/>
-        </linearGradient>
-      </defs>
-      <rect x="0" y="0" width={width} height={height} fill="url(#bath-water)"/>
-      <line x1="0" y1="6" x2={width} y2="6" stroke={TOKENS.pacific} strokeWidth="1" opacity="0.8"/>
-      <text x="4" y="4" fontFamily="JetBrains Mono, ui-monospace, monospace" fontSize="7" fill={TOKENS.pacific} opacity="0.8">MLLW 0.0</text>
-      <path
-        d={`M${pts[0][0]},${pts[0][1]} ${pts.slice(1).map(([x, y]) => `L${x},${y}`).join(' ')} L${width},${height} L0,${height} Z`}
-        fill="url(#bath-bottom)" stroke={TOKENS.borderHi} strokeWidth="1"
-      />
-      <path
-        d={`M${pts[2][0]},${pts[2][1] - 4} Q${pts[3][0]},${pts[3][1] - 14} ${pts[4][0]},${pts[4][1] - 6} T${pts[5][0]},${pts[5][1]}`}
-        stroke={TOKENS.pacific} strokeWidth="1.5" fill="none" opacity="0.9"
-      />
-      {[0, 2, 4, 5].map((i) => (
-        <text key={i} x={pts[i][0]} y={height - 3} textAnchor="middle" fontFamily="JetBrains Mono, ui-monospace, monospace" fontSize="7" fill={TOKENS.textMute}>
-          {distances[i]}m
-        </text>
-      ))}
-      <text x={width - 4} y={pts[0][1] + 3} textAnchor="end" fontFamily="JetBrains Mono, ui-monospace, monospace" fontSize="7" fill={TOKENS.textDim}>-{depths[0]}m</text>
-      <text x={pts[4][0] + 4} y={pts[4][1] + 3} fontFamily="JetBrains Mono, ui-monospace, monospace" fontSize="7" fill={TOKENS.phosphor}>break zone</text>
-    </svg>
+    <div ref={wrapRef} style={{ width: '100%' }}>
+      <svg width={width} height={height} style={{ display: 'block' }}>
+        <defs>
+          <linearGradient id="bath-water" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={TOKENS.pacific} stopOpacity="0.14"/>
+            <stop offset="100%" stopColor={TOKENS.pacific} stopOpacity="0.04"/>
+          </linearGradient>
+          <linearGradient id="bath-bottom" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={TOKENS.surface3}/>
+            <stop offset="100%" stopColor={TOKENS.surface2}/>
+          </linearGradient>
+        </defs>
+        <rect x="0" y="0" width={width} height={height} fill="url(#bath-water)"/>
+        <line x1="0" y1="6" x2={width} y2="6" stroke={TOKENS.pacific} strokeWidth="1" opacity="0.8"/>
+        <text x="4" y="4" fontFamily="JetBrains Mono, ui-monospace, monospace" fontSize="7" fill={TOKENS.pacific} opacity="0.8">MLLW 0.0</text>
+        <path
+          d={`M${pts[0][0]},${pts[0][1]} ${pts.slice(1).map(([x, y]) => `L${x},${y}`).join(' ')} L${width},${height} L0,${height} Z`}
+          fill="url(#bath-bottom)" stroke={TOKENS.borderHi} strokeWidth="1"
+        />
+        <path
+          d={`M${pts[2][0]},${pts[2][1] - 4} Q${pts[3][0]},${pts[3][1] - 14} ${pts[4][0]},${pts[4][1] - 6} T${pts[5][0]},${pts[5][1]}`}
+          stroke={TOKENS.pacific} strokeWidth="1.5" fill="none" opacity="0.9"
+        />
+        {labelTicks.map(({ i, anchor }) => (
+          <text key={i} x={pts[i][0]} y={height - 3} textAnchor={anchor} fontFamily="JetBrains Mono, ui-monospace, monospace" fontSize="7" fill={TOKENS.textMute}>
+            {distances[i]}m
+          </text>
+        ))}
+        <text x={width - 4} y={pts[0][1] + 3} textAnchor="end" fontFamily="JetBrains Mono, ui-monospace, monospace" fontSize="7" fill={TOKENS.textDim}>-{depths[0]}m</text>
+        <text x={pts[4][0] - 4} y={pts[4][1] + 3} textAnchor="end" fontFamily="JetBrains Mono, ui-monospace, monospace" fontSize="7" fill={TOKENS.phosphor}>break zone</text>
+      </svg>
+    </div>
   );
 }
 
