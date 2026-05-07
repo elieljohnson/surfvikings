@@ -163,10 +163,10 @@ export function ScoreSpark({
 }
 
 export function ForecastChart({
-  timeline, metric, spot, height = 56, width, showAxis = true, baseHour = 6,
+  timeline, metric, spot, height = 56, width, showAxis = true,
 }: {
   timeline: ForecastHour[]; metric: MetricKey; spot?: Spot;
-  height?: number; width?: number; showAxis?: boolean; baseHour?: number;
+  height?: number; width?: number; showAxis?: boolean;
 }) {
   // If no explicit width: measure the container so the chart fills it.
   const [wrapRef, measuredW] = useResponsiveWidth(320);
@@ -198,7 +198,7 @@ export function ForecastChart({
             <text key={h} x={tickH * barW + barW / 2} y={height + 11}
               textAnchor={anchor}
               fontFamily="JetBrains Mono, ui-monospace, monospace" fontSize="12" fill={TOKENS.textMute}>
-              {hourLabel(tickH, baseHour)}
+              {hourLabel(tickH)}
             </text>
           );
         })}
@@ -208,8 +208,8 @@ export function ForecastChart({
 }
 
 export function ScoreTimeline({
-  timeline, width, height = 90, baseHour = 6,
-}: { timeline: ForecastHour[]; width?: number; height?: number; baseHour?: number }) {
+  timeline, width, height = 90,
+}: { timeline: ForecastHour[]; width?: number; height?: number }) {
   const [wrapRef, measuredW] = useResponsiveWidth(320);
   const renderW = width ?? measuredW;
   const lastIdx = Math.max(1, timeline.length - 1);
@@ -244,7 +244,7 @@ export function ScoreTimeline({
             <text key={h} x={(tickH / lastIdx) * renderW} y={height + 11}
               textAnchor={anchor}
               fontFamily="JetBrains Mono, ui-monospace, monospace" fontSize="12" fill={TOKENS.textMute}>
-              {hourLabel(tickH, baseHour)}
+              {hourLabel(tickH)}
             </text>
           );
         })}

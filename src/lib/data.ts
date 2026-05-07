@@ -100,9 +100,6 @@ export interface CurrentConditions {
   waterTemp: number;
   tideHeight: number;
   tideRising: boolean;
-  sunrise: string;
-  sunset: string;
-  firstLight: string;
   updatedAgo: number;
 }
 
@@ -120,9 +117,6 @@ export const CURRENT: CurrentConditions = {
   waterTemp: 54,
   tideHeight: 1.2,
   tideRising: true,
-  sunrise: '06:14',
-  sunset: '19:48',
-  firstLight: '05:48',
   updatedAgo: 4,
 };
 
@@ -294,14 +288,17 @@ export function findBestWindows(timeline: ForecastHour[]): BestWindow[] {
   return windows.sort((a, b) => b.peak - a.peak);
 }
 
-export function hourLabel(h: number, baseHour = 6): string {
-  const totalMin = baseHour * 60 + h * 60;
-  const day = Math.floor(totalMin / (24 * 60));
-  const mm = totalMin % (24 * 60);
-  const hr = Math.floor(mm / 60);
+// Format an hour-offset from `anchor` as a short local-time label.
+// `h=0` is "now" (no day prefix); future days get a 3-letter day prefix.
+// Uses the browser's local timezone — NorCal users see Pacific time.
+const DAY_NAMES = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+export function hourLabel(h: number, anchor: number = Date.now()): string {
+  const t = new Date(anchor + h * 3600_000);
+  const today = new Date(anchor).getDay();
+  const dayPrefix = t.getDay() === today ? '' : `${DAY_NAMES[t.getDay()]} `;
+  const hr = t.getHours();
   const suffix = hr >= 12 ? 'pm' : 'am';
   const disp = ((hr + 11) % 12) + 1;
-  const dayPrefix = day === 0 ? '' : day === 1 ? 'Fri ' : 'Sat ';
   return `${dayPrefix}${disp}${suffix}`;
 }
 
