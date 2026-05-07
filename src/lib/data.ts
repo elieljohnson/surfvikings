@@ -19,6 +19,17 @@ export interface BathymetryProfile {
   distance: number[];
 }
 
+// Per-spot scoring quirks that don't fit the generic model. Add new kinds
+// here as they come up (Tomales outflow at Dillon, Sloat rip at OB, etc.).
+export type SpecialRule =
+  | {
+      /** Falling tide creates a strong outbound rip below `below` ft.
+       *  Applies a `penalty` to the score and pins tide-quality near zero. */
+      kind: 'falling-tide-rip';
+      below: number;
+      penalty: number;
+    };
+
 export interface Spot {
   id: string;
   region: RegionId;
@@ -39,6 +50,13 @@ export interface Spot {
    * the user's home base is geocoded and the OSRM matrix returns. */
   driveMin: number;
   bathymetry?: BathymetryProfile;
+  /** 0–1: fraction of open-ocean swell energy that reaches the break from
+   * its optimal direction. 1 = fully exposed; 0 = totally blocked. */
+  shadowFactor?: number;
+  /** 0–1: how much the bottom contour shifts week-to-week. 0 = pure rock
+   * reef; 1 = a beach with constantly re-forming sandbars. */
+  sandMobility?: number;
+  specialRules?: SpecialRule[];
   watchOnly?: boolean;
   sharkAdvisory?: boolean;
 }
@@ -52,11 +70,15 @@ export const SPOTS: Spot[] = [
   { id: 'dillon-beach',  region: 'pt-reyes', regionLabel: 'Point Reyes',  name: 'Dillon Beach',        subtitle: 'Tomales Bay mouth',            difficulty: 4,  type: 'Beach',                bottom: 'Sand',          optimalSwell: 270, optimalSize: [2,5], optimalPeriod: [10,14], offshore: 90,  optimalTide: 'high',   lat: 38.2531, lng: -122.9668, driveMin: 74 },
   // Bolinas cluster
   { id: 'bolinas-patch', region: 'bolinas',  regionLabel: 'Bolinas',      name: 'The Patch',           subtitle: 'Duxbury Reef',                 difficulty: 3,  type: 'Reef · Long/slow',     bottom: 'Rock reef',     optimalSwell: 225, optimalSize: [2,6], optimalPeriod: [12,16], offshore: 0,   optimalTide: 'low',    lat: 37.9042, lng: -122.7101, driveMin: 22,
-    bathymetry: { label: 'Duxbury Reef — largest intertidal reef in N. America. Permanent shape.', depth: [18,14,10,6,3,1.5], distance: [1800,1400,1000,600,300,100] } },
+    bathymetry: { label: 'Duxbury Reef — largest intertidal reef in N. America. Permanent shape.', depth: [18,14,10,6,3,1.5], distance: [1800,1400,1000,600,300,100] },
+    shadowFactor: 0.55, sandMobility: 0.0 },
   { id: 'bolinas-jetty', region: 'bolinas',  regionLabel: 'Bolinas',      name: 'The Jetty',           subtitle: 'Channel / Wharf Rd',           difficulty: 2,  type: 'Beach · Beginner',     bottom: 'Sand + rock',   optimalSwell: 200, optimalSize: [2,5], optimalPeriod: [12,16], offshore: 0,   optimalTide: 'high',   lat: 37.8987, lng: -122.6986, driveMin: 22,
-    bathymetry: { label: 'Shifting sandbars — lagoon outflow reshapes weekly.', depth: [22,16,11,7,4,1.5], distance: [1800,1400,1000,600,300,100] } },
+    bathymetry: { label: 'Shifting sandbars — lagoon outflow reshapes weekly.', depth: [22,16,11,7,4,1.5], distance: [1800,1400,1000,600,300,100] },
+    shadowFactor: 0.45, sandMobility: 0.85 },
   { id: 'bolinas-groin', region: 'bolinas',  regionLabel: 'Bolinas',      name: 'The Groin',           subtitle: 'Sea Drift · Lagoon mouth',     difficulty: 6,  type: 'Jetty · Left',         bottom: 'Sand + groin',  optimalSwell: 245, optimalSize: [4,8], optimalPeriod: [14,18], offshore: 0,   optimalTide: 'rising', lat: 37.8994, lng: -122.6962, driveMin: 22,
-    bathymetry: { label: 'Groin + lagoon hydraulics = river-mouth dynamic.', depth: [24,18,12,7,3,1], distance: [1800,1400,1000,600,300,100] } },
+    bathymetry: { label: 'Groin + lagoon hydraulics = river-mouth dynamic.', depth: [24,18,12,7,3,1], distance: [1800,1400,1000,600,300,100] },
+    shadowFactor: 0.50, sandMobility: 0.6,
+    specialRules: [{ kind: 'falling-tide-rip', below: 2, penalty: -15 }] },
   { id: 'stinson',       region: 'bolinas',  regionLabel: 'Stinson',      name: 'Stinson Beach',       subtitle: 'Open 3-mile beach',            difficulty: 4,  type: 'Beach · L/R',          bottom: 'Sand',          optimalSwell: 225, optimalSize: [3,8], optimalPeriod: [14,18], offshore: 45,  optimalTide: 'high',   lat: 37.8978, lng: -122.6477, driveMin: 18 },
   // Region 3 — Marin Headlands / SF
   { id: 'rodeo',         region: 'marin-sf', regionLabel: 'Marin / SF',   name: 'Rodeo Beach',         subtitle: 'Fort Cronkhite',               difficulty: 2,  type: 'Cove · Sandbar',       bottom: 'Sand',          optimalSwell: 215, optimalSize: [2,6], optimalPeriod: [10,14], offshore: 45,  optimalTide: 'low',    lat: 37.831,  lng: -122.540,  driveMin: 14 },
@@ -170,6 +192,24 @@ interface ScoringInput {
   tideRising: boolean;
 }
 
+// Walk a spot's special rules and return aggregated effects. `tideOverride`,
+// when set, replaces tide-quality with a near-zero value (signals "do not
+// surf") for `metricQuality` callers.
+function evaluateSpecialRules(
+  spot: Spot,
+  c: { tideHeight: number; tideRising: boolean },
+): { penalty: number; tideOverride: number | null } {
+  let penalty = 0;
+  let tideOverride: number | null = null;
+  for (const rule of spot.specialRules ?? []) {
+    if (rule.kind === 'falling-tide-rip' && !c.tideRising && c.tideHeight < rule.below) {
+      penalty += rule.penalty;
+      tideOverride = 0.1;
+    }
+  }
+  return { penalty, tideOverride };
+}
+
 export function computeScore(spot: Spot, c: ScoringInput): number {
   if (spot.watchOnly) {
     const sizeOK = c.swellHeight > 8 ? 30 : c.swellHeight * 3;
@@ -192,8 +232,7 @@ export function computeScore(spot: Spot, c: ScoringInput): number {
   const windDirScore = Math.max(0, 15 - windDelta * 0.09);
   const windPenalty = c.windSpeed > 20 ? -10 : c.windSpeed > 12 ? -(c.windSpeed - 12) : 0;
   const tideScore = tideMatch(spot.optimalTide, c.tideHeight, c.tideRising);
-  let special = 0;
-  if (spot.id === 'bolinas-groin' && !c.tideRising && c.tideHeight < 2) special = -15;
+  const { penalty: special } = evaluateSpecialRules(spot, c);
   return Math.max(0, Math.min(100, dirScore + pScore + sScore + windDirScore + windPenalty + tideScore + special + 5));
 }
 
@@ -353,12 +392,13 @@ export function metricQuality(spot: Spot, c: ForecastHour, metric: MetricKey): n
     return Math.max(0.05, dirQ * 0.6 + spdQ * 0.4);
   }
   if (metric === 'tideHeight') {
+    const { tideOverride } = evaluateSpecialRules(spot, c);
+    if (tideOverride !== null) return tideOverride;
     const bands: Record<Spot['optimalTide'], [number, number]> = { low:[0,2], mid:[2,4], high:[4,6], rising:[1.5,5] };
     const [lo, hi] = bands[spot.optimalTide] || [0, 6];
     const inside = c.tideHeight >= lo && c.tideHeight <= hi;
     if (inside) return c.tideRising && spot.optimalTide === 'rising' ? 1 : 0.9;
     const d = Math.min(Math.abs(c.tideHeight - lo), Math.abs(c.tideHeight - hi));
-    if (spot.id === 'bolinas-groin' && !c.tideRising && c.tideHeight < 2) return 0.1;
     return Math.max(0, 1 - d * 0.35);
   }
   return 0.6;

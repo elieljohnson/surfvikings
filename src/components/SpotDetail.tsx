@@ -262,8 +262,8 @@ function BathymetrySection({ spot }: { spot: Spot }) {
         <div style={{ fontSize: 13, color: TOKENS.textDim, marginTop: 10, lineHeight: 1.5 }}>{b.label}</div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginTop: 12, paddingTop: 12, borderTop: `1px solid ${TOKENS.border}` }}>
           <Stat label="Bottom" value={spot.bottom.split(' ')[0]} hint={spot.bottom}/>
-          <Stat label="Shadow fctr" value={spot.id.includes('groin') ? '0.62' : spot.id.includes('patch') ? '0.71' : '0.48'} hint="swell filter"/>
-          <Stat label="Sand mob." value={spot.bottom.includes('reef') ? '0.0' : '0.7'} hint="contour shift"/>
+          <Stat label="Shadow fctr" value={typeof spot.shadowFactor === 'number' ? spot.shadowFactor.toFixed(2) : '—'} hint="swell filter"/>
+          <Stat label="Sand mob." value={typeof spot.sandMobility === 'number' ? spot.sandMobility.toFixed(2) : '—'} hint="contour shift"/>
         </div>
       </div>
     </div>
