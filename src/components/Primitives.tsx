@@ -298,11 +298,22 @@ const WaveIcon = (
   </svg>
 );
 
+// Minimal bar chart — 5 bars of varying heights, mirrors the forecast view's
+// chart aesthetic. Rounded corners + currentColor.
+const BarsIcon = (
+  <svg width="22" height="16" viewBox="0 0 24 16" fill="currentColor">
+    <rect x="2"  y="8"  width="3" height="8"  rx="0.5"/>
+    <rect x="7"  y="4"  width="3" height="12" rx="0.5"/>
+    <rect x="12" y="6"  width="3" height="10" rx="0.5"/>
+    <rect x="17" y="2"  width="3" height="14" rx="0.5"/>
+  </svg>
+);
+
 export function TabBar({ active, onChange }: { active: TabId; onChange: (id: TabId) => void }) {
   const tabs: { id: TabId; label: string; icon: React.ReactNode }[] = [
     { id: 'dashboard', label: 'Today',    icon: '◉' },
     { id: 'map',       label: 'Breaks',   icon: WaveIcon },
-    { id: 'forecast',  label: 'Forecast', icon: '≋' },
+    { id: 'forecast',  label: 'Forecast', icon: BarsIcon },
     { id: 'settings',  label: 'Settings', icon: '⊙' },
   ];
   return (
