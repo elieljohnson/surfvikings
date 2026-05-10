@@ -124,6 +124,8 @@ export const SPOTS: Spot[] = [
     shadowFactor: 0.9, sandMobility: 0.85 },
   { id: 'linda-mar',     region: 'sm-north', regionLabel: 'Pacifica',     name: 'Linda Mar',           subtitle: 'Pacifica · Taco Bell',         difficulty: 2,  type: 'Beach · Beginner',     bottom: 'Sand',          optimalSwell: 295, optimalSize: [2,8], optimalPeriod: [12,16], offshore: 135, optimalTide: 'rising', lat: 37.5932, lng: -122.4978, driveMin: 46,
     shadowFactor: 0.7, sandMobility: 0.7 },
+  { id: 'pedro-point',   region: 'sm-north', regionLabel: 'Pacifica',     name: 'Pedro Point',         subtitle: 'Big-wave left · S of Linda Mar', difficulty: 9, type: 'Reef · Left',          bottom: 'Rock reef',     optimalSwell: 315, optimalSize: [8,25],optimalPeriod: [16,20], offshore: 135, optimalTide: 'high',   lat: 37.5820, lng: -122.4980, driveMin: 48,
+    shadowFactor: 0.7, sandMobility: 0.0 },
   { id: 'rockaway',      region: 'sm-north', regionLabel: 'Pacifica',     name: 'Rockaway',            subtitle: 'Pacifica',                     difficulty: 6,  type: 'Beach + reef',         bottom: 'Sand + rock',   optimalSwell: 290, optimalSize: [3,12],optimalPeriod: [12,16], offshore: 120, optimalTide: 'rising', lat: 37.6112, lng: -122.4956, driveMin: 42,
     shadowFactor: 0.7, sandMobility: 0.6 },
   { id: 'montara',       region: 'sm-north', regionLabel: 'Pacifica',     name: 'Montara',             subtitle: 'Exposed beach',                difficulty: 5,  type: 'Beach',                bottom: 'Sand + rock',   optimalSwell: 285, optimalSize: [3,8], optimalPeriod: [12,16], offshore: 45,  optimalTide: 'mid',    lat: 37.5428, lng: -122.5131, driveMin: 54 },

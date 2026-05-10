@@ -37,6 +37,7 @@ export const BUOY_MAPPINGS: BuoyMapping[] = [
   // Region 4 — San Mateo North
   { spotId: 'sharp-park',    primaryBuoy: '46026', secondaryBuoy: '46012', tideStation: '9414131', nwsZone: 'PZZ560' },
   { spotId: 'linda-mar',     primaryBuoy: '46026', secondaryBuoy: '46012', tideStation: '9414131', nwsZone: 'PZZ560' },
+  { spotId: 'pedro-point',   primaryBuoy: '46026', secondaryBuoy: '46012', tideStation: '9414131', nwsZone: 'PZZ560' },
   { spotId: 'rockaway',      primaryBuoy: '46026', secondaryBuoy: '46012', tideStation: '9414131', nwsZone: 'PZZ560' },
   { spotId: 'montara',       primaryBuoy: '46012', tideStation: '9414131', nwsZone: 'PZZ560' },
   { spotId: 'princeton',     primaryBuoy: '46012', tideStation: '9414131', nwsZone: 'PZZ560' },
