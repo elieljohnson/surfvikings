@@ -401,7 +401,7 @@ const HAZARDS: Record<string, string[]> = {
   'deadmans': ['Submerged rocks', 'Rips', 'Sharks'],
   'sharp-park': ['Heavy shorebreak', 'Rips', 'Sharks'],
   'linda-mar': ['Crowd', 'Rips'],
-  'rockaway': ['Heavy waves', 'Rocks'],
+  'rockaway': ['Strong currents', 'Rocks', 'Sharks'],
   'montara': ['Heavy shorebreak', 'Rips'],
   'princeton': ['Jetty rocks'],
   'mavericks': ['50ft+ waves', 'Rocks', 'Sharks', 'Drowning risk'],
