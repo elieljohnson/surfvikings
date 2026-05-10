@@ -57,6 +57,9 @@ export interface Spot {
    * reef; 1 = a beach with constantly re-forming sandbars. */
   sandMobility?: number;
   specialRules?: SpecialRule[];
+  /** Stormrider Guide editorial rating, 1–5 stars. Quality/recommendation
+   * (not difficulty). Optional — only set on spots covered by the guide. */
+  stormriderStars?: number;
   watchOnly?: boolean;
   sharkAdvisory?: boolean;
 }
@@ -72,23 +75,29 @@ export const SPOTS: Spot[] = [
   // Bolinas profiles share the same 1800→100m offshore distance grid so
   // they can be compared on a shared y-axis (see BathymetryCrossSection).
   // Depths reflect the distinct geometry of each break, not generic ramps.
-  { id: 'bolinas-patch', region: 'bolinas',  regionLabel: 'Bolinas',      name: 'The Patch',           subtitle: 'Duxbury Reef',                 difficulty: 3,  type: 'Reef · Long/slow',     bottom: 'Rock reef',     optimalSwell: 225, optimalSize: [2,6], optimalPeriod: [12,16], offshore: 0,   optimalTide: 'low',    lat: 37.9042, lng: -122.7101, driveMin: 22,
+  { id: 'bolinas-patch', region: 'bolinas',  regionLabel: 'Bolinas',      name: 'The Patch',           subtitle: 'Duxbury Reef',                 difficulty: 3,  type: 'Reef · Long/slow',     bottom: 'Rock ledge',    optimalSwell: 225, optimalSize: [1,6], optimalPeriod: [12,16], offshore: 0,   optimalTide: 'low',    lat: 37.9042, lng: -122.7101, driveMin: 22,
     // Reef-edge drop at ~1km out, then a long flat intertidal shelf.
     bathymetry: { label: 'Duxbury Reef — largest intertidal reef in N. America. Permanent shape.', depth: [22,18,12,4,2,1], distance: [1800,1400,1000,600,300,100] },
-    shadowFactor: 0.55, sandMobility: 0.0 },
-  { id: 'bolinas-jetty', region: 'bolinas',  regionLabel: 'Bolinas',      name: 'The Jetty',           subtitle: 'Channel / Wharf Rd',           difficulty: 2,  type: 'Beach · Beginner',     bottom: 'Sand + rock',   optimalSwell: 200, optimalSize: [2,5], optimalPeriod: [12,16], offshore: 0,   optimalTide: 'high',   lat: 37.8987, lng: -122.6986, driveMin: 22,
+    shadowFactor: 0.55, sandMobility: 0.0,
+    stormriderStars: 1 },
+  { id: 'bolinas-jetty', region: 'bolinas',  regionLabel: 'Bolinas',      name: 'The Jetty',           subtitle: 'Channel / Wharf Rd',           difficulty: 4,  type: 'Beach · Pier/groyne',  bottom: 'Sand',          optimalSwell: 225, optimalSize: [1,6], optimalPeriod: [12,16], offshore: 0,   optimalTide: 'mid',    lat: 37.8987, lng: -122.6986, driveMin: 22,
     // Smooth, near-linear sand ramp — no reef shelf, no scour.
     bathymetry: { label: 'Shifting sandbars — lagoon outflow reshapes weekly.', depth: [22,17,12,7,4,1.5], distance: [1800,1400,1000,600,300,100] },
-    shadowFactor: 0.45, sandMobility: 0.85 },
+    shadowFactor: 0.45, sandMobility: 0.85,
+    stormriderStars: 3 },
   { id: 'bolinas-groin', region: 'bolinas',  regionLabel: 'Bolinas',      name: 'The Groin',           subtitle: 'Sea Drift · Lagoon mouth',     difficulty: 6,  type: 'Jetty · Left',         bottom: 'Sand + groin',  optimalSwell: 245, optimalSize: [4,8], optimalPeriod: [14,18], offshore: 0,   optimalTide: 'rising', lat: 37.8994, lng: -122.6962, driveMin: 22,
     // Lagoon outflow scours a deeper trough offshore of the structure;
     // sand piles back up inshore, giving a sharp rise over the bar.
     bathymetry: { label: 'Groin + lagoon hydraulics = river-mouth dynamic.', depth: [22,18,14,11,5,1], distance: [1800,1400,1000,600,300,100] },
     shadowFactor: 0.50, sandMobility: 0.6,
     specialRules: [{ kind: 'falling-tide-rip', below: 2, penalty: -15 }] },
-  { id: 'stinson',       region: 'bolinas',  regionLabel: 'Stinson',      name: 'Stinson Beach',       subtitle: 'Open 3-mile beach',            difficulty: 4,  type: 'Beach · L/R',          bottom: 'Sand',          optimalSwell: 225, optimalSize: [3,8], optimalPeriod: [14,18], offshore: 45,  optimalTide: 'high',   lat: 37.8978, lng: -122.6477, driveMin: 18 },
+  { id: 'stinson',       region: 'bolinas',  regionLabel: 'Stinson',      name: 'Stinson Beach',       subtitle: 'Open 3-mile beach',            difficulty: 3,  type: 'Beach · L/R',          bottom: 'Sand',          optimalSwell: 250, optimalSize: [2,6], optimalPeriod: [10,14], offshore: 45,  optimalTide: 'high',   lat: 37.8978, lng: -122.6477, driveMin: 18,
+    shadowFactor: 0.6, sandMobility: 0.7,
+    stormriderStars: 3 },
   // Region 3 — Marin Headlands / SF
-  { id: 'rodeo',         region: 'marin-sf', regionLabel: 'Marin / SF',   name: 'Rodeo Beach',         subtitle: 'Fort Cronkhite',               difficulty: 2,  type: 'Cove · Sandbar',       bottom: 'Sand',          optimalSwell: 215, optimalSize: [2,6], optimalPeriod: [10,14], offshore: 45,  optimalTide: 'low',    lat: 37.831,  lng: -122.540,  driveMin: 14 },
+  { id: 'rodeo',         region: 'marin-sf', regionLabel: 'Marin / SF',   name: 'Rodeo Beach',         subtitle: 'Fort Cronkhite',               difficulty: 4,  type: 'Cove · Beachbreak',    bottom: 'Sand',          optimalSwell: 250, optimalSize: [1,6], optimalPeriod: [10,14], offshore: 45,  optimalTide: 'mid',    lat: 37.831,  lng: -122.540,  driveMin: 14,
+    shadowFactor: 0.5, sandMobility: 0.85,
+    stormriderStars: 2 },
   { id: 'fort-point',    region: 'marin-sf', regionLabel: 'Marin / SF',   name: 'Fort Point',          subtitle: 'Under the Golden Gate',        difficulty: 9,  type: 'Reef · Left · Expert', bottom: 'Rock + boulder',optimalSwell: 280, optimalSize: [8,20],optimalPeriod: [16,20], offshore: 180, optimalTide: 'low',    lat: 37.8108, lng: -122.4770, driveMin: 24 },
   { id: 'ocean-beach',   region: 'marin-sf', regionLabel: 'Marin / SF',   name: 'Ocean Beach',         subtitle: 'Sloat → Kelly’s Cove',         difficulty: 7,  type: 'Beach · Powerful',     bottom: 'Sand',          optimalSwell: 290, optimalSize: [4,12],optimalPeriod: [14,20], offshore: 115, optimalTide: 'mid',    lat: 37.7604, lng: -122.5107, driveMin: 32 },
   // Region 4 — San Mateo North
