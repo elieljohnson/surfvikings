@@ -76,8 +76,10 @@ export const SPOTS: Spot[] = [
   { id: 'doran-beach',   region: 'sonoma',   regionLabel: 'Sonoma Coast', name: 'Doran Beach',         subtitle: 'Bodega Bay · S-facing crescent',difficulty: 3, type: 'Beach · Beginner',     bottom: 'Sand',          optimalSwell: 250, optimalSize: [2,7], optimalPeriod: [12,16], offshore: 337, optimalTide: 'high',   lat: 38.3140, lng: -123.0316, driveMin: 85,
     shadowFactor: 0.4, sandMobility: 0.7 },
   // Region 2 — Point Reyes
-  { id: 'point-reyes-north', region: 'pt-reyes', regionLabel: 'Point Reyes', name: 'Point Reyes Beach (N)', subtitle: 'North access · 11-mile beach', difficulty: 6, type: 'Beach',                bottom: 'Sand',          optimalSwell: 280, optimalSize: [2,8], optimalPeriod: [12,16], offshore: 120, optimalTide: 'rising', lat: 38.0548, lng: -122.9652, driveMin: 62,
+  { id: 'point-reyes',   region: 'pt-reyes', regionLabel: 'Point Reyes',  name: 'Point Reyes Beach',   subtitle: 'The Great Beach',              difficulty: 6,  type: 'Beach',                bottom: 'Sand',          optimalSwell: 280, optimalSize: [2,8], optimalPeriod: [12,16], offshore: 120, optimalTide: 'rising', lat: 38.0548, lng: -122.9652, driveMin: 62,
     shadowFactor: 0.95, sandMobility: 0.9 },
+  { id: 'drakes-estero', region: 'pt-reyes', regionLabel: 'Point Reyes',  name: 'Drakes Estero',       subtitle: 'Drakes Bay · 1-mile walk-in',  difficulty: 5,  type: 'Rivermouth · L/R',     bottom: 'Sand',          optimalSwell: 200, optimalSize: [1,8], optimalPeriod: [10,14], offshore: 0,   optimalTide: 'rising', lat: 38.0287, lng: -122.9430, driveMin: 75,
+    shadowFactor: 0.6, sandMobility: 1.0 },
   { id: 'dillon-beach',  region: 'pt-reyes', regionLabel: 'Point Reyes',  name: 'Dillon Beach',        subtitle: 'Tomales Bay mouth',            difficulty: 3,  type: 'Beach',                bottom: 'Sand',          optimalSwell: 270, optimalSize: [2,8], optimalPeriod: [10,14], offshore: 80,  optimalTide: 'high',   lat: 38.2531, lng: -122.9668, driveMin: 74,
     shadowFactor: 0.85, sandMobility: 0.7 },
   // Bolinas cluster
