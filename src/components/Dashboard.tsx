@@ -180,7 +180,7 @@ export function Dashboard({ onOpenSpot }: DashboardProps) {
   return (
     <Screen>
       {/* Hero header */}
-      <div style={{ padding: '52px 20px 20px', background: `linear-gradient(180deg, ${TOKENS.surface} 0%, ${TOKENS.bg} 100%)` }}>
+      <div style={{ padding: '52px 20px 4px', background: `linear-gradient(180deg, ${TOKENS.surface} 0%, ${TOKENS.bg} 100%)` }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14, gap: 12 }}>
           <div style={{ minWidth: 0, flex: 1 }}>
             <div style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 13, letterSpacing: '0.2em', color: TOKENS.textMute, textTransform: 'uppercase' }}>{headerDate}</div>
