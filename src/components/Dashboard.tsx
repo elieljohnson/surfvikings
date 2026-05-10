@@ -167,7 +167,11 @@ export function Dashboard({ onOpenSpot }: DashboardProps) {
 
   // Local weather readout in the header: air temp from the nearest buoy,
   // wind from the top-ranked favorite (same regional conditions as the user).
-  const buoyAirF = response?.buoys[buoyId]?.airTempF;
+  // Air temp falls through to any buoy that reports it — most NDBC offshore
+  // buoys (46026, 46237, 46042) lack met sensors and only report waves and
+  // water temp. Coastal air temp varies little across the 30-mile region.
+  const buoyAirF = response?.buoys[buoyId]?.airTempF
+    ?? Object.values(response?.buoys ?? {}).find((b) => typeof b.airTempF === 'number')?.airTempF;
   const localTempStr = typeof buoyAirF === 'number' ? `${Math.round(buoyAirF)}°F` : '—°F';
   const localWindStr = now0 ? `${degToCardinal(now0.windDirection)} ${Math.round(now0.windSpeed)}kts` : '';
   const dataBadge = loading ? 'SYNCING' : error ? 'OFFLINE' : stale ? 'STALE' : response?.meta.source === 'partial' ? 'PARTIAL' : 'LIVE';
