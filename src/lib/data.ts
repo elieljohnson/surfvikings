@@ -113,7 +113,11 @@ export const SPOTS: Spot[] = [
     shadowFactor: 0.7, sandMobility: 0.0 },
   { id: 'kellys-cove',   region: 'marin-sf', regionLabel: 'Marin / SF',   name: "Kelly's Cove",        subtitle: 'OB north end · Cliff House shelter', difficulty: 4, type: 'Cove · Beach',         bottom: 'Sand',          optimalSwell: 225, optimalSize: [2,8], optimalPeriod: [10,14], offshore: 90,  optimalTide: 'mid',    lat: 37.7780, lng: -122.5135, driveMin: 30,
     shadowFactor: 0.6, sandMobility: 0.7 },
-  { id: 'ocean-beach',   region: 'marin-sf', regionLabel: 'Marin / SF',   name: 'Ocean Beach',         subtitle: '3-mile beach · Sloat to N end', difficulty: 7, type: 'Beach · Powerful',     bottom: 'Sand',          optimalSwell: 290, optimalSize: [4,15],optimalPeriod: [14,20], offshore: 100, optimalTide: 'mid',    lat: 37.7604, lng: -122.5107, driveMin: 32,
+  { id: 'ocean-beach-north', region: 'marin-sf', regionLabel: 'Marin / SF', name: 'Ocean Beach (N)', subtitle: 'North end · Lawton to Lincoln',  difficulty: 6, type: 'Beach · Powerful',     bottom: 'Sand',          optimalSwell: 290, optimalSize: [3,10],optimalPeriod: [12,18], offshore: 90,  optimalTide: 'mid',    lat: 37.7700, lng: -122.5125, driveMin: 31,
+    shadowFactor: 0.95, sandMobility: 0.95 },
+  { id: 'ocean-beach',   region: 'marin-sf', regionLabel: 'Marin / SF',   name: 'Ocean Beach',         subtitle: 'Central · Mid avenues',        difficulty: 7,  type: 'Beach · Powerful',     bottom: 'Sand',          optimalSwell: 290, optimalSize: [4,15],optimalPeriod: [14,20], offshore: 100, optimalTide: 'mid',    lat: 37.7604, lng: -122.5107, driveMin: 32,
+    shadowFactor: 0.95, sandMobility: 0.95 },
+  { id: 'ocean-beach-south', region: 'marin-sf', regionLabel: 'Marin / SF', name: 'Ocean Beach (S)', subtitle: 'Sloat · VFW to Sloat Blvd',     difficulty: 7,  type: 'Beach · Powerful',     bottom: 'Sand',          optimalSwell: 290, optimalSize: [3,12],optimalPeriod: [12,18], offshore: 80,  optimalTide: 'mid',    lat: 37.7400, lng: -122.5083, driveMin: 33,
     shadowFactor: 0.95, sandMobility: 0.95 },
   // Region 4 — San Mateo North
   { id: 'linda-mar',     region: 'sm-north', regionLabel: 'Pacifica',     name: 'Linda Mar',           subtitle: 'Pacifica · Taco Bell',         difficulty: 2,  type: 'Beach · Beginner',     bottom: 'Sand',          optimalSwell: 300, optimalSize: [2,6], optimalPeriod: [12,16], offshore: 135, optimalTide: 'high',   lat: 37.5932, lng: -122.4978, driveMin: 46 },

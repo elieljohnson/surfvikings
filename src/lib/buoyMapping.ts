@@ -31,7 +31,9 @@ export const BUOY_MAPPINGS: BuoyMapping[] = [
   { spotId: 'fort-point',    primaryBuoy: '46026', secondaryBuoy: '46237', tideStation: '9414290', nwsZone: 'PZZ545' },
   { spotId: 'deadmans',      primaryBuoy: '46026', secondaryBuoy: '46237', tideStation: '9414290', nwsZone: 'PZZ545' },
   { spotId: 'kellys-cove',   primaryBuoy: '46026', secondaryBuoy: '46237', tideStation: '9414290', nwsZone: 'PZZ545' },
+  { spotId: 'ocean-beach-north', primaryBuoy: '46026', secondaryBuoy: '46237', tideStation: '9414290', nwsZone: 'PZZ545' },
   { spotId: 'ocean-beach',   primaryBuoy: '46026', secondaryBuoy: '46237', tideStation: '9414290', nwsZone: 'PZZ545' },
+  { spotId: 'ocean-beach-south', primaryBuoy: '46026', secondaryBuoy: '46237', tideStation: '9414290', nwsZone: 'PZZ545' },
   // Region 4 — San Mateo North
   { spotId: 'linda-mar',     primaryBuoy: '46026', secondaryBuoy: '46012', tideStation: '9414131', nwsZone: 'PZZ560' },
   { spotId: 'rockaway',      primaryBuoy: '46026', secondaryBuoy: '46012', tideStation: '9414131', nwsZone: 'PZZ560' },
