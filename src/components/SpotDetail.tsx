@@ -250,15 +250,24 @@ function ChartRow({
   );
 }
 
+// Shared y-axis cap (in meters) for clusters of comparable spots. Without
+// this each chart auto-normalizes to its own deepest point, which hides
+// the fact that the Patch is shallower than the Groin. Per-cluster: extend
+// here when other regions get bathymetry profiles.
+const SHARED_DEPTH_BY_REGION: Partial<Record<Spot['region'], number>> = {
+  bolinas: 25,
+};
+
 function BathymetrySection({ spot }: { spot: Spot }) {
   const b = spot.bathymetry!;
+  const sharedMaxDepth = SHARED_DEPTH_BY_REGION[spot.region];
   return (
     <div style={{ padding: '4px 20px 16px' }}>
       <div style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 13, letterSpacing: '0.18em', color: TOKENS.textMute, textTransform: 'uppercase', marginBottom: 10 }}>
         Bathymetry · Bottom profile
       </div>
       <div style={{ background: TOKENS.surface, border: `1px solid ${TOKENS.border}`, borderRadius: 10, padding: 14 }}>
-        <BathymetryCrossSection depths={b.depth} distances={b.distance}/>
+        <BathymetryCrossSection depths={b.depth} distances={b.distance} maxDepthOverride={sharedMaxDepth}/>
         <div style={{ fontSize: 13, color: TOKENS.textDim, marginTop: 10, lineHeight: 1.5 }}>{b.label}</div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginTop: 12, paddingTop: 12, borderTop: `1px solid ${TOKENS.border}` }}>
           <Stat label="Bottom" value={spot.bottom.split(' ')[0]} hint={spot.bottom}/>
@@ -270,10 +279,12 @@ function BathymetrySection({ spot }: { spot: Spot }) {
   );
 }
 
-function BathymetryCrossSection({ depths, distances }: { depths: number[]; distances: number[] }) {
+function BathymetryCrossSection({ depths, distances, maxDepthOverride }: { depths: number[]; distances: number[]; maxDepthOverride?: number }) {
   const [wrapRef, width] = useResponsiveWidth(305);
   const height = 110;
-  const maxDepth = Math.max(...depths);
+  // When several spots in a region share a y-axis we override the per-chart
+  // normalization so depth differences are directly comparable.
+  const maxDepth = maxDepthOverride ?? Math.max(...depths);
   const maxDist = distances[0];
   const pts = depths.map((d, i) => {
     const x = width - (distances[i] / maxDist) * width;

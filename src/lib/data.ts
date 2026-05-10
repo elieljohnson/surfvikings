@@ -69,14 +69,21 @@ export const SPOTS: Spot[] = [
   { id: 'point-reyes',   region: 'pt-reyes', regionLabel: 'Point Reyes',  name: 'Point Reyes Beach',   subtitle: 'The Great Beach',              difficulty: 8,  type: 'Beach · Expert',       bottom: 'Sand',          optimalSwell: 250, optimalSize: [3,6], optimalPeriod: [12,16], offshore: 135, optimalTide: 'mid',    lat: 38.0548, lng: -122.9652, driveMin: 62 },
   { id: 'dillon-beach',  region: 'pt-reyes', regionLabel: 'Point Reyes',  name: 'Dillon Beach',        subtitle: 'Tomales Bay mouth',            difficulty: 4,  type: 'Beach',                bottom: 'Sand',          optimalSwell: 270, optimalSize: [2,5], optimalPeriod: [10,14], offshore: 90,  optimalTide: 'high',   lat: 38.2531, lng: -122.9668, driveMin: 74 },
   // Bolinas cluster
+  // Bolinas profiles share the same 1800→100m offshore distance grid so
+  // they can be compared on a shared y-axis (see BathymetryCrossSection).
+  // Depths reflect the distinct geometry of each break, not generic ramps.
   { id: 'bolinas-patch', region: 'bolinas',  regionLabel: 'Bolinas',      name: 'The Patch',           subtitle: 'Duxbury Reef',                 difficulty: 3,  type: 'Reef · Long/slow',     bottom: 'Rock reef',     optimalSwell: 225, optimalSize: [2,6], optimalPeriod: [12,16], offshore: 0,   optimalTide: 'low',    lat: 37.9042, lng: -122.7101, driveMin: 22,
-    bathymetry: { label: 'Duxbury Reef — largest intertidal reef in N. America. Permanent shape.', depth: [18,14,10,6,3,1.5], distance: [1800,1400,1000,600,300,100] },
+    // Reef-edge drop at ~1km out, then a long flat intertidal shelf.
+    bathymetry: { label: 'Duxbury Reef — largest intertidal reef in N. America. Permanent shape.', depth: [22,18,12,4,2,1], distance: [1800,1400,1000,600,300,100] },
     shadowFactor: 0.55, sandMobility: 0.0 },
   { id: 'bolinas-jetty', region: 'bolinas',  regionLabel: 'Bolinas',      name: 'The Jetty',           subtitle: 'Channel / Wharf Rd',           difficulty: 2,  type: 'Beach · Beginner',     bottom: 'Sand + rock',   optimalSwell: 200, optimalSize: [2,5], optimalPeriod: [12,16], offshore: 0,   optimalTide: 'high',   lat: 37.8987, lng: -122.6986, driveMin: 22,
-    bathymetry: { label: 'Shifting sandbars — lagoon outflow reshapes weekly.', depth: [22,16,11,7,4,1.5], distance: [1800,1400,1000,600,300,100] },
+    // Smooth, near-linear sand ramp — no reef shelf, no scour.
+    bathymetry: { label: 'Shifting sandbars — lagoon outflow reshapes weekly.', depth: [22,17,12,7,4,1.5], distance: [1800,1400,1000,600,300,100] },
     shadowFactor: 0.45, sandMobility: 0.85 },
   { id: 'bolinas-groin', region: 'bolinas',  regionLabel: 'Bolinas',      name: 'The Groin',           subtitle: 'Sea Drift · Lagoon mouth',     difficulty: 6,  type: 'Jetty · Left',         bottom: 'Sand + groin',  optimalSwell: 245, optimalSize: [4,8], optimalPeriod: [14,18], offshore: 0,   optimalTide: 'rising', lat: 37.8994, lng: -122.6962, driveMin: 22,
-    bathymetry: { label: 'Groin + lagoon hydraulics = river-mouth dynamic.', depth: [24,18,12,7,3,1], distance: [1800,1400,1000,600,300,100] },
+    // Lagoon outflow scours a deeper trough offshore of the structure;
+    // sand piles back up inshore, giving a sharp rise over the bar.
+    bathymetry: { label: 'Groin + lagoon hydraulics = river-mouth dynamic.', depth: [22,18,14,11,5,1], distance: [1800,1400,1000,600,300,100] },
     shadowFactor: 0.50, sandMobility: 0.6,
     specialRules: [{ kind: 'falling-tide-rip', below: 2, penalty: -15 }] },
   { id: 'stinson',       region: 'bolinas',  regionLabel: 'Stinson',      name: 'Stinson Beach',       subtitle: 'Open 3-mile beach',            difficulty: 4,  type: 'Beach · L/R',          bottom: 'Sand',          optimalSwell: 225, optimalSize: [3,8], optimalPeriod: [14,18], offshore: 45,  optimalTide: 'high',   lat: 37.8978, lng: -122.6477, driveMin: 18 },
