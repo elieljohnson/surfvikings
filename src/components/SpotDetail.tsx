@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { TOKENS, scoreColor } from '../lib/tokens';
+import { TOKENS, scoreColor, qualityColor } from '../lib/tokens';
 import {
   SPOTS, Spot, ForecastHour, findBestWindows,
   scoreToRating, hourLabel, degToCardinal, angleDelta, MetricKey,
@@ -197,7 +197,10 @@ function ScoreBreakdown({ spot, current }: { spot: Spot; current: ForecastHour }
       }}>
         {rows.map((r) => {
           const pct = r.score / r.max;
-          const barColor = pct > 0.7 ? TOKENS.epic : pct > 0.4 ? TOKENS.good : TOKENS.poor;
+          // Match the hero card's 6-band qualityColor scale so green/yellow/red
+          // mean the same thing across surfaces. Was a 3-band local mapping that
+          // skipped fair/mediocre/meh and snapped 5/15 wind dir to red.
+          const barColor = qualityColor(pct);
           return (
             <div key={r.label} style={{
               display: 'flex', alignItems: 'center', gap: 12,
