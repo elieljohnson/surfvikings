@@ -213,36 +213,36 @@ export function ScoreTimeline({
 }: { timeline: ForecastHour[]; width?: number; height?: number }) {
   const [wrapRef, measuredW] = useResponsiveWidth(320);
   const renderW = width ?? measuredW;
-  const lastIdx = Math.max(1, timeline.length - 1);
-  const pts = timeline.map((t, i) => {
-    const x = (i / lastIdx) * renderW;
-    const y = height - (t.score / 100) * height;
-    return [x, y] as const;
-  });
-  const path = pts.map(([x, y], i) => (i === 0 ? `M${x},${y}` : `L${x},${y}`)).join(' ');
-  const areaPath = `${path} L${renderW},${height} L0,${height} Z`;
+  const barW = renderW / timeline.length;
   const epicY = height - 0.80 * height;
   const goodY = height - 0.60 * height;
+  const lastIdx = Math.max(1, timeline.length - 1);
   return (
     <div ref={wrapRef} style={{ width: width ? undefined : '100%' }}>
       <svg width={renderW} height={height + 14} style={{ display: 'block' }}>
-        <defs>
-          <linearGradient id="score-ln" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor={TOKENS.pacific} stopOpacity="0.5"/>
-            <stop offset="100%" stopColor={TOKENS.pacific} stopOpacity="0"/>
-          </linearGradient>
-        </defs>
-        <line x1="0" x2={renderW} y1={epicY} y2={epicY} stroke={TOKENS.epic} strokeWidth="0.5" strokeDasharray="2 3" opacity="0.5"/>
-        <line x1="0" x2={renderW} y1={goodY} y2={goodY} stroke={TOKENS.good} strokeWidth="0.5" strokeDasharray="2 3" opacity="0.35"/>
+        {/* Reference threshold lines — drawn behind the bars so the bar color
+         * is still readable when a bar crosses a line. */}
+        <line x1="0" x2={renderW} y1={epicY} y2={epicY} stroke={TOKENS.epic} strokeWidth="0.5" strokeDasharray="2 3" opacity="0.4"/>
+        <line x1="0" x2={renderW} y1={goodY} y2={goodY} stroke={TOKENS.good} strokeWidth="0.5" strokeDasharray="2 3" opacity="0.3"/>
+        {/* Per-hour bars colored by scoreColor — same palette as the metric
+         * bar charts below, so green/yellow/red mean the same thing. */}
+        {timeline.map((t, i) => {
+          const h = (t.score / 100) * height;
+          const x = i * barW;
+          const y = height - h;
+          const fill = scoreColor(t.score, false);
+          // Slight fade into the future to draw the eye to "now."
+          const op = i === 0 ? 1 : 0.55 + (1 - i / timeline.length) * 0.4;
+          return (
+            <rect key={i} x={x + 0.5} y={y} width={Math.max(1, barW - 1)} height={h} fill={fill} opacity={op}/>
+          );
+        })}
         <text x={renderW - 2} y={epicY - 2} textAnchor="end" fontFamily="JetBrains Mono, ui-monospace, monospace" fontSize="11" fill={TOKENS.epic} opacity="0.8">EPIC 80</text>
         <text x={renderW - 2} y={goodY - 2} textAnchor="end" fontFamily="JetBrains Mono, ui-monospace, monospace" fontSize="11" fill={TOKENS.good} opacity="0.65">GOOD 60</text>
-        <path d={areaPath} fill="url(#score-ln)"/>
-        <path d={path} stroke={TOKENS.pacific} strokeWidth="1.75" fill="none" strokeLinecap="round"/>
-        <circle cx={pts[0][0]} cy={pts[0][1]} r="3.5" fill={TOKENS.pacific} stroke={TOKENS.bg} strokeWidth="2"/>
         {AXIS_TICKS.map(({ h, anchor }) => {
           const tickH = Math.min(h, lastIdx);
           return (
-            <text key={h} x={(tickH / lastIdx) * renderW} y={height + 11}
+            <text key={h} x={tickH * barW + barW / 2} y={height + 11}
               textAnchor={anchor}
               fontFamily="JetBrains Mono, ui-monospace, monospace" fontSize="12" fill={TOKENS.textMute}>
               {hourLabel(tickH)}
