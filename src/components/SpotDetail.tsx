@@ -180,11 +180,11 @@ function ScoreBreakdown({ spot, current }: { spot: Spot; current: ForecastHour }
   })();
 
   const rows = [
-    { label: 'Direction', score: dirScore, max: 30, hint: `${Math.round(current.swellDirection)}° · opt ${spot.optimalSwell}°` },
-    { label: 'Period', score: pScore, max: 20, hint: `${Math.round(current.swellPeriod)}s · opt ${pMin}-${pMax}s` },
-    { label: 'Size', score: sScore, max: 15, hint: `${current.swellHeight.toFixed(1)}ft · opt ${sMin}-${sMax}ft` },
-    { label: 'Wind dir', score: windDirScore, max: 15, hint: `${degToCardinal(current.windDirection)} · off ${degToCardinal(spot.offshore)}` },
-    { label: 'Tide', score: tideScore, max: 10, hint: `${current.tideHeight.toFixed(1)}ft · opt ${spot.optimalTide}` },
+    { label: 'Direction', score: dirScore,     max: 30, now: `${Math.round(current.swellDirection)}°`,        opt: `opt ${spot.optimalSwell}°` },
+    { label: 'Period',    score: pScore,       max: 20, now: `${Math.round(current.swellPeriod)}s`,           opt: `opt ${pMin}-${pMax}s` },
+    { label: 'Size',      score: sScore,       max: 15, now: `${current.swellHeight.toFixed(1)}ft`,           opt: `opt ${sMin}-${sMax}ft` },
+    { label: 'Wind dir',  score: windDirScore, max: 15, now: degToCardinal(current.windDirection),            opt: `off ${degToCardinal(spot.offshore)}` },
+    { label: 'Tide',      score: tideScore,    max: 10, now: `${current.tideHeight.toFixed(1)}ft`,            opt: `opt ${spot.optimalTide}` },
   ];
 
   return (
@@ -222,7 +222,10 @@ function ScoreBreakdown({ spot, current }: { spot: Spot; current: ForecastHour }
                 <span style={{ color: barColor, fontWeight: 500 }}>{Math.round(r.score)}</span>
                 <span style={{ color: TOKENS.textMute }}>/{r.max}</span>
               </div>
-              <div style={{ width: 104, fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 13, color: TOKENS.textDim, textAlign: 'right' }}>{r.hint}</div>
+              <div style={{ width: 104, fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 13, textAlign: 'right', display: 'flex', flexDirection: 'column', gap: 2, lineHeight: 1.2 }}>
+                <span style={{ color: TOKENS.text }}>{r.now}</span>
+                <span style={{ color: TOKENS.textMute }}>{r.opt}</span>
+              </div>
             </div>
           );
         })}
