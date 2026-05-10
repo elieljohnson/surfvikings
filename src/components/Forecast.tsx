@@ -56,9 +56,8 @@ export function Forecast(_props: ForecastProps) {
           <div style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 13, letterSpacing: '0.18em', color: TOKENS.textMute, textTransform: 'uppercase' }}>
             Conditions · raw readings
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 12, letterSpacing: '0.12em', textTransform: 'uppercase', color: TOKENS.textDim }}>
-            <span>Fit for {spot.name.replace('The ', '')}</span>
-            <span style={{ width: 42, height: 6, background: `linear-gradient(90deg, ${TOKENS.flat}, ${TOKENS.poor}, ${TOKENS.fair}, ${TOKENS.good}, ${TOKENS.epic})`, borderRadius: 1 }}/>
+          <div style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 12, letterSpacing: '0.12em', textTransform: 'uppercase', color: TOKENS.textDim }}>
+            Fit for {spot.name.replace('The ', '')}
           </div>
         </div>
         <div style={{ background: TOKENS.surface, border: `1px solid ${TOKENS.border}`, borderRadius: 10, padding: 14 }}>
