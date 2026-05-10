@@ -86,7 +86,7 @@ export function Forecast(_props: ForecastProps) {
               <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                 <Stat label="Swell dir" value={degToCardinal(timeline[0].swellDirection)} hint={`${Math.round(timeline[0].swellDirection)}°`} color={qualityColor(swellDirQ)}/>
                 <Stat label="Optimal"   value={degToCardinal(spot.optimalSwell)}           hint={`${spot.optimalSwell}°`}                       color={TOKENS.phosphor}/>
-                <Stat label="Wind"      value={degToCardinal(timeline[0].windDirection)}    hint={`${Math.round(timeline[0].windSpeed)}kts`}    color={qualityColor(windDirQ)}/>
+                <Stat label="Wind"      value={degToCardinal(timeline[0].windDirection)}    unit={`${Math.round(timeline[0].windSpeed)}kts`} hint={`${Math.round(timeline[0].windDirection)}°`} color={qualityColor(windDirQ)}/>
                 <Stat label="Offshore"  value={degToCardinal(spot.offshore)}                hint={`${spot.offshore}°`}                          color={TOKENS.phosphor}/>
               </div>
             </div>
