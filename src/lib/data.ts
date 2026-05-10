@@ -109,6 +109,8 @@ export const SPOTS: Spot[] = [
     shadowFactor: 0.5, sandMobility: 0.85 },
   { id: 'fort-point',    region: 'marin-sf', regionLabel: 'Marin / SF',   name: 'Fort Point',          subtitle: 'Under the Golden Gate',        difficulty: 7,  type: 'Reef · Left',          bottom: 'Boulders',      optimalSwell: 290, optimalSize: [4,12],optimalPeriod: [12,18], offshore: 180, optimalTide: 'low',    lat: 37.8108, lng: -122.4770, driveMin: 24,
     shadowFactor: 0.25, sandMobility: 0.0 },
+  { id: 'deadmans',      region: 'marin-sf', regionLabel: 'Marin / SF',   name: 'Deadmans',            subtitle: 'Lands End · Sutro Baths reef', difficulty: 8,  type: 'Reef · Left',          bottom: 'Uneven reef',   optimalSwell: 315, optimalSize: [6,12],optimalPeriod: [14,18], offshore: 135, optimalTide: 'low',    lat: 37.7800, lng: -122.5135, driveMin: 30,
+    shadowFactor: 0.7, sandMobility: 0.0 },
   { id: 'ocean-beach',   region: 'marin-sf', regionLabel: 'Marin / SF',   name: 'Ocean Beach',         subtitle: 'Sloat → Kelly’s Cove',         difficulty: 7,  type: 'Beach · Powerful',     bottom: 'Sand',          optimalSwell: 290, optimalSize: [4,12],optimalPeriod: [14,20], offshore: 115, optimalTide: 'mid',    lat: 37.7604, lng: -122.5107, driveMin: 32 },
   // Region 4 — San Mateo North
   { id: 'linda-mar',     region: 'sm-north', regionLabel: 'Pacifica',     name: 'Linda Mar',           subtitle: 'Pacifica · Taco Bell',         difficulty: 2,  type: 'Beach · Beginner',     bottom: 'Sand',          optimalSwell: 300, optimalSize: [2,6], optimalPeriod: [12,16], offshore: 135, optimalTide: 'high',   lat: 37.5932, lng: -122.4978, driveMin: 46 },
