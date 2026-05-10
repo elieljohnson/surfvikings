@@ -42,7 +42,7 @@ export const BUOY_MAPPINGS: BuoyMapping[] = [
   { spotId: 'montara',       primaryBuoy: '46012', tideStation: '9414131', nwsZone: 'PZZ560' },
   { spotId: 'princeton',     primaryBuoy: '46012', tideStation: '9414131', nwsZone: 'PZZ560' },
   { spotId: 'mavericks',     primaryBuoy: '46012', tideStation: '9414131', nwsZone: 'PZZ560' },
-  { spotId: 'hmb-jetty',     primaryBuoy: '46012', tideStation: '9414131', nwsZone: 'PZZ560' },
+  { spotId: 'francis-beach', primaryBuoy: '46012', tideStation: '9414131', nwsZone: 'PZZ560' },
   // Region 5 — Hwy 1 South
   { spotId: 'martins',       primaryBuoy: '46012', tideStation: '9413450', nwsZone: 'PZZ560' },
   { spotId: 'ano-nuevo',     primaryBuoy: '46042', secondaryBuoy: '46012', tideStation: '9413450', nwsZone: 'PZZ560' },
