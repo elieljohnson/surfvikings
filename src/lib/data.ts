@@ -151,7 +151,7 @@ export const SPOTS: Spot[] = [
   { id: 'the-hook',      region: 'sc',       regionLabel: 'Santa Cruz',   name: 'The Hook',            subtitle: 'Classic right',                difficulty: 5,  type: 'Reef · Right',         bottom: 'Rock + kelp',   optimalSwell: 245, optimalSize: [3,8], optimalPeriod: [12,16], offshore: 0,   optimalTide: 'mid',    lat: 36.9582, lng: -121.9627, driveMin: 134 },
 ];
 
-export const FAVORITES = ['bolinas-patch', 'bolinas-jetty', 'bolinas-groin', 'stinson', 'rodeo', 'ocean-beach'];
+export const FAVORITES = ['bolinas-patch', 'bolinas-jetty', 'bolinas-groin', 'stinson', 'rodeo', 'muir-beach'];
 
 export interface CurrentConditions {
   swellHeight: number;
