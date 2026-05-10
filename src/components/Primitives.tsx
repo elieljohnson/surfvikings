@@ -190,7 +190,7 @@ export function ForecastChart({
   const barW = renderW / timeline.length;
   const lastIdx = Math.max(0, timeline.length - 1);
   return (
-    <div ref={wrapRef} style={{ width: width ? undefined : '100%' }}>
+    <div ref={wrapRef} style={{ width: width ? undefined : '100%', minWidth: 0, overflow: 'hidden' }}>
       <svg width={renderW} height={height + (showAxis ? 22 : 0)} style={{ display: 'block' }}>
         {timeline.map((t, i) => {
           const v = t[metric] as number;
@@ -227,7 +227,7 @@ export function ScoreTimeline({
   const barW = renderW / timeline.length;
   const lastIdx = Math.max(1, timeline.length - 1);
   return (
-    <div ref={wrapRef} style={{ width: width ? undefined : '100%' }}>
+    <div ref={wrapRef} style={{ width: width ? undefined : '100%', minWidth: 0, overflow: 'hidden' }}>
       <svg width={renderW} height={height + 22} style={{ display: 'block' }}>
         {/* Per-hour bars colored by scoreColor — same palette as the metric
          * bar charts below, so green/yellow/red mean the same thing. */}
