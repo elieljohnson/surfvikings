@@ -180,7 +180,7 @@ export function ForecastChart({
   const lastIdx = Math.max(0, timeline.length - 1);
   return (
     <div ref={wrapRef} style={{ width: width ? undefined : '100%' }}>
-      <svg width={renderW} height={height + (showAxis ? 14 : 0)} style={{ display: 'block' }}>
+      <svg width={renderW} height={height + (showAxis ? 22 : 0)} style={{ display: 'block' }}>
         {timeline.map((t, i) => {
           const v = t[metric] as number;
           const h = ((v - min) / range) * height;
@@ -196,7 +196,7 @@ export function ForecastChart({
         {showAxis && AXIS_TICKS.map(({ h, anchor }) => {
           const tickH = Math.min(h, lastIdx);
           return (
-            <text key={h} x={tickH * barW + barW / 2} y={height + 11}
+            <text key={h} x={tickH * barW + barW / 2} y={height + 18}
               textAnchor={anchor}
               fontFamily="JetBrains Mono, ui-monospace, monospace" fontSize="12" fill={TOKENS.textMute}>
               {hourLabel(tickH)}
@@ -217,7 +217,7 @@ export function ScoreTimeline({
   const lastIdx = Math.max(1, timeline.length - 1);
   return (
     <div ref={wrapRef} style={{ width: width ? undefined : '100%' }}>
-      <svg width={renderW} height={height + 14} style={{ display: 'block' }}>
+      <svg width={renderW} height={height + 22} style={{ display: 'block' }}>
         {/* Per-hour bars colored by scoreColor — same palette as the metric
          * bar charts below, so green/yellow/red mean the same thing. */}
         {timeline.map((t, i) => {
@@ -234,7 +234,7 @@ export function ScoreTimeline({
         {AXIS_TICKS.map(({ h, anchor }) => {
           const tickH = Math.min(h, lastIdx);
           return (
-            <text key={h} x={tickH * barW + barW / 2} y={height + 11}
+            <text key={h} x={tickH * barW + barW / 2} y={height + 18}
               textAnchor={anchor}
               fontFamily="JetBrains Mono, ui-monospace, monospace" fontSize="12" fill={TOKENS.textMute}>
               {hourLabel(tickH)}
