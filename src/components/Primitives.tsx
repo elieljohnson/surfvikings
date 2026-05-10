@@ -368,8 +368,8 @@ export function CompassRose({
         <g transform={`rotate(${windDir} ${r} ${r})`}>
           {/* Match the swell's reach (a 6px stub was invisible). Use a small
            * dot at the tip to differentiate from the swell's arrowhead. */}
-          <line x1={r} y1={r} x2={r} y2="6" stroke={windColor} strokeWidth="1.25" strokeDasharray="2 2"/>
-          <circle cx={r} cy="5" r="1.75" fill={windColor}/>
+          <line x1={r} y1={r} x2={r} y2="6" stroke={windColor} strokeWidth="2" strokeDasharray="3 2"/>
+          <circle cx={r} cy="5" r="2" fill={windColor}/>
         </g>
       )}
       <circle cx={r} cy={r} r="1.5" fill={TOKENS.text}/>
