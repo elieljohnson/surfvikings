@@ -329,8 +329,18 @@ function describeArc(cx: number, cy: number, r: number, startAngle: number, endA
 
 export function CompassRose({
   size = 36, swellDir, windDir, offshore,
-}: { size?: number; swellDir?: number; windDir?: number; offshore?: number }) {
+  swellDirColor, windDirColor,
+}: {
+  size?: number; swellDir?: number; windDir?: number; offshore?: number;
+  /** Override the swell arrow color (default TOKENS.pacific). Pass a
+   * qualityColor() output to make the arrow communicate match quality. */
+  swellDirColor?: string;
+  /** Override the wind arrow color (default TOKENS.cData). */
+  windDirColor?: string;
+}) {
   const r = size / 2;
+  const swellColor = swellDirColor ?? TOKENS.pacific;
+  const windColor = windDirColor ?? TOKENS.cData;
   return (
     <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
       <circle cx={r} cy={r} r={r - 1} fill="none" stroke={TOKENS.border} strokeWidth="1"/>
@@ -341,13 +351,13 @@ export function CompassRose({
       )}
       {swellDir !== undefined && (
         <g transform={`rotate(${swellDir} ${r} ${r})`}>
-          <line x1={r} y1={r} x2={r} y2="4" stroke={TOKENS.pacific} strokeWidth="1.5"/>
-          <polygon points={`${r - 2},6 ${r + 2},6 ${r},2`} fill={TOKENS.pacific}/>
+          <line x1={r} y1={r} x2={r} y2="4" stroke={swellColor} strokeWidth="1.5"/>
+          <polygon points={`${r - 2},6 ${r + 2},6 ${r},2`} fill={swellColor}/>
         </g>
       )}
       {windDir !== undefined && (
         <g transform={`rotate(${windDir} ${r} ${r})`}>
-          <line x1={r} y1={r} x2={r} y2={r - 6} stroke={TOKENS.cData} strokeWidth="1"/>
+          <line x1={r} y1={r} x2={r} y2={r - 6} stroke={windColor} strokeWidth="1"/>
         </g>
       )}
       <circle cx={r} cy={r} r="1.5" fill={TOKENS.text}/>
