@@ -82,7 +82,7 @@ export function Forecast(_props: ForecastProps) {
           const windDirQ  = Math.max(0, 1 - angleDelta(timeline[0].windDirection,  spot.offshore)     / 180);
           return (
             <div style={{ background: TOKENS.surface, border: `1px solid ${TOKENS.border}`, borderRadius: 10, padding: 16, display: 'flex', alignItems: 'center', gap: 16 }}>
-              <CompassRose size={92} swellDir={timeline[0].swellDirection} windDir={timeline[0].windDirection} offshore={spot.offshore} swellDirColor={qualityColor(swellDirQ)} windDirColor={qualityColor(windDirQ)}/>
+              <CompassRose size={92} swellDir={timeline[0].swellDirection} windDir={timeline[0].windDirection} offshore={spot.offshore} optimalSwell={spot.optimalSwell} swellDirColor={qualityColor(swellDirQ)} windDirColor={qualityColor(windDirQ)}/>
               <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                 <Stat label="Swell dir" value={degToCardinal(timeline[0].swellDirection)} hint={`${Math.round(timeline[0].swellDirection)}°`} color={qualityColor(swellDirQ)}/>
                 <Stat label="Optimal"   value={degToCardinal(spot.optimalSwell)}           hint={`${spot.optimalSwell}°`}                       color={TOKENS.phosphor}/>

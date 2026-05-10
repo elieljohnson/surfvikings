@@ -328,10 +328,14 @@ function describeArc(cx: number, cy: number, r: number, startAngle: number, endA
 }
 
 export function CompassRose({
-  size = 36, swellDir, windDir, offshore,
+  size = 36, swellDir, windDir, offshore, optimalSwell,
   swellDirColor, windDirColor,
 }: {
-  size?: number; swellDir?: number; windDir?: number; offshore?: number;
+  size?: number; swellDir?: number; windDir?: number;
+  /** Offshore wind direction. Renders a green target wedge for the wind arrow. */
+  offshore?: number;
+  /** Optimal swell direction. Renders a green target wedge for the swell arrow. */
+  optimalSwell?: number;
   /** Override the swell arrow color (default TOKENS.pacific). Pass a
    * qualityColor() output to make the arrow communicate match quality. */
   swellDirColor?: string;
@@ -346,6 +350,9 @@ export function CompassRose({
       <circle cx={r} cy={r} r={r - 1} fill="none" stroke={TOKENS.border} strokeWidth="1"/>
       <circle cx={r} cy={r} r={r - 7} fill="none" stroke={TOKENS.border} strokeWidth="0.5"/>
       <text x={r} y="7" textAnchor="middle" fontFamily="JetBrains Mono, ui-monospace, monospace" fontSize="6" fill={TOKENS.textMute}>N</text>
+      {optimalSwell !== undefined && (
+        <path d={describeArc(r, r, r - 3, optimalSwell - 30, optimalSwell + 30)} fill={TOKENS.phosphor} opacity="0.18"/>
+      )}
       {offshore !== undefined && (
         <path d={describeArc(r, r, r - 3, offshore - 30, offshore + 30)} fill={TOKENS.phosphor} opacity="0.18"/>
       )}
