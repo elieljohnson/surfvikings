@@ -47,6 +47,8 @@ export const BUOY_MAPPINGS: BuoyMapping[] = [
   { spotId: 'martins',       primaryBuoy: '46012', tideStation: '9413450', nwsZone: 'PZZ560' },
   { spotId: 'tunitas',       primaryBuoy: '46012', tideStation: '9414131', nwsZone: 'PZZ560' },
   { spotId: 'san-gregorio',  primaryBuoy: '46012', tideStation: '9414131', nwsZone: 'PZZ560' },
+  { spotId: 'pomponio',      primaryBuoy: '46012', tideStation: '9414131', nwsZone: 'PZZ560' },
+  { spotId: 'pescadero',     primaryBuoy: '46012', tideStation: '9414131', nwsZone: 'PZZ560' },
   { spotId: 'ano-nuevo',     primaryBuoy: '46042', secondaryBuoy: '46012', tideStation: '9413450', nwsZone: 'PZZ560' },
   { spotId: 'waddell',       primaryBuoy: '46042', tideStation: '9413745', nwsZone: 'PZZ565' },
   { spotId: 'scott-creek',   primaryBuoy: '46042', tideStation: '9413745', nwsZone: 'PZZ565' },
