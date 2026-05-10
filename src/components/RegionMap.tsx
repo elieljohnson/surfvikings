@@ -15,7 +15,7 @@ const REGIONS: RegionMeta[] = [
   { id: 'sonoma',   label: 'Sonoma Coast',      buoy: '46013' },
   { id: 'pt-reyes', label: 'Point Reyes',       buoy: '46013' },
   { id: 'marin',    label: 'Marin',             buoy: '46026' },
-  { id: 'sf',       label: 'SF',                buoy: '46026' },
+  { id: 'sf',       label: 'San Francisco',     buoy: '46026' },
   { id: 'sm-north', label: 'San Mateo N',       buoy: '46012' },
   { id: 'sm-south', label: 'Hwy 1 South',       buoy: '46042' },
   { id: 'sc',       label: 'Santa Cruz',        buoy: '46042' },
