@@ -328,13 +328,16 @@ export function findBestWindows(timeline: ForecastHour[]): BestWindow[] {
 }
 
 // Format an hour-offset from `anchor` as a short local-time label.
-// `h=0` is "now" (no day prefix); future days get a 3-letter day prefix.
-// Uses the browser's local timezone — NorCal users see Pacific time.
-const DAY_NAMES = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+// `h=0` is "now" (no day prefix); future days get a single-letter day
+// prefix (S/M/T/W/T/F/S). The single letter is ambiguous in isolation
+// (T = Tue or Thu) but unambiguous in chronological context where labels
+// run in calendar order. Saves ~16px per label so 5 ticks fit on narrow
+// viewports without colliding. Uses the browser's local timezone.
+const DAY_INITIALS = ['S','M','T','W','T','F','S'];
 export function hourLabel(h: number, anchor: number = Date.now()): string {
   const t = new Date(anchor + h * 3600_000);
   const today = new Date(anchor).getDay();
-  const dayPrefix = t.getDay() === today ? '' : `${DAY_NAMES[t.getDay()]} `;
+  const dayPrefix = t.getDay() === today ? '' : `${DAY_INITIALS[t.getDay()]} `;
   const hr = t.getHours();
   const suffix = hr >= 12 ? 'pm' : 'am';
   const disp = ((hr + 11) % 12) + 1;
