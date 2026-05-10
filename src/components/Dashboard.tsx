@@ -158,8 +158,12 @@ export function Dashboard({ onOpenSpot }: DashboardProps) {
   const tideQ = now0 ? metricQuality(tp, now0, 'tideHeight') : 0.5;
 
   const updatedAgoMin = response ? Math.max(0, Math.round((Date.now() - response.updatedAt) / 60000)) : null;
-  const buoyId = response ? Object.keys(response.buoys)[0] ?? '46026' : '46026';
-  const tideId = response ? Object.keys(response.tides)[0] ?? '9414958' : '9414958';
+  // Pin the buoy + tide station to the top-pick spot's mapping rather than
+  // grabbing whichever happened to be first in the response. The header
+  // copy says "FIT FOR PATCH" — the IDs alongside it should match.
+  const tpMapping = BUOY_MAP_BY_SPOT[tp.id];
+  const buoyId = tpMapping?.primaryBuoy ?? Object.keys(response?.buoys ?? {})[0] ?? '46026';
+  const tideId = tpMapping?.tideStation ?? Object.keys(response?.tides ?? {})[0] ?? '9414958';
 
   // Local weather readout in the header: air temp from the nearest buoy,
   // wind from the top-ranked favorite (same regional conditions as the user).
