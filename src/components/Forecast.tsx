@@ -90,9 +90,13 @@ export function Forecast(_props: ForecastProps) {
 }
 
 function HourlyHeatmap({ timeline }: { timeline: ForecastHour[] }) {
+  // Row 1 is always "today"; row 2 derives from real local time so the
+  // label is correct any day of the week, not a hardcoded "FRI".
+  const DAYS = ['SUN','MON','TUE','WED','THU','FRI','SAT'];
+  const tomorrow = new Date(Date.now() + 24 * 3600_000).getDay();
   const rows = [
-    { label: 'TODAY', data: timeline.slice(0, 24) },
-    { label: 'FRI',   data: timeline.slice(24, 48) },
+    { label: 'TDY',         data: timeline.slice(0, 24) },
+    { label: DAYS[tomorrow], data: timeline.slice(24, 48) },
   ];
   return (
     <div style={{ background: TOKENS.surface, border: `1px solid ${TOKENS.border}`, borderRadius: 10, padding: 12 }}>
