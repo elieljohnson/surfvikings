@@ -73,6 +73,8 @@ export const SPOTS: Spot[] = [
     shadowFactor: 0.7, sandMobility: 1.0 },
   { id: 'salmon-creek',  region: 'sonoma',   regionLabel: 'Sonoma Coast', name: 'Salmon Creek',        subtitle: 'Bodega Bay',                   difficulty: 6,  type: 'Beach · L/R',          bottom: 'Sand',          optimalSwell: 270, optimalSize: [3,12],optimalPeriod: [12,16], offshore: 100, optimalTide: 'mid',    lat: 38.3544, lng: -123.0728, driveMin: 86,
     shadowFactor: 0.9, sandMobility: 0.85 },
+  { id: 'doran-beach',   region: 'sonoma',   regionLabel: 'Sonoma Coast', name: 'Doran Beach',         subtitle: 'Bodega Bay · S-facing crescent',difficulty: 3, type: 'Beach · Beginner',     bottom: 'Sand',          optimalSwell: 250, optimalSize: [2,7], optimalPeriod: [12,16], offshore: 337, optimalTide: 'high',   lat: 38.3140, lng: -123.0316, driveMin: 85,
+    shadowFactor: 0.4, sandMobility: 0.7 },
   // Region 2 — Point Reyes
   { id: 'point-reyes',   region: 'pt-reyes', regionLabel: 'Point Reyes',  name: 'Point Reyes Beach',   subtitle: 'The Great Beach',              difficulty: 8,  type: 'Beach · Expert',       bottom: 'Sand',          optimalSwell: 250, optimalSize: [3,6], optimalPeriod: [12,16], offshore: 135, optimalTide: 'mid',    lat: 38.0548, lng: -122.9652, driveMin: 62 },
   { id: 'dillon-beach',  region: 'pt-reyes', regionLabel: 'Point Reyes',  name: 'Dillon Beach',        subtitle: 'Tomales Bay mouth',            difficulty: 4,  type: 'Beach',                bottom: 'Sand',          optimalSwell: 270, optimalSize: [2,5], optimalPeriod: [10,14], offshore: 90,  optimalTide: 'high',   lat: 38.2531, lng: -122.9668, driveMin: 74 },

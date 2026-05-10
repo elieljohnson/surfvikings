@@ -16,6 +16,7 @@ export const BUOY_MAPPINGS: BuoyMapping[] = [
   { spotId: 'mystos',        primaryBuoy: '46013', tideStation: '9415020', nwsZone: 'PZZ540' },
   { spotId: 'russian-rivermouth', primaryBuoy: '46013', tideStation: '9415020', nwsZone: 'PZZ540' },
   { spotId: 'salmon-creek',  primaryBuoy: '46013', tideStation: '9415020', nwsZone: 'PZZ540' },
+  { spotId: 'doran-beach',   primaryBuoy: '46013', tideStation: '9415020', nwsZone: 'PZZ540' },
   // Region 2 — Point Reyes / West Marin
   { spotId: 'point-reyes',   primaryBuoy: '46013', tideStation: '9415020', nwsZone: 'PZZ545' },
   { spotId: 'dillon-beach',  primaryBuoy: '46013', tideStation: '9415020', nwsZone: 'PZZ540' },
