@@ -332,14 +332,16 @@ export function CompassRose({
   swellDirColor, windDirColor,
 }: {
   size?: number; swellDir?: number; windDir?: number;
-  /** Offshore wind direction. Renders a green target wedge for the wind arrow. */
+  /** Offshore wind direction. Renders a target wedge for the wind arrow. */
   offshore?: number;
-  /** Optimal swell direction. Renders a green target wedge for the swell arrow. */
+  /** Optimal swell direction. Renders a target wedge for the swell arrow. */
   optimalSwell?: number;
-  /** Override the swell arrow color (default TOKENS.pacific). Pass a
-   * qualityColor() output to make the arrow communicate match quality. */
+  /** Color for the swell arrow AND the optimal-swell wedge (default
+   * TOKENS.pacific). Pass a qualityColor() output to make both communicate
+   * match quality together — when the swell aims at its wedge, both turn
+   * green; when wildly off, both turn red. */
   swellDirColor?: string;
-  /** Override the wind arrow color (default TOKENS.cData). */
+  /** Color for the wind arrow AND the offshore wedge (default TOKENS.cData). */
   windDirColor?: string;
 }) {
   const r = size / 2;
@@ -351,10 +353,10 @@ export function CompassRose({
       <circle cx={r} cy={r} r={r - 7} fill="none" stroke={TOKENS.border} strokeWidth="0.5"/>
       <text x={r} y="7" textAnchor="middle" fontFamily="JetBrains Mono, ui-monospace, monospace" fontSize="6" fill={TOKENS.textMute}>N</text>
       {optimalSwell !== undefined && (
-        <path d={describeArc(r, r, r - 3, optimalSwell - 30, optimalSwell + 30)} fill={TOKENS.phosphor} opacity="0.18"/>
+        <path d={describeArc(r, r, r - 3, optimalSwell - 30, optimalSwell + 30)} fill={swellColor} opacity="0.22"/>
       )}
       {offshore !== undefined && (
-        <path d={describeArc(r, r, r - 3, offshore - 30, offshore + 30)} fill={TOKENS.phosphor} opacity="0.18"/>
+        <path d={describeArc(r, r, r - 3, offshore - 30, offshore + 30)} fill={windColor} opacity="0.22"/>
       )}
       {swellDir !== undefined && (
         <g transform={`rotate(${swellDir} ${r} ${r})`}>
