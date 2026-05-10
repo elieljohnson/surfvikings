@@ -22,7 +22,7 @@ export function SpotDetail({ spotId, onBack }: SpotDetailProps) {
   // Read the same home-base + drive-matrix cache the dashboard writes.
   const [home] = useLocalStorage<HomeBase | null>('sv:user:home', null);
   const driveTime = useDriveTimes(home);
-  const isBolinasSpot = spot.region === 'bolinas' && spot.id.startsWith('bolinas');
+  const isBolinasSpot = spot.region === 'marin' && spot.id.startsWith('bolinas');
   const requestedSpots = useMemo(
     () => (isBolinasSpot ? SPOTS.filter((s) => s.id.startsWith('bolinas')).map((s) => s.id) : [activeSpot.id]),
     [isBolinasSpot, activeSpot.id]
@@ -255,7 +255,7 @@ function ChartRow({
 // the fact that the Patch is shallower than the Groin. Per-cluster: extend
 // here when other regions get bathymetry profiles.
 const SHARED_DEPTH_BY_REGION: Partial<Record<Spot['region'], number>> = {
-  bolinas: 25,
+  marin: 25,
 };
 
 function BathymetrySection({ spot }: { spot: Spot }) {

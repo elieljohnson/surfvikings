@@ -7,8 +7,8 @@
 export type RegionId =
   | 'sonoma'
   | 'pt-reyes'
-  | 'bolinas'
-  | 'marin-sf'
+  | 'marin'
+  | 'sf'
   | 'sm-north'
   | 'sm-south'
   | 'sc';
@@ -86,38 +86,38 @@ export const SPOTS: Spot[] = [
   // Bolinas profiles share the same 1800→100m offshore distance grid so
   // they can be compared on a shared y-axis (see BathymetryCrossSection).
   // Depths reflect the distinct geometry of each break, not generic ramps.
-  { id: 'bolinas-patch', region: 'bolinas',  regionLabel: 'Bolinas',      name: 'The Patch',           subtitle: 'Duxbury Reef',                 difficulty: 3,  type: 'Reef · Long/slow',     bottom: 'Rock ledge',    optimalSwell: 225, optimalSize: [1,6], optimalPeriod: [12,16], offshore: 0,   optimalTide: 'low',    lat: 37.9042, lng: -122.7101, driveMin: 22,
+  { id: 'bolinas-patch', region: 'marin',  regionLabel: 'Bolinas',      name: 'The Patch',           subtitle: 'Duxbury Reef',                 difficulty: 3,  type: 'Reef · Long/slow',     bottom: 'Rock ledge',    optimalSwell: 225, optimalSize: [1,6], optimalPeriod: [12,16], offshore: 0,   optimalTide: 'low',    lat: 37.9042, lng: -122.7101, driveMin: 22,
     // Reef-edge drop at ~1km out, then a long flat intertidal shelf.
     bathymetry: { label: 'Duxbury Reef — largest intertidal reef in N. America. Permanent shape.', depth: [22,18,12,4,2,1], distance: [1800,1400,1000,600,300,100] },
     shadowFactor: 0.55, sandMobility: 0.0 },
-  { id: 'bolinas-jetty', region: 'bolinas',  regionLabel: 'Bolinas',      name: 'The Jetty',           subtitle: 'Channel / Wharf Rd',           difficulty: 4,  type: 'Beach · Pier/groyne',  bottom: 'Sand',          optimalSwell: 225, optimalSize: [1,6], optimalPeriod: [12,16], offshore: 0,   optimalTide: 'mid',    lat: 37.8987, lng: -122.6986, driveMin: 22,
+  { id: 'bolinas-jetty', region: 'marin',  regionLabel: 'Bolinas',      name: 'The Jetty',           subtitle: 'Channel / Wharf Rd',           difficulty: 4,  type: 'Beach · Pier/groyne',  bottom: 'Sand',          optimalSwell: 225, optimalSize: [1,6], optimalPeriod: [12,16], offshore: 0,   optimalTide: 'mid',    lat: 37.8987, lng: -122.6986, driveMin: 22,
     // Smooth, near-linear sand ramp — no reef shelf, no scour.
     bathymetry: { label: 'Shifting sandbars — lagoon outflow reshapes weekly.', depth: [22,17,12,7,4,1.5], distance: [1800,1400,1000,600,300,100] },
     shadowFactor: 0.45, sandMobility: 0.85 },
-  { id: 'bolinas-groin', region: 'bolinas',  regionLabel: 'Bolinas',      name: 'The Groin',           subtitle: 'Sea Drift · Lagoon mouth',     difficulty: 6,  type: 'Jetty · Left',         bottom: 'Sand + groin',  optimalSwell: 245, optimalSize: [4,8], optimalPeriod: [14,18], offshore: 0,   optimalTide: 'rising', lat: 37.8994, lng: -122.6962, driveMin: 22,
+  { id: 'bolinas-groin', region: 'marin',  regionLabel: 'Bolinas',      name: 'The Groin',           subtitle: 'Sea Drift · Lagoon mouth',     difficulty: 6,  type: 'Jetty · Left',         bottom: 'Sand + groin',  optimalSwell: 245, optimalSize: [4,8], optimalPeriod: [14,18], offshore: 0,   optimalTide: 'rising', lat: 37.8994, lng: -122.6962, driveMin: 22,
     // Lagoon outflow scours a deeper trough offshore of the structure;
     // sand piles back up inshore, giving a sharp rise over the bar.
     bathymetry: { label: 'Groin + lagoon hydraulics = river-mouth dynamic.', depth: [22,18,14,11,5,1], distance: [1800,1400,1000,600,300,100] },
     shadowFactor: 0.50, sandMobility: 0.6,
     specialRules: [{ kind: 'falling-tide-rip', below: 2, penalty: -15 }] },
-  { id: 'stinson',       region: 'bolinas',  regionLabel: 'Stinson',      name: 'Stinson Beach',       subtitle: 'Open 3-mile beach',            difficulty: 3,  type: 'Beach · L/R',          bottom: 'Sand',          optimalSwell: 250, optimalSize: [2,6], optimalPeriod: [10,14], offshore: 45,  optimalTide: 'high',   lat: 37.8978, lng: -122.6477, driveMin: 18,
+  { id: 'stinson',       region: 'marin',  regionLabel: 'Stinson',      name: 'Stinson Beach',       subtitle: 'Open 3-mile beach',            difficulty: 3,  type: 'Beach · L/R',          bottom: 'Sand',          optimalSwell: 250, optimalSize: [2,6], optimalPeriod: [10,14], offshore: 45,  optimalTide: 'high',   lat: 37.8978, lng: -122.6477, driveMin: 18,
     shadowFactor: 0.6, sandMobility: 0.7 },
-  // Region 3 — Marin Headlands / SF
-  { id: 'muir-beach',    region: 'marin-sf', regionLabel: 'Marin / SF',   name: 'Muir Beach',          subtitle: 'Cove beach · Mt Tam shelter',  difficulty: 4,  type: 'Cove · Beachbreak',    bottom: 'Sand',          optimalSwell: 250, optimalSize: [1,6], optimalPeriod: [10,14], offshore: 45,  optimalTide: 'mid',    lat: 37.8589, lng: -122.5795, driveMin: 18,
+  { id: 'muir-beach',    region: 'marin',  regionLabel: 'Muir Beach',   name: 'Muir Beach',          subtitle: 'Cove beach · Mt Tam shelter',  difficulty: 4,  type: 'Cove · Beachbreak',    bottom: 'Sand',          optimalSwell: 250, optimalSize: [1,6], optimalPeriod: [10,14], offshore: 45,  optimalTide: 'mid',    lat: 37.8589, lng: -122.5795, driveMin: 18,
     shadowFactor: 0.5, sandMobility: 0.85 },
-  { id: 'rodeo',         region: 'marin-sf', regionLabel: 'Marin / SF',   name: 'Rodeo Beach',         subtitle: 'Fort Cronkhite',               difficulty: 4,  type: 'Cove · Beachbreak',    bottom: 'Sand',          optimalSwell: 270, optimalSize: [1,6], optimalPeriod: [10,14], offshore: 45,  optimalTide: 'low',    lat: 37.831,  lng: -122.540,  driveMin: 14,
+  { id: 'rodeo',         region: 'marin',  regionLabel: 'Marin Headlands', name: 'Rodeo Beach',      subtitle: 'Fort Cronkhite',               difficulty: 4,  type: 'Cove · Beachbreak',    bottom: 'Sand',          optimalSwell: 270, optimalSize: [1,6], optimalPeriod: [10,14], offshore: 45,  optimalTide: 'low',    lat: 37.831,  lng: -122.540,  driveMin: 14,
     shadowFactor: 0.5, sandMobility: 0.85 },
-  { id: 'fort-point',    region: 'marin-sf', regionLabel: 'Marin / SF',   name: 'Fort Point',          subtitle: 'Under the Golden Gate',        difficulty: 7,  type: 'Reef · Left',          bottom: 'Boulders',      optimalSwell: 290, optimalSize: [4,12],optimalPeriod: [12,18], offshore: 180, optimalTide: 'low',    lat: 37.8108, lng: -122.4770, driveMin: 24,
+  // Region 3 — San Francisco
+  { id: 'fort-point',    region: 'sf', regionLabel: 'SF',   name: 'Fort Point',          subtitle: 'Under the Golden Gate',        difficulty: 7,  type: 'Reef · Left',          bottom: 'Boulders',      optimalSwell: 290, optimalSize: [4,12],optimalPeriod: [12,18], offshore: 180, optimalTide: 'low',    lat: 37.8108, lng: -122.4770, driveMin: 24,
     shadowFactor: 0.25, sandMobility: 0.0 },
-  { id: 'deadmans',      region: 'marin-sf', regionLabel: 'Marin / SF',   name: 'Deadmans',            subtitle: 'Lands End · Sutro Baths reef', difficulty: 8,  type: 'Reef · Left',          bottom: 'Uneven reef',   optimalSwell: 315, optimalSize: [6,12],optimalPeriod: [14,18], offshore: 135, optimalTide: 'low',    lat: 37.7800, lng: -122.5135, driveMin: 30,
+  { id: 'deadmans',      region: 'sf', regionLabel: 'SF',   name: 'Deadmans',            subtitle: 'Lands End · Sutro Baths reef', difficulty: 8,  type: 'Reef · Left',          bottom: 'Uneven reef',   optimalSwell: 315, optimalSize: [6,12],optimalPeriod: [14,18], offshore: 135, optimalTide: 'low',    lat: 37.7800, lng: -122.5135, driveMin: 30,
     shadowFactor: 0.7, sandMobility: 0.0 },
-  { id: 'kellys-cove',   region: 'marin-sf', regionLabel: 'Marin / SF',   name: "Kelly's Cove",        subtitle: 'OB north end · Cliff House shelter', difficulty: 4, type: 'Cove · Beach',         bottom: 'Sand',          optimalSwell: 225, optimalSize: [2,8], optimalPeriod: [10,14], offshore: 90,  optimalTide: 'mid',    lat: 37.7780, lng: -122.5135, driveMin: 30,
+  { id: 'kellys-cove',   region: 'sf', regionLabel: 'SF',   name: "Kelly's Cove",        subtitle: 'OB north end · Cliff House shelter', difficulty: 4, type: 'Cove · Beach',         bottom: 'Sand',          optimalSwell: 225, optimalSize: [2,8], optimalPeriod: [10,14], offshore: 90,  optimalTide: 'mid',    lat: 37.7780, lng: -122.5135, driveMin: 30,
     shadowFactor: 0.6, sandMobility: 0.7 },
-  { id: 'ocean-beach-north', region: 'marin-sf', regionLabel: 'Marin / SF', name: 'Ocean Beach (N)', subtitle: 'North end · Lawton to Lincoln',  difficulty: 6, type: 'Beach · Powerful',     bottom: 'Sand',          optimalSwell: 290, optimalSize: [3,10],optimalPeriod: [12,18], offshore: 90,  optimalTide: 'mid',    lat: 37.7700, lng: -122.5125, driveMin: 31,
+  { id: 'ocean-beach-north', region: 'sf', regionLabel: 'SF', name: 'Ocean Beach (N)', subtitle: 'North end · Lawton to Lincoln',  difficulty: 6, type: 'Beach · Powerful',     bottom: 'Sand',          optimalSwell: 290, optimalSize: [3,10],optimalPeriod: [12,18], offshore: 90,  optimalTide: 'mid',    lat: 37.7700, lng: -122.5125, driveMin: 31,
     shadowFactor: 0.95, sandMobility: 0.95 },
-  { id: 'ocean-beach',   region: 'marin-sf', regionLabel: 'Marin / SF',   name: 'Ocean Beach',         subtitle: 'Central · Mid avenues',        difficulty: 7,  type: 'Beach · Powerful',     bottom: 'Sand',          optimalSwell: 290, optimalSize: [4,15],optimalPeriod: [14,20], offshore: 100, optimalTide: 'mid',    lat: 37.7604, lng: -122.5107, driveMin: 32,
+  { id: 'ocean-beach',   region: 'sf', regionLabel: 'SF',   name: 'Ocean Beach',         subtitle: 'Central · Mid avenues',        difficulty: 7,  type: 'Beach · Powerful',     bottom: 'Sand',          optimalSwell: 290, optimalSize: [4,15],optimalPeriod: [14,20], offshore: 100, optimalTide: 'mid',    lat: 37.7604, lng: -122.5107, driveMin: 32,
     shadowFactor: 0.95, sandMobility: 0.95 },
-  { id: 'ocean-beach-south', region: 'marin-sf', regionLabel: 'Marin / SF', name: 'Ocean Beach (S)', subtitle: 'Sloat · VFW to Sloat Blvd',     difficulty: 7,  type: 'Beach · Powerful',     bottom: 'Sand',          optimalSwell: 290, optimalSize: [3,12],optimalPeriod: [12,18], offshore: 80,  optimalTide: 'mid',    lat: 37.7400, lng: -122.5083, driveMin: 33,
+  { id: 'ocean-beach-south', region: 'sf', regionLabel: 'SF', name: 'Ocean Beach (S)', subtitle: 'Sloat · VFW to Sloat Blvd',     difficulty: 7,  type: 'Beach · Powerful',     bottom: 'Sand',          optimalSwell: 290, optimalSize: [3,12],optimalPeriod: [12,18], offshore: 80,  optimalTide: 'mid',    lat: 37.7400, lng: -122.5083, driveMin: 33,
     shadowFactor: 0.95, sandMobility: 0.95 },
   // Region 4 — San Mateo North
   { id: 'sharp-park',    region: 'sm-north', regionLabel: 'Pacifica',     name: 'Sharp Park',          subtitle: 'Pier sandbar · Pacifica',      difficulty: 6,  type: 'Beach · Pier/groyne',  bottom: 'Sand + reef',   optimalSwell: 300, optimalSize: [3,12],optimalPeriod: [12,18], offshore: 90,  optimalTide: 'low',    lat: 37.6325, lng: -122.4900, driveMin: 38,

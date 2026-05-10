@@ -6,7 +6,7 @@ import { useConditions } from '../hooks/useConditions';
 type Filter = 'all' | 'beginner' | 'intermediate' | 'advanced';
 
 interface RegionMeta {
-  id: RegionId | 'bolinas';
+  id: RegionId;
   label: string;
   buoy: string;
 }
@@ -14,8 +14,8 @@ interface RegionMeta {
 const REGIONS: RegionMeta[] = [
   { id: 'sonoma',   label: 'Sonoma Coast',      buoy: '46013' },
   { id: 'pt-reyes', label: 'Point Reyes',       buoy: '46013' },
-  { id: 'bolinas',  label: 'Bolinas · Stinson', buoy: '46026' },
-  { id: 'marin-sf', label: 'Marin · SF',        buoy: '46026' },
+  { id: 'marin',    label: 'Marin',             buoy: '46026' },
+  { id: 'sf',       label: 'SF',                buoy: '46026' },
   { id: 'sm-north', label: 'San Mateo N',       buoy: '46012' },
   { id: 'sm-south', label: 'Hwy 1 South',       buoy: '46042' },
   { id: 'sc',       label: 'Santa Cruz',        buoy: '46042' },
@@ -90,7 +90,7 @@ export function RegionMap({ onOpenSpot }: RegionMapProps) {
       <div style={{ position: 'absolute', top: 118, bottom: 0, left: 0, right: 0, overflow: 'auto' }}>
         <div style={{ padding: '16px 0 0' }}>
           {REGIONS.map((r, ri) => {
-            const regionSpots = SPOTS.filter((s) => s.region === r.id || (r.id === 'bolinas' && s.region === 'bolinas'));
+            const regionSpots = SPOTS.filter((s) => s.region === r.id);
             const show = regionSpots.filter(passesFilter);
             return (
               <div key={r.id} style={{ marginBottom: 8 }}>
