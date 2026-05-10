@@ -321,10 +321,13 @@ function TopPickCard({
       <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: color }}/>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14 }}>
         <div>
-          <div style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 13, letterSpacing: '0.2em', color: TOKENS.textMute, textTransform: 'uppercase' }}>
-            Top Pick · {driveMin} min drive
+          <div style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 13, letterSpacing: '0.2em', color: TOKENS.textMute, textTransform: 'uppercase', lineHeight: 1 }}>
+            Top Pick
           </div>
-          <div style={{ fontSize: 20, fontWeight: 600, letterSpacing: '-0.02em', marginTop: 4 }}>{spot.regionLabel} · {spot.name}</div>
+          <div style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 13, letterSpacing: '0.2em', color: TOKENS.textMute, textTransform: 'uppercase', lineHeight: 1, marginTop: 6 }}>
+            {driveMin} min drive
+          </div>
+          <div style={{ fontSize: 20, fontWeight: 600, letterSpacing: '-0.02em', marginTop: 8 }}>{spot.regionLabel} · {spot.name}</div>
           <div style={{ fontSize: 13, color: TOKENS.textDim, marginTop: 2 }}>{spot.subtitle}</div>
         </div>
         <ScoreBadge score={current.score} rating={rating.label} size="lg"/>
