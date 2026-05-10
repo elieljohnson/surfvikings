@@ -288,13 +288,11 @@ export function Rule({ label }: { label?: string }) {
 
 export type TabId = 'dashboard' | 'map' | 'forecast' | 'settings';
 
-// Stylized cresting wave — line-drawn, currentColor so it inherits the
-// active/inactive tab text color.
+// Stylized cresting wave with a barrel curl on the right — single continuous
+// stroke. currentColor so it inherits the active/inactive tab text color.
 const WaveIcon = (
-  <svg width="22" height="16" viewBox="0 0 24 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M2 11 C 4.5 6, 9 4, 13 7 C 16 9, 18 9, 20 7"/>
-    <path d="M14 7 C 16 5, 19 4, 22 6"/>
-    <path d="M2 14 L 22 14" opacity="0.4"/>
+  <svg width="24" height="16" viewBox="0 0 24 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M2 13 C 4.5 13, 8 4, 13 3.5 C 17 3.5, 18 7, 15 7.5 C 12 8, 12.5 11.5, 16 11.5 C 19 11.5, 21 12.5, 22 13"/>
   </svg>
 );
 
