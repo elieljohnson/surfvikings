@@ -288,10 +288,20 @@ export function Rule({ label }: { label?: string }) {
 
 export type TabId = 'dashboard' | 'map' | 'forecast' | 'settings';
 
+// Stylized cresting wave — line-drawn, currentColor so it inherits the
+// active/inactive tab text color.
+const WaveIcon = (
+  <svg width="22" height="16" viewBox="0 0 24 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M2 11 C 4.5 6, 9 4, 13 7 C 16 9, 18 9, 20 7"/>
+    <path d="M14 7 C 16 5, 19 4, 22 6"/>
+    <path d="M2 14 L 22 14" opacity="0.4"/>
+  </svg>
+);
+
 export function TabBar({ active, onChange }: { active: TabId; onChange: (id: TabId) => void }) {
-  const tabs: { id: TabId; label: string; icon: string }[] = [
+  const tabs: { id: TabId; label: string; icon: React.ReactNode }[] = [
     { id: 'dashboard', label: 'Today',    icon: '◉' },
-    { id: 'map',       label: 'Breaks',   icon: '◎' },
+    { id: 'map',       label: 'Breaks',   icon: WaveIcon },
     { id: 'forecast',  label: 'Forecast', icon: '≋' },
     { id: 'settings',  label: 'Settings', icon: '⊙' },
   ];
