@@ -132,6 +132,23 @@ export function Dashboard({ onOpenSpot }: DashboardProps) {
   const mavPeak = mavTimeline.length
     ? mavTimeline.reduce((best, h) => (h.swellHeight > best.swellHeight ? h : best), mavTimeline[0])
     : null;
+  // Hide the panel except on legitimately contest-grade days. The Mavericks
+  // contest (Titans / WSL) has run only ~10-12 times in 25+ years because
+  // its holding criteria are tight: Hs ≥ 20ft at the offshore buoy with
+  // 17-18s+ WNW groundswell. Watch tier (panel appears) is set slightly
+  // below that so the panel surfaces while a swell is approaching, not
+  // only when contest committee is calling green light. Firing tier
+  // matches actual contest criteria.
+  const mavSpot = SPOTS.find((s) => s.id === 'mavericks');
+  const mavOptimalDir = mavSpot?.optimalSwell ?? 305;
+  const isMavWatch = !!mavPeak
+    && mavPeak.swellHeight >= 15
+    && mavPeak.swellPeriod  >= 15
+    && angleDelta(mavPeak.swellDirection, mavOptimalDir) <= 35;
+  const isMavFiring = !!mavPeak
+    && mavPeak.swellHeight >= 22
+    && mavPeak.swellPeriod  >= 17
+    && angleDelta(mavPeak.swellDirection, mavOptimalDir) <= 25;
   const mavHeadline = mavPeak
     ? mavPeak.hour === 0
       ? `${Math.round(mavPeak.swellHeight)}ft now`
@@ -268,18 +285,18 @@ export function Dashboard({ onOpenSpot }: DashboardProps) {
         </div>
       </div>
 
-      {mavScore >= 30 && (
+      {isMavWatch && (
         <div style={{ padding: '8px 20px 16px' }}>
           <div onClick={() => onOpenSpot('mavericks')} style={{
             background: TOKENS.surface,
-            border: `1px solid ${mavScore >= 75 ? TOKENS.maverick : TOKENS.border}`,
-            borderLeft: `3px solid ${mavScore >= 75 ? TOKENS.maverick : TOKENS.good}`,
+            border: `1px solid ${isMavFiring ? TOKENS.maverick : TOKENS.border}`,
+            borderLeft: `3px solid ${isMavFiring ? TOKENS.maverick : TOKENS.good}`,
             borderRadius: 10, padding: 16, cursor: 'pointer',
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
-                <div style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 13, letterSpacing: '0.2em', color: mavScore >= 75 ? TOKENS.maverick : TOKENS.good, textTransform: 'uppercase' }}>
-                  {mavScore >= 75 ? '⚡ Mavericks Firing' : '◉ Mavericks Watch'}
+                <div style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 13, letterSpacing: '0.2em', color: isMavFiring ? TOKENS.maverick : TOKENS.good, textTransform: 'uppercase' }}>
+                  {isMavFiring ? '⚡ Mavericks Firing' : '◉ Mavericks Watch'}
                 </div>
                 <div style={{ fontSize: 14, fontWeight: 500, marginTop: 4 }}>{mavHeadline}</div>
                 <div style={{ fontSize: 13, color: TOKENS.textDim, marginTop: 2 }}>{mavSubline}</div>
