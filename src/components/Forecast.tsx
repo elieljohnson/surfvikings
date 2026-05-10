@@ -161,7 +161,7 @@ function MiniMetric({
         </div>
       </div>
       <div style={{ flex: 1 }}>
-        <ForecastChart timeline={timeline} metric={metric} spot={spot} width={220} height={28} showAxis={false}/>
+        <ForecastChart timeline={timeline} metric={metric} spot={spot} height={28} showAxis={false}/>
       </div>
       <div style={{ width: 50, textAlign: 'right', fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 13, color: TOKENS.textMute }}>
         {min.toFixed(1)}–{max.toFixed(1)}
