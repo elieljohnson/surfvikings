@@ -399,7 +399,7 @@ const HAZARDS: Record<string, string[]> = {
   'dillon-beach': ['Tomales currents', 'Sharks'],
   'fort-point': ['Extreme currents', 'Rocks', 'Shipping'],
   'deadmans': ['Submerged rocks', 'Rips', 'Sharks'],
-  'sharp-park': ['Heavy waves', 'Rips', 'Sharks'],
+  'sharp-park': ['Heavy shorebreak', 'Rips', 'Sharks'],
   'linda-mar': ['Crowd', 'Rips'],
   'rockaway': ['Heavy waves', 'Rocks'],
   'montara': ['Heavy shorebreak', 'Rips'],
