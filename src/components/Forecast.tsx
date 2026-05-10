@@ -5,7 +5,7 @@ import {
   hourLabel, degToCardinal, metricQuality, angleDelta,
 } from '../lib/data';
 import { useConditions } from '../hooks/useConditions';
-import { Screen, Stat, CompassRose, ForecastChart } from './Primitives';
+import { Screen, Stat, ForecastChart, VectorsPanel } from './Primitives';
 
 interface ForecastProps {
   onOpenSpot?: (id: string) => void;
@@ -69,30 +69,7 @@ export function Forecast(_props: ForecastProps) {
         </div>
       </div>
 
-      <div style={{ padding: '0 20px 16px' }}>
-        <div style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 13, letterSpacing: '0.18em', color: TOKENS.textMute, textTransform: 'uppercase', marginBottom: 10 }}>
-          Swell & wind vectors · now
-        </div>
-        {(() => {
-          // Direction-only quality (independent of size/period/speed) so the
-          // colors here read "is this direction good?" rather than "is the
-          // overall metric good?". Optimal + Offshore stay green as constant
-          // reference labels — only the live values pick up quality color.
-          const swellDirQ = Math.max(0, 1 - angleDelta(timeline[0].swellDirection, spot.optimalSwell) / 180);
-          const windDirQ  = Math.max(0, 1 - angleDelta(timeline[0].windDirection,  spot.offshore)     / 180);
-          return (
-            <div style={{ background: TOKENS.surface, border: `1px solid ${TOKENS.border}`, borderRadius: 10, padding: 16, display: 'flex', alignItems: 'center', gap: 16 }}>
-              <CompassRose size={92} swellDir={timeline[0].swellDirection} windDir={timeline[0].windDirection} offshore={spot.offshore} optimalSwell={spot.optimalSwell} swellDirColor={qualityColor(swellDirQ)} windDirColor={qualityColor(windDirQ)}/>
-              <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                <Stat label="Swell dir" value={degToCardinal(timeline[0].swellDirection)} hint={`${Math.round(timeline[0].swellDirection)}°`} color={qualityColor(swellDirQ)}/>
-                <Stat label="Optimal"   value={degToCardinal(spot.optimalSwell)}           hint={`${spot.optimalSwell}°`}                       color={TOKENS.phosphor}/>
-                <Stat label="Wind"      value={degToCardinal(timeline[0].windDirection)}    unit={`${Math.round(timeline[0].windSpeed)}kts`} hint={`${Math.round(timeline[0].windDirection)}°`} color={qualityColor(windDirQ)}/>
-                <Stat label="Offshore"  value={degToCardinal(spot.offshore)}                hint={`${spot.offshore}°`}                          color={TOKENS.phosphor}/>
-              </div>
-            </div>
-          );
-        })()}
-      </div>
+      <VectorsPanel spot={spot} current={timeline[0]}/>
 
       <div style={{ height: 100 }}/>
     </Screen>

@@ -5,7 +5,7 @@ import {
   scoreToRating, hourLabel, degToCardinal, angleDelta, MetricKey,
 } from '../lib/data';
 import { useConditions } from '../hooks/useConditions';
-import { Screen, ScoreBadge, ScoreTimeline, Stat, DifficultyPips, ForecastChart, BackButton, useResponsiveWidth } from './Primitives';
+import { Screen, ScoreBadge, ScoreTimeline, Stat, DifficultyPips, ForecastChart, BackButton, useResponsiveWidth, VectorsPanel } from './Primitives';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { useDriveTimes } from '../hooks/useDriveTimes';
 import type { HomeBase } from '../lib/routing';
@@ -152,6 +152,7 @@ export function SpotDetail({ spotId, onBack }: SpotDetailProps) {
       </div>
 
       {activeSpot.bathymetry && <BathymetrySection spot={activeSpot}/>}
+      <VectorsPanel spot={activeSpot} current={current}/>
       <LocalInsight spot={activeSpot}/>
 
       <div style={{ height: 100 }}/>

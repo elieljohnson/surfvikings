@@ -2,6 +2,7 @@ import React from 'react';
 import { TOKENS, scoreColor } from '../lib/tokens';
 import {
   ForecastHour, Spot, MetricKey, metricQuality, hourLabel,
+  degToCardinal, angleDelta,
 } from '../lib/data';
 import { qualityColor } from '../lib/tokens';
 
@@ -374,6 +375,36 @@ export function CompassRose({
       )}
       <circle cx={r} cy={r} r="1.5" fill={TOKENS.text}/>
     </svg>
+  );
+}
+
+/** Compass rose + 4-cell stat grid showing the spot's current swell + wind
+ * directions vs its optimal/offshore reference. Used on Forecast and SpotDetail
+ * so both surfaces render identical visuals from the same component. */
+export function VectorsPanel({
+  spot, current, title = 'Swell & wind vectors · now',
+}: { spot: Spot; current: ForecastHour; title?: string }) {
+  // Direction-only quality (independent of size/period/speed) so the colors
+  // here read "is this direction good?" rather than "is the metric good?".
+  // Optimal + Offshore stay green as constant per-spot reference labels;
+  // live values + their target wedges pick up qualityColor together.
+  const swellDirQ = Math.max(0, 1 - angleDelta(current.swellDirection, spot.optimalSwell) / 180);
+  const windDirQ  = Math.max(0, 1 - angleDelta(current.windDirection,  spot.offshore)     / 180);
+  return (
+    <div style={{ padding: '0 20px 16px' }}>
+      <div style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 13, letterSpacing: '0.18em', color: TOKENS.textMute, textTransform: 'uppercase', marginBottom: 10 }}>
+        {title}
+      </div>
+      <div style={{ background: TOKENS.surface, border: `1px solid ${TOKENS.border}`, borderRadius: 10, padding: 16, display: 'flex', alignItems: 'center', gap: 16 }}>
+        <CompassRose size={92} swellDir={current.swellDirection} windDir={current.windDirection} offshore={spot.offshore} optimalSwell={spot.optimalSwell} swellDirColor={qualityColor(swellDirQ)} windDirColor={qualityColor(windDirQ)}/>
+        <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+          <Stat label="Swell dir" value={degToCardinal(current.swellDirection)} hint={`${Math.round(current.swellDirection)}°`}                       color={qualityColor(swellDirQ)}/>
+          <Stat label="Optimal"   value={degToCardinal(spot.optimalSwell)}      hint={`${spot.optimalSwell}°`}                                       color={TOKENS.phosphor}/>
+          <Stat label="Wind"      value={degToCardinal(current.windDirection)}  unit={`${Math.round(current.windSpeed)}kts`} hint={`${Math.round(current.windDirection)}°`} color={qualityColor(windDirQ)}/>
+          <Stat label="Offshore"  value={degToCardinal(spot.offshore)}          hint={`${spot.offshore}°`}                                           color={TOKENS.phosphor}/>
+        </div>
+      </div>
+    </div>
   );
 }
 
