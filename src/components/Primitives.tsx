@@ -137,27 +137,38 @@ export function ScoreSpark({
   timeline, width = 140, height = 32, highlight = 0,
 }: { timeline: ForecastHour[]; width?: number; height?: number; highlight?: number }) {
   const idRef = React.useRef(++_sparkUid);
+  const slice = timeline.slice(0, 24);
   const max = 100;
-  const pts = timeline.slice(0, 24).map((t, i) => {
-    const x = (i / 23) * width;
+  const pts = slice.map((t, i) => {
+    const x = (i / Math.max(1, slice.length - 1)) * width;
     const y = height - (t.score / max) * height;
     return [x, y] as const;
   });
-  const path = pts.map(([x, y], i) => (i === 0 ? `M${x},${y}` : `L${x},${y}`)).join(' ');
-  const areaPath = `${path} L${width},${height} L0,${height} Z`;
+  const areaPath = pts.map(([x, y], i) => (i === 0 ? `M${x},${y}` : `L${x},${y}`)).join(' ')
+    + ` L${width},${height} L0,${height} Z`;
   const gid = `spk-${idRef.current}`;
   return (
     <svg width={width} height={height} style={{ display: 'block' }}>
       <defs>
         <linearGradient id={gid} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={TOKENS.pacific} stopOpacity="0.35"/>
+          <stop offset="0%" stopColor={TOKENS.pacific} stopOpacity="0.18"/>
           <stop offset="100%" stopColor={TOKENS.pacific} stopOpacity="0"/>
         </linearGradient>
       </defs>
       <path d={areaPath} fill={`url(#${gid})`}/>
-      <path d={path} stroke={TOKENS.pacific} strokeWidth="1.5" fill="none" strokeLinecap="round"/>
+      {/* Per-segment color: each segment between two hours uses the average
+       * score of its endpoints, so the line communicates quality the same
+       * way bars do on the larger Quality chart. */}
+      {pts.slice(0, -1).map(([x1, y1], i) => {
+        const [x2, y2] = pts[i + 1];
+        const segScore = (slice[i].score + slice[i + 1].score) / 2;
+        return (
+          <line key={i} x1={x1} y1={y1} x2={x2} y2={y2}
+            stroke={scoreColor(segScore)} strokeWidth="1.75" strokeLinecap="round"/>
+        );
+      })}
       {highlight > 0 && pts[highlight] && (
-        <circle cx={pts[highlight][0]} cy={pts[highlight][1]} r="3" fill={TOKENS.pacific} stroke={TOKENS.bg} strokeWidth="2"/>
+        <circle cx={pts[highlight][0]} cy={pts[highlight][1]} r="3" fill={scoreColor(slice[highlight].score)} stroke={TOKENS.bg} strokeWidth="2"/>
       )}
     </svg>
   );
