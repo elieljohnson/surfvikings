@@ -79,8 +79,6 @@ export const SPOTS: Spot[] = [
   { id: 'point-reyes',   region: 'pt-reyes', regionLabel: 'Point Reyes',  name: 'Point Reyes Beach',   subtitle: 'The Great Beach',              difficulty: 8,  type: 'Beach · Expert',       bottom: 'Sand',          optimalSwell: 250, optimalSize: [3,6], optimalPeriod: [12,16], offshore: 135, optimalTide: 'mid',    lat: 38.0548, lng: -122.9652, driveMin: 62 },
   { id: 'dillon-beach',  region: 'pt-reyes', regionLabel: 'Point Reyes',  name: 'Dillon Beach',        subtitle: 'Tomales Bay mouth',            difficulty: 3,  type: 'Beach',                bottom: 'Sand',          optimalSwell: 270, optimalSize: [2,8], optimalPeriod: [10,14], offshore: 80,  optimalTide: 'high',   lat: 38.2531, lng: -122.9668, driveMin: 74,
     shadowFactor: 0.85, sandMobility: 0.7 },
-  { id: 'shark-pit',     region: 'pt-reyes', regionLabel: 'Point Reyes',  name: 'Shark Pit',           subtitle: 'Tomales Bay mouth · Boat access',difficulty: 9,type: 'Rivermouth · Left',    bottom: 'Sand',          optimalSwell: 315, optimalSize: [6,18],optimalPeriod: [14,18], offshore: 135, optimalTide: 'rising', lat: 38.2403, lng: -122.9750, driveMin: 75,
-    shadowFactor: 0.95, sandMobility: 0.85, sharkAdvisory: true },
   // Bolinas cluster
   // Bolinas profiles share the same 1800→100m offshore distance grid so
   // they can be compared on a shared y-axis (see BathymetryCrossSection).
