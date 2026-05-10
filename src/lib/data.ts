@@ -103,6 +103,8 @@ export const SPOTS: Spot[] = [
   { id: 'stinson',       region: 'bolinas',  regionLabel: 'Stinson',      name: 'Stinson Beach',       subtitle: 'Open 3-mile beach',            difficulty: 3,  type: 'Beach · L/R',          bottom: 'Sand',          optimalSwell: 250, optimalSize: [2,6], optimalPeriod: [10,14], offshore: 45,  optimalTide: 'high',   lat: 37.8978, lng: -122.6477, driveMin: 18,
     shadowFactor: 0.6, sandMobility: 0.7 },
   // Region 3 — Marin Headlands / SF
+  { id: 'muir-beach',    region: 'marin-sf', regionLabel: 'Marin / SF',   name: 'Muir Beach',          subtitle: 'Cove beach · Mt Tam shelter',  difficulty: 4,  type: 'Cove · Beachbreak',    bottom: 'Sand',          optimalSwell: 250, optimalSize: [1,6], optimalPeriod: [10,14], offshore: 45,  optimalTide: 'mid',    lat: 37.8589, lng: -122.5795, driveMin: 18,
+    shadowFactor: 0.5, sandMobility: 0.85 },
   { id: 'rodeo',         region: 'marin-sf', regionLabel: 'Marin / SF',   name: 'Rodeo Beach',         subtitle: 'Fort Cronkhite',               difficulty: 4,  type: 'Cove · Beachbreak',    bottom: 'Sand',          optimalSwell: 250, optimalSize: [1,6], optimalPeriod: [10,14], offshore: 45,  optimalTide: 'mid',    lat: 37.831,  lng: -122.540,  driveMin: 14,
     shadowFactor: 0.5, sandMobility: 0.85 },
   { id: 'fort-point',    region: 'marin-sf', regionLabel: 'Marin / SF',   name: 'Fort Point',          subtitle: 'Under the Golden Gate',        difficulty: 9,  type: 'Reef · Left · Expert', bottom: 'Rock + boulder',optimalSwell: 280, optimalSize: [8,20],optimalPeriod: [16,20], offshore: 180, optimalTide: 'low',    lat: 37.8108, lng: -122.4770, driveMin: 24 },

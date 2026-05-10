@@ -26,6 +26,7 @@ export const BUOY_MAPPINGS: BuoyMapping[] = [
   { spotId: 'bolinas-groin', primaryBuoy: '46026', secondaryBuoy: '46013', tideStation: '9414958', nwsZone: 'PZZ545' },
   { spotId: 'stinson',       primaryBuoy: '46026', tideStation: '9414958', nwsZone: 'PZZ545' },
   // Region 3 — Marin Headlands / SF
+  { spotId: 'muir-beach',    primaryBuoy: '46237', secondaryBuoy: '46026', tideStation: '9414290', nwsZone: 'PZZ545' },
   { spotId: 'rodeo',         primaryBuoy: '46026', secondaryBuoy: '46237', tideStation: '9414290', nwsZone: 'PZZ545' },
   { spotId: 'fort-point',    primaryBuoy: '46026', secondaryBuoy: '46237', tideStation: '9414290', nwsZone: 'PZZ545' },
   { spotId: 'ocean-beach',   primaryBuoy: '46026', secondaryBuoy: '46237', tideStation: '9414290', nwsZone: 'PZZ545' },
