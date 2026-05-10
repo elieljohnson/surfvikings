@@ -439,8 +439,8 @@ function SpotRow({ spot, timeline, onClick }: { spot: Spot; timeline: ForecastHo
           <span style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 13, color: TOKENS.textMute, letterSpacing: '0.1em' }}>{spot.regionLabel.toUpperCase()}</span>
         </div>
         <div style={{ display: 'flex', gap: 10, marginTop: 4, fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 12, color: TOKENS.textDim }}>
-          <span style={{ color: TOKENS.cData }}>{current.swellHeight.toFixed(1)}ft · {Math.round(current.swellPeriod)}s {degToCardinal(current.swellDirection)}</span>
-          <span style={{ color: TOKENS.cData }}>{Math.round(current.windSpeed)}kts {degToCardinal(current.windDirection)}</span>
+          <span>{current.swellHeight.toFixed(1)}ft · {Math.round(current.swellPeriod)}s {degToCardinal(current.swellDirection)}</span>
+          <span>{Math.round(current.windSpeed)}kts {degToCardinal(current.windDirection)}</span>
         </div>
         {best && (
           <div style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 13, color, marginTop: 3, letterSpacing: '0.05em' }}>
