@@ -241,22 +241,6 @@ export function Dashboard({ onOpenSpot }: DashboardProps) {
           </div>
         </div>
 
-        <div style={{
-          background: TOKENS.surface2, border: `1px solid ${TOKENS.border}`, borderRadius: 12,
-          padding: '14px 16px', display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12,
-        }}>
-          <Stat label="Swell" value={now0 ? now0.swellHeight.toFixed(1) : '—'} unit="ft" hint={now0 ? `${Math.round(now0.swellPeriod)}s` : ''} color={qualityColor(swellQ)}/>
-          <Stat label="Dir" value={now0 ? degToCardinal(now0.swellDirection) : '—'} hint={now0 ? `${Math.round(now0.swellDirection)}°` : ''} color={qualityColor(dirQ)}/>
-          <Stat label="Wind" value={now0 ? Math.round(now0.windSpeed) : '—'} unit="kts" hint={now0 ? degToCardinal(now0.windDirection) : ''} color={qualityColor(windQ)}/>
-          <Stat label="Tide" value={now0 ? now0.tideHeight.toFixed(1) : '—'} unit="ft" hint={now0 ? (now0.tideRising ? 'rising ↑' : 'falling ↓') : ''} color={qualityColor(tideQ)}/>
-        </div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8, fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 13, color: TOKENS.textMute, letterSpacing: '0.1em' }}>
-          <span>BUOY {buoyId}{updatedAgoMin !== null ? ` · ${updatedAgoMin}m AGO` : ''} · FIT FOR {tp.name.replace('The ', '').toUpperCase()}</span>
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ width: 6, height: 6, borderRadius: '50%', background: dataBadgeColor }}/>
-            {dataBadge} · TIDE {tideId}
-          </span>
-        </div>
       </div>
 
       <TopPickCard
@@ -264,6 +248,9 @@ export function Dashboard({ onOpenSpot }: DashboardProps) {
         timeline={timelines[ranked[0].id]}
         driveMin={driveTime(ranked[0])}
         waterTempF={response?.buoys[BUOY_MAP_BY_SPOT[ranked[0].id]?.primaryBuoy ?? '']?.waterTempF}
+        swellQ={swellQ} dirQ={dirQ} windQ={windQ} tideQ={tideQ}
+        buoyId={buoyId} tideId={tideId} updatedAgoMin={updatedAgoMin}
+        dataBadge={dataBadge} dataBadgeColor={dataBadgeColor}
         onOpen={() => onOpenSpot(ranked[0].id)}
       />
 
@@ -308,7 +295,18 @@ export function Dashboard({ onOpenSpot }: DashboardProps) {
   );
 }
 
-function TopPickCard({ spot, timeline, driveMin, waterTempF, onOpen }: { spot: Spot; timeline: ForecastHour[]; driveMin: number; waterTempF?: number; onOpen: () => void }) {
+function TopPickCard({
+  spot, timeline, driveMin, waterTempF,
+  swellQ, dirQ, windQ, tideQ,
+  buoyId, tideId, updatedAgoMin, dataBadge, dataBadgeColor,
+  onOpen,
+}: {
+  spot: Spot; timeline: ForecastHour[]; driveMin: number; waterTempF?: number;
+  swellQ: number; dirQ: number; windQ: number; tideQ: number;
+  buoyId: string; tideId: string; updatedAgoMin: number | null;
+  dataBadge: string; dataBadgeColor: string;
+  onOpen: () => void;
+}) {
   const waterStr = typeof waterTempF === 'number' ? Math.round(waterTempF).toString() : '—';
   const wetsuit = wetsuitForWaterF(waterTempF) ?? '—';
   const current = timeline[0];
@@ -332,10 +330,10 @@ function TopPickCard({ spot, timeline, driveMin, waterTempF, onOpen }: { spot: S
         <ScoreBadge score={current.score} rating={rating.label} size="lg"/>
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', padding: '12px 0', borderTop: `1px solid ${TOKENS.border}`, borderBottom: `1px solid ${TOKENS.border}` }}>
-        <Stat label="Swell" value={current.swellHeight.toFixed(1)} unit="ft" hint={`${Math.round(current.swellPeriod)}s ${degToCardinal(current.swellDirection)}`}/>
-        <Stat label="Wind" value={Math.round(current.windSpeed)} unit="kts" hint={`${degToCardinal(current.windDirection)} • offshore`}/>
-        <Stat label="Tide" value={current.tideHeight.toFixed(1)} unit="ft" hint={current.tideRising ? 'rising ↑' : 'falling ↓'}/>
-        <Stat label="Water" value={waterStr} unit="°F" hint={wetsuit}/>
+        <Stat label="Swell" value={current.swellHeight.toFixed(1)} unit="ft" hint={`${Math.round(current.swellPeriod)}s`} color={qualityColor(swellQ)}/>
+        <Stat label="Dir"   value={degToCardinal(current.swellDirection)} hint={`${Math.round(current.swellDirection)}°`} color={qualityColor(dirQ)}/>
+        <Stat label="Wind"  value={Math.round(current.windSpeed)} unit="kts" hint={degToCardinal(current.windDirection)} color={qualityColor(windQ)}/>
+        <Stat label="Tide"  value={current.tideHeight.toFixed(1)} unit="ft" hint={current.tideRising ? 'rising ↑' : 'falling ↓'} color={qualityColor(tideQ)}/>
       </div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 14 }}>
         <div>
@@ -348,8 +346,22 @@ function TopPickCard({ spot, timeline, driveMin, waterTempF, onOpen }: { spot: S
           <div style={{ fontSize: 12, color: TOKENS.textDim, marginTop: 2 }}>
             peak {Math.round(best ? best.peak : current.score)} at {hourLabel(best ? best.peakHour : 0)}
           </div>
+          <div style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 12, color: TOKENS.textDim, marginTop: 6, letterSpacing: '0.08em' }}>
+            WATER {waterStr}°F · {wetsuit}
+          </div>
         </div>
         <ScoreSpark timeline={timeline} width={120} height={38}/>
+      </div>
+      <div style={{
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        marginTop: 14, paddingTop: 10, borderTop: `1px solid ${TOKENS.border}`,
+        fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 12, color: TOKENS.textMute, letterSpacing: '0.1em',
+      }}>
+        <span>BUOY {buoyId}{updatedAgoMin !== null ? ` · ${updatedAgoMin}m AGO` : ''}</span>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+          <span style={{ width: 6, height: 6, borderRadius: '50%', background: dataBadgeColor }}/>
+          {dataBadge} · TIDE {tideId}
+        </span>
       </div>
     </div>
   );
