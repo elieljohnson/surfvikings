@@ -69,6 +69,8 @@ export const SPOTS: Spot[] = [
     shadowFactor: 0.65, sandMobility: 0.7 },
   { id: 'mystos',        region: 'sonoma',   regionLabel: 'Sonoma Coast', name: 'Mystos',              subtitle: 'Fort Ross reef · Right',       difficulty: 8,  type: 'Reef · Right · Expert',bottom: 'Uneven reef',   optimalSwell: 200, optimalSize: [4,8], optimalPeriod: [12,16], offshore: 45,  optimalTide: 'high',   lat: 38.5040, lng: -123.2335, driveMin: 105,
     shadowFactor: 0.65, sandMobility: 0.0 },
+  { id: 'russian-rivermouth', region: 'sonoma', regionLabel: 'Sonoma Coast', name: 'Russian Rivermouth', subtitle: 'Jenner · Sandbar right',     difficulty: 6,  type: 'Rivermouth · Right',   bottom: 'Sand',          optimalSwell: 240, optimalSize: [2,7], optimalPeriod: [10,14], offshore: 80,  optimalTide: 'rising', lat: 38.4515, lng: -123.1310, driveMin: 95,
+    shadowFactor: 0.7, sandMobility: 1.0 },
   { id: 'salmon-creek',  region: 'sonoma',   regionLabel: 'Sonoma Coast', name: 'Salmon Creek',        subtitle: 'Bodega Bay',                   difficulty: 5,  type: 'Beach · L/R',          bottom: 'Sand',          optimalSwell: 250, optimalSize: [3,8], optimalPeriod: [12,16], offshore: 110, optimalTide: 'mid',    lat: 38.3544, lng: -123.0728, driveMin: 86 },
   // Region 2 — Point Reyes
   { id: 'point-reyes',   region: 'pt-reyes', regionLabel: 'Point Reyes',  name: 'Point Reyes Beach',   subtitle: 'The Great Beach',              difficulty: 8,  type: 'Beach · Expert',       bottom: 'Sand',          optimalSwell: 250, optimalSize: [3,6], optimalPeriod: [12,16], offshore: 135, optimalTide: 'mid',    lat: 38.0548, lng: -122.9652, driveMin: 62 },
