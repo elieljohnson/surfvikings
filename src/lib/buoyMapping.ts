@@ -12,6 +12,7 @@ export interface BuoyMapping {
 export const BUOY_MAPPINGS: BuoyMapping[] = [
   // Region 1 — Sonoma
   { spotId: 'secrets',       primaryBuoy: '46013', tideStation: '9415020', nwsZone: 'PZZ540' },
+  { spotId: 'timber-cove',   primaryBuoy: '46013', tideStation: '9415020', nwsZone: 'PZZ540' },
   { spotId: 'salmon-creek',  primaryBuoy: '46013', tideStation: '9415020', nwsZone: 'PZZ540' },
   // Region 2 — Point Reyes / West Marin
   { spotId: 'point-reyes',   primaryBuoy: '46013', tideStation: '9415020', nwsZone: 'PZZ545' },

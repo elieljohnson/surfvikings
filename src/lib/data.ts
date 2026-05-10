@@ -65,6 +65,8 @@ export const SPOTS: Spot[] = [
   // Region 1 — Sonoma Coast
   { id: 'secrets',       region: 'sonoma',   regionLabel: 'Sonoma Coast', name: 'Secrets',             subtitle: 'Horseshoe Cove · Salt Point', difficulty: 6,  type: 'Point · Left',         bottom: 'Rock ledge',    optimalSwell: 270, optimalSize: [6,12],optimalPeriod: [14,18], offshore: 135, optimalTide: 'low',    lat: 38.5651, lng: -123.3294, driveMin: 112,
     shadowFactor: 0.7, sandMobility: 0.0 },
+  { id: 'timber-cove',   region: 'sonoma',   regionLabel: 'Sonoma Coast', name: 'Timber Cove',         subtitle: 'Cove right · Day-use access', difficulty: 5,  type: 'Cove · Right',         bottom: 'Sand + rock',   optimalSwell: 315, optimalSize: [2,6], optimalPeriod: [12,16], offshore: 45,  optimalTide: 'low',    lat: 38.4574, lng: -123.0734, driveMin: 100,
+    shadowFactor: 0.65, sandMobility: 0.7 },
   { id: 'salmon-creek',  region: 'sonoma',   regionLabel: 'Sonoma Coast', name: 'Salmon Creek',        subtitle: 'Bodega Bay',                   difficulty: 5,  type: 'Beach · L/R',          bottom: 'Sand',          optimalSwell: 250, optimalSize: [3,8], optimalPeriod: [12,16], offshore: 110, optimalTide: 'mid',    lat: 38.3544, lng: -123.0728, driveMin: 86 },
   // Region 2 — Point Reyes
   { id: 'point-reyes',   region: 'pt-reyes', regionLabel: 'Point Reyes',  name: 'Point Reyes Beach',   subtitle: 'The Great Beach',              difficulty: 8,  type: 'Beach · Expert',       bottom: 'Sand',          optimalSwell: 250, optimalSize: [3,6], optimalPeriod: [12,16], offshore: 135, optimalTide: 'mid',    lat: 38.0548, lng: -122.9652, driveMin: 62 },
