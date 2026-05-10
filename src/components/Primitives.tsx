@@ -291,7 +291,7 @@ export type TabId = 'dashboard' | 'map' | 'forecast' | 'settings';
 export function TabBar({ active, onChange }: { active: TabId; onChange: (id: TabId) => void }) {
   const tabs: { id: TabId; label: string; icon: string }[] = [
     { id: 'dashboard', label: 'Today',    icon: '◉' },
-    { id: 'map',       label: 'Map',      icon: '◎' },
+    { id: 'map',       label: 'Breaks',   icon: '◎' },
     { id: 'forecast',  label: 'Forecast', icon: '≋' },
     { id: 'settings',  label: 'Settings', icon: '⊙' },
   ];
