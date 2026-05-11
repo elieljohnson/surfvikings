@@ -276,6 +276,12 @@ interface ScoringInput {
   swellHeight: number;
   swellPeriod: number;
   swellDirection: number;
+  /** Local wind-wave height (ft). Optional for backward compat; when
+   *  provided, computeScore docks points for chop on top of the primary
+   *  swell. The headline score then reflects mixed-sea-state reality
+   *  rather than treating a 2ft @ 18s under 4ft of windswell the same
+   *  as a glassy 2ft @ 18s day. */
+  windWaveHeight?: number;
   windSpeed: number;
   windDirection: number;
   tideHeight: number;
@@ -300,6 +306,27 @@ function evaluateSpecialRules(
   return { penalty, tideOverride };
 }
 
+/** Penalty when local wind wave is significant relative to the primary
+ *  groundswell. A 2ft @ 18s with 4ft of windswell on top is materially
+ *  less surfable than a glassy 2ft @ 18s, even though the headline swell
+ *  numbers are identical. The penalty scales linearly from 0 (clean) at
+ *  ratio ≤ 0.5 down to -15 (windswell dominates) at ratio ≥ 2.0, with no
+ *  discontinuities. Returns 0 when windWaveHeight is undefined (caller
+ *  didn't pass multi-swell data) or when the groundswell is itself tiny
+ *  (we'd otherwise divide-by-near-zero and dock heavily for nothing). */
+export function windWavePenalty(
+  swellHeight: number,
+  windWaveHeight: number | undefined,
+): number {
+  if (typeof windWaveHeight !== 'number' || windWaveHeight <= 0.3) return 0;
+  if (swellHeight < 0.5) return 0;
+  const ratio = windWaveHeight / swellHeight;
+  if (ratio <= 0.5) return 0;
+  if (ratio >= 2.0) return -15;
+  // Linear: -(ratio - 0.5) * 10 gives 0 at 0.5, -10 at 1.5, -15 at 2.0.
+  return -(ratio - 0.5) * 10;
+}
+
 export function computeScore(spot: Spot, c: ScoringInput): number {
   if (spot.watchOnly) {
     const sizeOK = c.swellHeight > 8 ? 30 : c.swellHeight * 3;
@@ -321,9 +348,10 @@ export function computeScore(spot: Spot, c: ScoringInput): number {
   const windDelta = angleDelta(c.windDirection, spot.offshore);
   const windDirScore = Math.max(0, 15 - windDelta * 0.09);
   const windPenalty = c.windSpeed > 20 ? -10 : c.windSpeed > 12 ? -(c.windSpeed - 12) : 0;
+  const choppy = windWavePenalty(c.swellHeight, c.windWaveHeight);
   const tideScore = tideMatch(spot.optimalTide, c.tideHeight, c.tideRising);
   const { penalty: special } = evaluateSpecialRules(spot, c);
-  return Math.max(0, Math.min(100, dirScore + pScore + sScore + windDirScore + windPenalty + tideScore + special + 5));
+  return Math.max(0, Math.min(100, dirScore + pScore + sScore + windDirScore + windPenalty + choppy + tideScore + special + 5));
 }
 
 export function buildTimeline(spot: Spot, hours = 48): ForecastHour[] {
@@ -374,6 +402,7 @@ export function buildTimeline(spot: Spot, hours = 48): ForecastHour[] {
       tideRising,
       score: computeScore(spot, {
         swellHeight: sh, swellPeriod: sp, swellDirection: sd,
+        windWaveHeight: wwH,
         windSpeed: ws, windDirection: wd,
         tideHeight: tideH, tideRising,
       }),

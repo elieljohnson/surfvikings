@@ -84,6 +84,7 @@ export function hoursToTimeline(spot: Spot, wire: MergedHourWire[], hoursWanted 
       swellHeight,
       swellPeriod: h.swellPeriod,
       swellDirection: h.swellDirection,
+      windWaveHeight: h.windWaveHeight,
       windSpeed: h.windSpeed,
       windDirection: h.windDirection,
       tideHeight: h.tideHeight,
