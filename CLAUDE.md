@@ -25,6 +25,14 @@ Process:
    The branch-named alias is usually more memorable:
    `https://surfvikings-git-preview-<slug>-elieljohnsons-projects.vercel.app`
 
+   **Watch for the 63-char DNS label limit.** Long branch names get a
+   hashed alias instead of the predictable one — e.g. a branch named
+   `preview/spectral-direction-energy-buoys` got the alias
+   `surfvikings-git-preview-spectral-008376-elieljohnsons-projects.vercel.app`
+   (the slug after `preview-` got truncated + hashed). Always confirm
+   the alias from `vercel inspect` before sharing it. Keep branch names
+   short — under ~30 chars after `preview/`.
+
 3. **Iterate on the branch.** Each push to the branch triggers a new preview
    deploy with the same alias. Share the URL with Eliel for review.
 
