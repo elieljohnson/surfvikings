@@ -419,24 +419,17 @@ function NwsPanel({ nws }: {
   const ageHr = Math.max(0, Math.round((Date.now() - nws.issuedAt) / 3600000));
   return (
     <div style={{ padding: '4px 20px 16px' }}>
-      <div style={{
-        display: 'flex', alignItems: 'baseline', justifyContent: 'space-between',
-        marginBottom: 10,
-      }}>
+      <div style={{ marginBottom: 10 }}>
         <div style={{
           fontFamily: 'JetBrains Mono, ui-monospace, monospace',
           fontSize: 13, letterSpacing: '0.18em',
           color: TOKENS.textMute, textTransform: 'uppercase',
         }}>
-          NWS · {nws.zone} · {ageHr}h ago
+          NWS Marine Forecast · {ageHr}h ago
         </div>
         <div style={{
-          fontFamily: 'JetBrains Mono, ui-monospace, monospace',
-          fontSize: 12, letterSpacing: '0.08em',
-          color: TOKENS.textDim, textTransform: 'uppercase',
-          maxWidth: '60%', textAlign: 'right',
-          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-        }} title={nws.description}>
+          fontSize: 12, color: TOKENS.textDim, marginTop: 3,
+        }}>
           {nws.description}
         </div>
       </div>
