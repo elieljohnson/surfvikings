@@ -47,6 +47,17 @@ ranked by user value — start by re-creating the todo list from there.
 - When you use a technical term Eliel might not know (he's a senior design
   leader at a beginner coder level), define it inline. One sentence.
 
+## Tests
+
+Vitest is set up. Run with `npm test` (one-shot) or `npm run test:watch`.
+Tests live next to the file they cover as `*.test.ts`. Working-agreement
+rule #7 — every bug fix gets the smallest possible regression test that
+would have caught it; see `src/lib/celestial.test.ts` for the pattern.
+
+Don't add testing-library / DOM tests for component behavior yet — the
+app's interaction surfaces are still moving too fast for them to be
+worth maintaining. Stick to pure logic in `lib/` for now.
+
 ## Preview deploy workflow for bigger features
 
 For anything bigger than a single-file tweak or data refinement, work on a
