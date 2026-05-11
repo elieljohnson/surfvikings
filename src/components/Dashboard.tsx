@@ -3,7 +3,7 @@ import { TOKENS, scoreColor, qualityColor } from '../lib/tokens';
 import {
   SPOTS, FAVORITES, Spot, ForecastHour, BestWindow,
   findBestWindows, scoreToRating,
-  hourLabel, degToCardinal, swellDirectionQuality, metricQuality,
+  hourLabel, degToCardinal, angleDelta, swellDirectionQuality, metricQuality,
   wetsuitForWaterF, weatherLabel,
 } from '../lib/data';
 import { BUOY_MAP_BY_SPOT } from '../lib/buoyMapping';
