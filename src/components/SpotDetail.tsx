@@ -359,6 +359,14 @@ function SpectralPanel({
                 }}>
                   {t.height.toFixed(1)}<span style={{ fontSize: 12, color: TOKENS.textDim, marginLeft: 2 }}>ft</span>
                 </span>
+                {typeof t.direction === 'number' && (
+                  <span style={{
+                    fontFamily: 'JetBrains Mono, ui-monospace, monospace',
+                    fontSize: 13, color: TOKENS.textDim,
+                  }}>
+                    {degToCardinal(t.direction)}<span style={{ marginLeft: 4 }}>{Math.round(t.direction)}°</span>
+                  </span>
+                )}
               </div>
               {isGroundswell && (
                 <span style={{

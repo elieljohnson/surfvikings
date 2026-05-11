@@ -37,8 +37,9 @@ export interface ConditionsResponse {
     windGust?: number;
     waterTempF?: number;
     airTempF?: number;
-    /** Multi-train decomposition from NDBC .data_spec — longest period first. */
-    swellTrains?: Array<{ height: number; period: number }>;
+    /** Multi-train decomposition from NDBC .data_spec — longest period first.
+     *  direction is deg "FROM" (when .swdir is available for that buoy). */
+    swellTrains?: Array<{ height: number; period: number; direction?: number }>;
     /** Wave energy flux in kW per meter of wave crest, from .data_spec. */
     energyKwPerM?: number;
     status: 'online' | 'offline' | 'stale';

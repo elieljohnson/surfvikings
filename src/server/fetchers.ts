@@ -12,8 +12,9 @@ export const MS_TO_KTS = 1.94384;
  *  windswell at the same buoy at the same moment). Trains are sorted longest
  *  period first so trains[0] is the cleanest groundswell. */
 export interface SwellTrain {
-  height: number;   // ft (Hs computed from spectral variance in this band)
-  period: number;   // s (1 / peak frequency)
+  height: number;     // ft (Hs computed from spectral variance in this band)
+  period: number;     // s (1 / peak frequency)
+  direction?: number; // deg "FROM" (when .swdir is available — alpha1 at peak bin)
 }
 
 export interface BuoyObservation {
@@ -137,19 +138,30 @@ export interface SpectralObservation {
 }
 
 export async function fetchSpectral(buoyId: string, signal?: AbortSignal): Promise<SpectralObservation> {
-  const url = `https://www.ndbc.noaa.gov/data/realtime2/${buoyId}.data_spec`;
+  const specUrl = `https://www.ndbc.noaa.gov/data/realtime2/${buoyId}.data_spec`;
+  const dirUrl = `https://www.ndbc.noaa.gov/data/realtime2/${buoyId}.swdir`;
   try {
-    const res = await fetch(url, { signal });
-    if (!res.ok) return { buoyId, timestamp: Date.now(), trains: [], status: 'offline' };
-    const text = await res.text();
-    return parseSpectral(buoyId, text);
+    // Both files run in parallel. .swdir frequently lags or is missing on
+    // smaller buoys — that's fine, we degrade to direction-less trains.
+    const [specRes, dirRes] = await Promise.all([
+      fetch(specUrl, { signal }),
+      fetch(dirUrl, { signal }).catch(() => null),
+    ]);
+    if (!specRes.ok) return { buoyId, timestamp: Date.now(), trains: [], status: 'offline' };
+    const specText = await specRes.text();
+    const dirText = dirRes && dirRes.ok ? await dirRes.text() : '';
+    return parseSpectral(buoyId, specText, dirText);
   } catch {
     return { buoyId, timestamp: Date.now(), trains: [], status: 'offline' };
   }
 }
 
-export function parseSpectral(buoyId: string, text: string): SpectralObservation {
-  const lines = text.split('\n').filter((l) => l && !l.startsWith('#'));
+export function parseSpectral(
+  buoyId: string,
+  specText: string,
+  dirText = '',
+): SpectralObservation {
+  const lines = specText.split('\n').filter((l) => l && !l.startsWith('#'));
   if (!lines.length) return { buoyId, timestamp: Date.now(), trains: [], status: 'offline' };
 
   // Most recent observation is the first non-header line
@@ -163,13 +175,34 @@ export function parseSpectral(buoyId: string, text: string): SpectralObservation
     now - timestamp > 3 * 3600e3 ? 'stale' : 'online';
 
   // Parse energy/freq pairs starting at index 6
-  const bins: Array<{ freq: number; energy: number }> = [];
+  const bins: Array<{ freq: number; energy: number; direction?: number }> = [];
   for (let i = 6; i + 1 < tokens.length; i += 2) {
     const energy = parseFloat(tokens[i]);
     const freqStr = tokens[i + 1].replace(/[()]/g, '');
     const freq = parseFloat(freqStr);
     if (Number.isFinite(energy) && Number.isFinite(freq) && energy >= 0) {
       bins.push({ freq, energy });
+    }
+  }
+
+  // Optional .swdir overlay — alpha1 mean direction at each frequency bin.
+  // Same row format as .data_spec but values are degrees instead of energy.
+  if (dirText) {
+    const dirLines = dirText.split('\n').filter((l) => l && !l.startsWith('#'));
+    if (dirLines.length) {
+      const dirTokens = dirLines[0].trim().split(/\s+/);
+      const dirByFreq = new Map<number, number>();
+      for (let i = 6; i + 1 < dirTokens.length; i += 2) {
+        const dir = parseFloat(dirTokens[i]);
+        const freq = parseFloat(dirTokens[i + 1].replace(/[()]/g, ''));
+        if (Number.isFinite(dir) && Number.isFinite(freq) && dir >= 0 && dir <= 360) {
+          dirByFreq.set(freq, dir);
+        }
+      }
+      for (const b of bins) {
+        const d = dirByFreq.get(b.freq);
+        if (typeof d === 'number') b.direction = d;
+      }
     }
   }
 
@@ -214,7 +247,7 @@ function computeWaveEnergyFlux(
 /** Peak-finding decomposition: locate local maxima in the smoothed spectrum,
  *  integrate variance in a ±2-bin window around each, convert to Hs = 4·√σ². */
 function decomposeSwellTrains(
-  bins: Array<{ freq: number; energy: number }>,
+  bins: Array<{ freq: number; energy: number; direction?: number }>,
 ): SwellTrain[] {
   if (bins.length < 5) return [];
   // Sort by frequency ascending (period descending — long swell first)
@@ -260,7 +293,8 @@ function decomposeSwellTrains(
     const hsM = 4 * Math.sqrt(Math.max(0, totalVar));
     const hsFt = hsM * M_TO_FT;
     const period = 1 / bins[peakIdx].freq;
-    if (hsFt > 0.3) trains.push({ height: hsFt, period });
+    const direction = bins[peakIdx].direction;
+    if (hsFt > 0.3) trains.push({ height: hsFt, period, direction });
   }
 
   // Longest-period first (primary groundswell at trains[0])
