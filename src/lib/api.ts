@@ -39,6 +39,8 @@ export interface ConditionsResponse {
     airTempF?: number;
     /** Multi-train decomposition from NDBC .data_spec — longest period first. */
     swellTrains?: Array<{ height: number; period: number }>;
+    /** Wave energy flux in kW per meter of wave crest, from .data_spec. */
+    energyKwPerM?: number;
     status: 'online' | 'offline' | 'stale';
   }>;
   tides: Record<string, { stationId: string; samples: Array<{ t: number; v: number }> }>;

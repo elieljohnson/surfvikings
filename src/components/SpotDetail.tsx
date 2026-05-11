@@ -309,11 +309,25 @@ function SpectralPanel({
   return (
     <div style={{ padding: '4px 20px 16px' }}>
       <div style={{
-        fontFamily: 'JetBrains Mono, ui-monospace, monospace',
-        fontSize: 13, letterSpacing: '0.18em',
-        color: TOKENS.textMute, textTransform: 'uppercase', marginBottom: 10,
+        display: 'flex', alignItems: 'baseline', justifyContent: 'space-between',
+        marginBottom: 10,
       }}>
-        Spectral · Buoy {buoyId} · {ageMin}m ago
+        <div style={{
+          fontFamily: 'JetBrains Mono, ui-monospace, monospace',
+          fontSize: 13, letterSpacing: '0.18em',
+          color: TOKENS.textMute, textTransform: 'uppercase',
+        }}>
+          Spectral · Buoy {buoyId} · {ageMin}m ago
+        </div>
+        {typeof buoy.energyKwPerM === 'number' && (
+          <div style={{
+            fontFamily: 'JetBrains Mono, ui-monospace, monospace',
+            fontSize: 13, letterSpacing: '0.12em',
+            color: TOKENS.textDim, textTransform: 'uppercase',
+          }}>
+            {Math.round(buoy.energyKwPerM)} kW/m
+          </div>
+        )}
       </div>
       <div style={{
         background: TOKENS.surface, border: `1px solid ${TOKENS.border}`,

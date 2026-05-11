@@ -30,6 +30,8 @@ export interface BuoyObservation {
   waterTempF?: number;
   /** Multi-train decomposition from .data_spec, if available. */
   swellTrains?: SwellTrain[];
+  /** Wave energy flux (kW per meter of wave crest), if .data_spec available. */
+  energyKwPerM?: number;
   status: 'online' | 'offline' | 'stale';
 }
 
@@ -127,6 +129,10 @@ export interface SpectralObservation {
   buoyId: string;
   timestamp: number;
   trains: SwellTrain[];
+  /** Wave energy flux density in kW per meter of wave crest:
+   *  P = ρ·g²·Hs²·Tₑ / (64π). Surfers read this as "how much water is moving"
+   *  — a single relative magnitude across all swell trains combined. */
+  energyKwPerM?: number;
   status: 'online' | 'offline' | 'stale';
 }
 
@@ -168,7 +174,41 @@ export function parseSpectral(buoyId: string, text: string): SpectralObservation
   }
 
   const trains = decomposeSwellTrains(bins);
-  return { buoyId, timestamp, trains, status };
+  const energyKwPerM = computeWaveEnergyFlux(bins);
+  return { buoyId, timestamp, trains, energyKwPerM, status };
+}
+
+/** Wave energy flux density (kW per meter of wave crest) from spectral
+ *  variance. Standard oceanographic formula:
+ *     P = ρ·g²·m₀·Tₑ / (16π)
+ *  where m₀ = ∫S(f)df is total variance and Tₑ = m_{-1}/m₀ is the energy
+ *  period. Surfers see this as a single "how much water is moving" number
+ *  across all swell trains combined.
+ *  Result is in kW/m (divide W/m by 1000). */
+function computeWaveEnergyFlux(
+  bins: Array<{ freq: number; energy: number }>,
+): number | undefined {
+  if (bins.length < 5) return undefined;
+  const sorted = [...bins].sort((a, b) => a.freq - b.freq);
+  let m0 = 0;      // total variance (m²)
+  let mNeg1 = 0;   // first negative moment (used to compute Tₑ)
+  for (let i = 0; i < sorted.length; i++) {
+    const dF =
+      i === sorted.length - 1
+        ? sorted[i].freq - sorted[i - 1].freq
+        : i === 0
+          ? sorted[i + 1].freq - sorted[i].freq
+          : (sorted[i + 1].freq - sorted[i - 1].freq) / 2;
+    const e = sorted[i].energy * Math.abs(dF);
+    m0 += e;
+    if (sorted[i].freq > 0) mNeg1 += e / sorted[i].freq;
+  }
+  if (m0 <= 0) return undefined;
+  const Te = mNeg1 / m0;                      // energy period (s)
+  const RHO = 1025;                            // seawater density kg/m³
+  const G = 9.81;                              // gravity m/s²
+  const P_w_per_m = (RHO * G * G * m0 * Te) / (16 * Math.PI);
+  return P_w_per_m / 1000;                    // kW/m
 }
 
 /** Peak-finding decomposition: locate local maxima in the smoothed spectrum,
@@ -436,12 +476,15 @@ export async function buildConditions(spotIds: string[], signal?: AbortSignal): 
     }),
   ]);
 
-  // Merge spectral trains into each buoy's observation
-  const spectralByBuoy: Record<string, SwellTrain[]> = Object.fromEntries(
-    spectralList.map((s) => [s.buoyId, s.trains]),
+  // Merge spectral observations (trains + energy) into each buoy
+  const spectralByBuoy: Record<string, SpectralObservation> = Object.fromEntries(
+    spectralList.map((s) => [s.buoyId, s]),
   );
   const buoys: Record<string, BuoyObservation> = Object.fromEntries(
-    buoyList.map((b) => [b.buoyId, { ...b, swellTrains: spectralByBuoy[b.buoyId] }]),
+    buoyList.map((b) => {
+      const spec = spectralByBuoy[b.buoyId];
+      return [b.buoyId, { ...b, swellTrains: spec?.trains, energyKwPerM: spec?.energyKwPerM }];
+    }),
   );
   const tides: Record<string, TidePrediction> = Object.fromEntries(tideList.map((t) => [t.stationId, t]));
   const marineByspot: Record<string, MarineHour[]> = Object.fromEntries(marineList.map((m) => [m.spotId, m.hours]));
