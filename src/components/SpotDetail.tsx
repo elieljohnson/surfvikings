@@ -386,6 +386,8 @@ const INSIGHTS: Record<string, string> = {
   'pleasure-sewer': 'Top of the point. Top-to-bottom barrel over a rock shelf — the most famous and most competitive section. Lefts are decent but rights are cleaner and longer. Heavily surfed by excellent shortboarders. Best with S and W swells and low tide.',
   'pleasure-first': 'Further down the point from Sewer. A utility right — predictable, surfable on a variety of swell angles and tides. Very crowded. Shifts around and can offer long slopey walls on a big day.',
   'pleasure-second': 'Further down again. Less of a peak, more of a lined-up wall than First. Not as stellar as Sewer, but it has its days. Popular with the grommet pack.',
+  'pleasure-insides': 'Aka Middle Peak. Directly in front of Jack O\'Neill\'s house. A mushy reef peak occupied by longboarder cruisers and beginners. Best with lower mid tides to minimize backwash; kelp clogs the inside on big lows.',
+  'jacks': '38th Avenue. On big winter swells and the occasional macking S swell, transforms into a world-class wave. On the biggest swells, you can ride from First Peak Pleasure Point all the way through Jack\'s.',
   'capitola': 'Perfect longboard wave when conditions allow. Charming village vibe. Good fallback when Santa Cruz proper is too heavy.',
   'the-hook': 'Classic Santa Cruz right-hander. Kelp beds slow the wave face. A step up from Capitola without the intensity of Steamer Lane.',
 };
@@ -434,6 +436,8 @@ const HAZARDS: Record<string, string[]> = {
   'pleasure-sewer': ['Rocks', 'Kelp', 'Heavy localism', 'Crowds'],
   'pleasure-first': ['Rocks', 'Kelp', 'Crowds'],
   'pleasure-second': ['Rocks', 'Kelp', 'Crowds'],
+  'pleasure-insides': ['Kelp', 'Inside rocks', 'Backwash'],
+  'jacks': ['Kelp', 'Long lulls', 'Sea otters', 'Crowds'],
   'capitola': ['Crowds', 'Rocks'],
   'the-hook': ['Rocks', 'Kelp', 'Localism'],
 };
