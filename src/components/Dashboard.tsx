@@ -370,7 +370,7 @@ function TopPickCard({
             WATER {waterStr}°F · {wetsuit} · {weatherLabel(current.cloudcover, current.precipitation, current.precipitationProb)}
           </div>
         </div>
-        <ScoreSpark timeline={timeline} width={120} height={38}/>
+        <ScoreSpark timeline={timeline.slice(0, 24)} width={120} height={38}/>
       </div>
       <div style={{
         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
@@ -448,7 +448,7 @@ function SpotRow({ spot, timeline, onClick }: { spot: Spot; timeline: ForecastHo
           </div>
         )}
       </div>
-      <ScoreSpark timeline={timeline} width={60} height={24}/>
+      <ScoreSpark timeline={timeline.slice(0, 24)} width={60} height={24}/>
       <ScoreBadge score={current.score} rating={rating.label} size="sm"/>
     </div>
   );
