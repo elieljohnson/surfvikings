@@ -29,9 +29,15 @@ export interface TidePrediction {
 
 export interface MarineHour {
   t: number;                // epoch ms
-  swellHeight: number;      // ft (primary swell)
+  swellHeight: number;      // ft (primary groundswell only)
   swellPeriod: number;      // s
   swellDirection: number;   // deg
+  windWaveHeight: number;   // ft (local wind-generated, separate from groundswell)
+  windWavePeriod: number;   // s
+  windWaveDirection: number;// deg
+  combinedHeight: number;   // ft (groundswell + wind wave + chop, total sea state)
+  combinedPeriod: number;   // s
+  combinedDirection: number;// deg
   windSpeed: number;        // kts
   windDirection: number;    // deg
   windGust: number;         // kts
@@ -135,10 +141,13 @@ interface OpenMeteoResponse {
   longitude: number | number[];
   hourly: {
     time: string[];
-    swell_wave_height?: number[];      // m
+    swell_wave_height?: number[];      // m — primary groundswell only
     swell_wave_period?: number[];      // s
     swell_wave_direction?: number[];   // deg
-    wave_height?: number[];            // m
+    wind_wave_height?: number[];       // m — local wind-generated only
+    wind_wave_period?: number[];       // s
+    wind_wave_direction?: number[];    // deg
+    wave_height?: number[];            // m — combined sea state (groundswell + wind wave)
     wave_period?: number[];            // s
     wave_direction?: number[];         // deg
   };
@@ -168,7 +177,7 @@ export async function fetchMarineBatch(spots: Spot[], forecastDays = 3, signal?:
   const marineParams = new URLSearchParams({
     latitude: lats,
     longitude: lngs,
-    hourly: 'swell_wave_height,swell_wave_period,swell_wave_direction,wave_height,wave_period,wave_direction',
+    hourly: 'swell_wave_height,swell_wave_period,swell_wave_direction,wind_wave_height,wind_wave_period,wind_wave_direction,wave_height,wave_period,wave_direction',
     forecast_days: String(forecastDays),
     length_unit: 'metric',
     timeformat: 'unixtime',
@@ -200,9 +209,20 @@ export async function fetchMarineBatch(spots: Spot[], forecastDays = 3, signal?:
     const times = mh?.time ?? [];
     const hours: MarineHour[] = times.map((tRaw, h) => {
       const t = Number(tRaw) * 1000;
+      // Primary groundswell — falls back to combined if Open-Meteo doesn't
+      // decompose for this lat/lng (rare; the fallback preserves prior behavior
+      // rather than zeroing out).
       const swellM = mh?.swell_wave_height?.[h] ?? mh?.wave_height?.[h] ?? 0;
       const swellP = mh?.swell_wave_period?.[h] ?? mh?.wave_period?.[h] ?? 0;
       const swellD = mh?.swell_wave_direction?.[h] ?? mh?.wave_direction?.[h] ?? 0;
+      // Local wind wave — separate signal, no fallback (0 means no chop, not missing data)
+      const windWaveM = mh?.wind_wave_height?.[h] ?? 0;
+      const windWaveP = mh?.wind_wave_period?.[h] ?? 0;
+      const windWaveD = mh?.wind_wave_direction?.[h] ?? 0;
+      // Combined sea state (groundswell + wind wave) — the "5ft of mess" total
+      const combinedM = mh?.wave_height?.[h] ?? swellM;
+      const combinedP = mh?.wave_period?.[h] ?? swellP;
+      const combinedD = mh?.wave_direction?.[h] ?? swellD;
       const windS = wh?.wind_speed_10m?.[h] ?? 0;
       const windD = wh?.wind_direction_10m?.[h] ?? 0;
       const windG = wh?.wind_gusts_10m?.[h] ?? windS;
@@ -211,6 +231,12 @@ export async function fetchMarineBatch(spots: Spot[], forecastDays = 3, signal?:
         swellHeight: (swellM || 0) * M_TO_FT,
         swellPeriod: swellP || 0,
         swellDirection: swellD || 0,
+        windWaveHeight: (windWaveM || 0) * M_TO_FT,
+        windWavePeriod: windWaveP || 0,
+        windWaveDirection: windWaveD || 0,
+        combinedHeight: (combinedM || 0) * M_TO_FT,
+        combinedPeriod: combinedP || 0,
+        combinedDirection: combinedD || 0,
         windSpeed: windS || 0,
         windDirection: windD || 0,
         windGust: windG || 0,

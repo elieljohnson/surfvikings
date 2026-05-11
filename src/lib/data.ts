@@ -215,9 +215,15 @@ export const CURRENT: CurrentConditions = {
 
 export interface ForecastHour {
   hour: number;
-  swellHeight: number;
+  swellHeight: number;          // primary groundswell only, after shadowFactor
   swellPeriod: number;
   swellDirection: number;
+  windWaveHeight: number;       // local wind wave, separate from groundswell
+  windWavePeriod: number;
+  windWaveDirection: number;
+  combinedHeight: number;       // groundswell + wind wave total sea state (raw, not shadowed)
+  combinedPeriod: number;
+  combinedDirection: number;
   windSpeed: number;
   windDirection: number;
   windGust: number;
@@ -326,11 +332,25 @@ export function buildTimeline(spot: Spot, hours = 48): ForecastHour[] {
     const sd = (swellD + 360) % 360;
     const ws = Math.max(0, windS);
     const wd = (windD + 360) % 360;
+    // Mock wind-wave: scales with local wind, short period, follows wind direction
+    const wwH = Math.max(0, (ws - 3) * 0.15 + rnd() * 0.3);
+    const wwP = 4 + rnd() * 3;       // 4-7s, typical windswell
+    const wwD = wd;                  // wind-generated waves come from same direction as wind
+    // Mock combined: rough additive of swell + wind wave (real combined is spectral, not arithmetic)
+    const combH = sh + wwH * 0.5;
+    const combP = sh > wwH ? sp : wwP;
+    const combD = sh > wwH ? sd : wwD;
     data.push({
       hour: h,
       swellHeight: sh,
       swellPeriod: sp,
       swellDirection: sd,
+      windWaveHeight: wwH,
+      windWavePeriod: wwP,
+      windWaveDirection: wwD,
+      combinedHeight: combH,
+      combinedPeriod: combP,
+      combinedDirection: combD,
       windSpeed: ws,
       windDirection: wd,
       windGust: Math.max(0, ws + 3 + rnd() * 2),

@@ -7,9 +7,15 @@ import {
 
 export interface MergedHourWire {
   t: number;
-  swellHeight: number;
+  swellHeight: number;        // primary groundswell only
   swellPeriod: number;
   swellDirection: number;
+  windWaveHeight: number;     // local wind-generated, separate from groundswell
+  windWavePeriod: number;
+  windWaveDirection: number;
+  combinedHeight: number;     // groundswell + wind wave + chop total
+  combinedPeriod: number;
+  combinedDirection: number;
   windSpeed: number;
   windDirection: number;
   windGust: number;
@@ -73,6 +79,12 @@ export function hoursToTimeline(spot: Spot, wire: MergedHourWire[], hoursWanted 
       swellHeight: h.swellHeight,
       swellPeriod: h.swellPeriod,
       swellDirection: h.swellDirection,
+      windWaveHeight: h.windWaveHeight,
+      windWavePeriod: h.windWavePeriod,
+      windWaveDirection: h.windWaveDirection,
+      combinedHeight: h.combinedHeight,
+      combinedPeriod: h.combinedPeriod,
+      combinedDirection: h.combinedDirection,
       windSpeed: h.windSpeed,
       windDirection: h.windDirection,
       windGust: h.windGust,
@@ -89,6 +101,12 @@ function wireFromMock(f: ForecastHour): MergedHourWire {
     swellHeight: f.swellHeight,
     swellPeriod: f.swellPeriod,
     swellDirection: f.swellDirection,
+    windWaveHeight: f.windWaveHeight,
+    windWavePeriod: f.windWavePeriod,
+    windWaveDirection: f.windWaveDirection,
+    combinedHeight: f.combinedHeight,
+    combinedPeriod: f.combinedPeriod,
+    combinedDirection: f.combinedDirection,
     windSpeed: f.windSpeed,
     windDirection: f.windDirection,
     windGust: f.windGust,
