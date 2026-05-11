@@ -79,6 +79,7 @@ export const BUOY_MAPPINGS: BuoyMapping[] = [
   { spotId: 'the-hook',      primaryBuoy: '46042', tideStation: '9413745', nwsZone: 'PZZ565' },
   { spotId: 'privates',      primaryBuoy: '46042', tideStation: '9413745', nwsZone: 'PZZ565' },
   { spotId: 'beer-can',      primaryBuoy: '46042', tideStation: '9413745', nwsZone: 'PZZ565' },
+  { spotId: 'capitola-rivermouth', primaryBuoy: '46042', tideStation: '9413745', nwsZone: 'PZZ565' },
 ];
 
 export const BUOY_MAP_BY_SPOT: Record<string, BuoyMapping> = Object.fromEntries(
