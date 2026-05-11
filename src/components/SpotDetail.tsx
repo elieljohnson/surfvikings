@@ -30,7 +30,12 @@ export function SpotDetail({ spotId, onBack }: SpotDetailProps) {
     [isBolinasSpot, activeSpot.id]
   );
   const { timelines, response } = useConditions(requestedSpots);
-  const timeline = timelines[activeSpot.id] ?? [];
+  // useConditions fetches 7 days (168h) but Spot Detail intentionally shows
+  // only the next 48h. Keeps this view distinct from the Forecast tab's
+  // 7-day plan-the-week framing — Spot Detail is "should I go today / tonight
+  // / tomorrow." All downstream consumers (charts, heatmap, best window,
+  // peak score) use the trimmed timeline.
+  const timeline = (timelines[activeSpot.id] ?? []).slice(0, 48);
   const buoyId = BUOY_MAP_BY_SPOT[activeSpot.id]?.primaryBuoy;
   const buoy = buoyId ? response?.buoys[buoyId] : undefined;
   const current = timeline[0];
@@ -97,7 +102,7 @@ export function SpotDetail({ spotId, onBack }: SpotDetailProps) {
       {/* Quality timeline */}
       <div style={{ padding: '18px 20px 12px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-          <div style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 13, letterSpacing: '0.18em', color: TOKENS.textMute, textTransform: 'uppercase' }}>Quality · 7 days</div>
+          <div style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 13, letterSpacing: '0.18em', color: TOKENS.textMute, textTransform: 'uppercase' }}>Quality · 48h</div>
           <div style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 12, color: TOKENS.textDim }}>
             now <span style={{ color }}>{Math.round(current.score)}</span> · peak{' '}
             <span style={{ color: scoreColor(Math.max(...timeline.map((t) => t.score))) }}>
