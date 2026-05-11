@@ -14,12 +14,22 @@ function julianDay(date: Date): number {
 
 /** Sunrise + sunset for a given date at a given lat/lng. Returns Date
  *  objects in the system's local timezone. Implements the NOAA Solar
- *  Position Algorithm — approximate but well within ±1 minute. */
+ *  Position Algorithm — approximate but well within ±1 minute.
+ *
+ *  IMPORTANT — the algorithm expects `n` to count days from J2000 (Jan 1
+ *  2000 12:00 UTC) to the day's midnight UTC. The `lng/360` step is the
+ *  longitude correction that shifts to local solar mean noon. So we MUST
+ *  feed in midnight-UTC, not midnight-local. Using `setHours(0,0,0,0)`
+ *  here was the bug behind the off-by-5-hours sunrise readouts in the
+ *  May 11 ship. */
 export function sunriseSunset(date: Date, lat: number, lng: number): { sunrise: Date; sunset: Date } {
-  // Start of the day in UT, midnight at the spot's longitude
-  const dayStart = new Date(date);
-  dayStart.setHours(0, 0, 0, 0);
-  const jd = julianDay(dayStart);
+  // Calendar date in the system's local time (i.e. "what day is the user
+  // asking about"), then anchor to that date's midnight UTC.
+  const y = date.getFullYear();
+  const m = date.getMonth();
+  const d = date.getDate();
+  const dayStartUtc = Date.UTC(y, m, d, 0, 0, 0, 0);
+  const jd = dayStartUtc / 86400000 + 2440587.5;
 
   // Days since J2000 (Jan 1 2000 12:00 UT)
   const n = jd - 2451545.0 + 0.0008;
