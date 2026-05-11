@@ -306,6 +306,110 @@ function decomposeSwellTrains(
 }
 
 // ───────────────────────────────────────────────────────────────────────────
+// NOAA NWS Coastal Waters Forecast (CWF) — marine narrative text.
+//
+// The standard /zones/forecast endpoint explicitly does not support marine
+// zones (returns MarineForecastNotSupported). The CWF text product is the
+// closest replacement — issued ~4×/day by the local NWS office, contains
+// per-zone period sections like:
+//
+//   .TODAY...NW wind 20 to 25 kt. Seas 7 to 9 ft.
+//   Wave Detail: NW 9 ft at 9 seconds and S 2 ft at 16 seconds.
+//
+// Two-step fetch: GET the index, take the latest ID, GET the product text.
+// Office MTR covers Pt Arena south to Pt Piedras Blancas — all our zones.
+// ───────────────────────────────────────────────────────────────────────────
+
+export interface NwsPeriod {
+  name: string;       // e.g. 'Today', 'Tonight', 'Tuesday'
+  text: string;       // forecaster narrative for the period
+}
+
+export interface NwsZoneForecast {
+  zone: string;       // e.g. 'PZZ545'
+  description: string;// e.g. 'Waters from Pt Arena to Pt Reyes 10-60 NM'
+  issuedAt: number;   // epoch ms of product issuance
+  advisories: string[]; // any ...ADVISORY... lines for this zone
+  periods: NwsPeriod[];
+}
+
+const USER_AGENT = 'SurfVikings/1.0 (eliel.johnson@gmail.com)';
+
+export async function fetchNwsCwf(office = 'MTR', signal?: AbortSignal): Promise<Record<string, NwsZoneForecast>> {
+  try {
+    const idxRes = await fetch(
+      `https://api.weather.gov/products/types/CWF/locations/${office}`,
+      { signal, headers: { 'User-Agent': USER_AGENT, Accept: 'application/ld+json' } },
+    );
+    if (!idxRes.ok) return {};
+    const idx = (await idxRes.json()) as { '@graph'?: Array<{ id: string; issuanceTime: string }> };
+    const latest = idx['@graph']?.[0];
+    if (!latest) return {};
+    const prodRes = await fetch(`https://api.weather.gov/products/${latest.id}`, {
+      signal,
+      headers: { 'User-Agent': USER_AGENT, Accept: 'application/ld+json' },
+    });
+    if (!prodRes.ok) return {};
+    const prod = (await prodRes.json()) as { productText?: string; issuanceTime?: string };
+    if (!prod.productText) return {};
+    return parseCwf(prod.productText, Date.parse(prod.issuanceTime ?? latest.issuanceTime));
+  } catch {
+    return {};
+  }
+}
+
+/** Parse a Coastal Waters Forecast text bulletin into per-zone period maps.
+ *  The text format is well-defined and stable: zone blocks separated by `$$`,
+ *  periods within a zone starting with `.NAME...text...` (continuation lines
+ *  belong to the previous period until the next `.NAME...` or `$$`). */
+export function parseCwf(text: string, issuedAt: number): Record<string, NwsZoneForecast> {
+  const out: Record<string, NwsZoneForecast> = {};
+  // Split on $$ separators to get one block per zone.
+  const blocks = text.split(/\n\$\$\n?/);
+  for (const block of blocks) {
+    // Zone header looks like: PZZ545-120430- (zone code with VTEC time suffix)
+    const zoneMatch = block.match(/\n(PZZ\d{3})-\d{6}-\n([^\n]+?)-?\n/);
+    if (!zoneMatch) continue;
+    const zone = zoneMatch[1];
+    const description = zoneMatch[2].trim();
+    // Slice from after the zone header to extract the body.
+    const body = block.slice(block.indexOf(zoneMatch[0]) + zoneMatch[0].length);
+
+    // Advisory lines look like: ...SMALL CRAFT ADVISORY IN EFFECT...
+    const advisories: string[] = [];
+    for (const advMatch of body.matchAll(/^\.\.\.([^.\n]+(?:\.[^.\n]+)*)\.\.\.$/gm)) {
+      advisories.push(advMatch[1].trim());
+    }
+
+    // Periods: `.NAME...content` running until next `.NAME...` or end-of-block.
+    const periods: NwsPeriod[] = [];
+    const periodRe = /\n\.([A-Z][A-Z .]+?)\.\.\.([\s\S]*?)(?=\n\.[A-Z][A-Z .]+?\.\.\.|\n\.\.\.|$)/g;
+    for (const m of body.matchAll(periodRe)) {
+      const name = m[1].trim().replace(/\s+/g, ' ');
+      // Skip section headers like ".SYNOPSIS" which use the same syntax
+      // but aren't day-period forecasts.
+      if (/^(SYNOPSIS|FORECAST|SEAS|SURF)$/.test(name)) continue;
+      const periodText = m[2]
+        .replace(/\n/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+      if (periodText) periods.push({ name: toTitleCase(name), text: periodText });
+    }
+
+    out[zone] = { zone, description, issuedAt, advisories, periods };
+  }
+  return out;
+}
+
+function toTitleCase(s: string): string {
+  return s
+    .toLowerCase()
+    .split(' ')
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(' ');
+}
+
+// ───────────────────────────────────────────────────────────────────────────
 // NOAA CO-OPS tide predictions
 // api.tidesandcurrents.noaa.gov/api/prod/datagetter
 // ───────────────────────────────────────────────────────────────────────────
@@ -503,6 +607,8 @@ export interface ConditionsPayload {
   spots: Record<string, MergedHour[]>;
   buoys: Record<string, BuoyObservation>;
   tides: Record<string, TidePrediction>;
+  /** NWS Coastal Waters Forecast periods, keyed by zone (PZZ540 etc.). */
+  nwsForecasts: Record<string, NwsZoneForecast>;
   meta: { source: 'live' | 'partial'; errors?: string[] };
 }
 
@@ -512,7 +618,7 @@ export async function buildConditions(spotIds: string[], signal?: AbortSignal): 
   const tideIds = Array.from(new Set(spots.map((s) => BUOY_MAP_BY_SPOT[s.id]?.tideStation).filter(Boolean)));
 
   const errors: string[] = [];
-  const [buoyList, spectralList, tideList, marineList] = await Promise.all([
+  const [buoyList, spectralList, tideList, marineList, nwsForecasts] = await Promise.all([
     Promise.all(buoyIds.map((id) => fetchBuoy(id, signal))),
     Promise.all(buoyIds.map((id) => fetchSpectral(id, signal))),
     // Tides extend ~7d/168h to cover the marine forecast horizon.
@@ -520,6 +626,11 @@ export async function buildConditions(spotIds: string[], signal?: AbortSignal): 
     fetchMarineBatch(spots, 7, signal).catch((e) => {
       errors.push(`openmeteo: ${e.message ?? e}`);
       return [] as SpotMarine[];
+    }),
+    // NWS Coastal Waters Forecast — all our zones are MTR office.
+    fetchNwsCwf('MTR', signal).catch((e) => {
+      errors.push(`nws: ${e.message ?? e}`);
+      return {} as Record<string, NwsZoneForecast>;
     }),
   ]);
 
@@ -549,6 +660,7 @@ export async function buildConditions(spotIds: string[], signal?: AbortSignal): 
     spots: spotData,
     buoys,
     tides,
+    nwsForecasts,
     meta: { source: errors.length ? 'partial' : 'live', errors: errors.length ? errors : undefined },
   };
 }

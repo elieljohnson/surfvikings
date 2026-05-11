@@ -38,6 +38,8 @@ export function SpotDetail({ spotId, onBack }: SpotDetailProps) {
   const timeline = (timelines[activeSpot.id] ?? []).slice(0, 48);
   const buoyId = BUOY_MAP_BY_SPOT[activeSpot.id]?.primaryBuoy;
   const buoy = buoyId ? response?.buoys[buoyId] : undefined;
+  const nwsZone = BUOY_MAP_BY_SPOT[activeSpot.id]?.nwsZone;
+  const nws = nwsZone ? response?.nwsForecasts?.[nwsZone] : undefined;
   const current = timeline[0];
   const rating = scoreToRating(current.score, activeSpot.watchOnly);
   const windows = findBestWindows(timeline);
@@ -175,6 +177,7 @@ export function SpotDetail({ spotId, onBack }: SpotDetailProps) {
       {buoy?.swellTrains && buoy.swellTrains.length > 0 && (
         <SpectralPanel buoyId={buoyId!} buoy={buoy}/>
       )}
+      {nws && nws.periods.length > 0 && <NwsPanel nws={nws}/>}
       {activeSpot.bathymetry && <BathymetrySection spot={activeSpot}/>}
       <VectorsPanel spot={activeSpot} current={current}/>
       <SunMoonPanel spot={activeSpot}/>
@@ -396,6 +399,79 @@ function SpectralPanel({
             </div>
           );
         })}
+      </div>
+    </div>
+  );
+}
+
+// NWS Coastal Waters Forecast — human-written marine narrative from the
+// local NWS office. Different feel from our model numbers: prose like
+// 'Seas 7 to 9 ft. Wave Detail: NW 9 ft at 9 seconds and S 2 ft at 16
+// seconds.' Plus any active marine advisories.
+function NwsPanel({ nws }: {
+  nws: NonNullable<ReturnType<typeof useConditions>['response']>['nwsForecasts'][string];
+}) {
+  // Show the next 3 periods so the panel doesn't dominate the page.
+  const periods = nws.periods.slice(0, 3);
+  const ageHr = Math.max(0, Math.round((Date.now() - nws.issuedAt) / 3600000));
+  return (
+    <div style={{ padding: '4px 20px 16px' }}>
+      <div style={{
+        display: 'flex', alignItems: 'baseline', justifyContent: 'space-between',
+        marginBottom: 10,
+      }}>
+        <div style={{
+          fontFamily: 'JetBrains Mono, ui-monospace, monospace',
+          fontSize: 13, letterSpacing: '0.18em',
+          color: TOKENS.textMute, textTransform: 'uppercase',
+        }}>
+          NWS · {nws.zone} · {ageHr}h ago
+        </div>
+        <div style={{
+          fontFamily: 'JetBrains Mono, ui-monospace, monospace',
+          fontSize: 12, letterSpacing: '0.08em',
+          color: TOKENS.textDim, textTransform: 'uppercase',
+          maxWidth: '60%', textAlign: 'right',
+          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+        }} title={nws.description}>
+          {nws.description}
+        </div>
+      </div>
+      <div style={{
+        background: TOKENS.surface, border: `1px solid ${TOKENS.border}`,
+        borderRadius: 10, padding: 14,
+      }}>
+        {nws.advisories.map((adv, i) => (
+          <div key={i} style={{
+            fontFamily: 'JetBrains Mono, ui-monospace, monospace',
+            fontSize: 12, letterSpacing: '0.08em',
+            color: TOKENS.poor, textTransform: 'uppercase',
+            padding: '6px 8px', marginBottom: 10,
+            background: 'rgba(255, 80, 80, 0.06)',
+            border: `1px solid ${TOKENS.poor}`,
+            borderRadius: 6,
+          }}>
+            ⚠ {adv}
+          </div>
+        ))}
+        {periods.map((p, i) => (
+          <div key={i} style={{
+            padding: '10px 0',
+            borderBottom: i < periods.length - 1 ? `1px solid ${TOKENS.border}` : 'none',
+          }}>
+            <div style={{
+              fontFamily: 'JetBrains Mono, ui-monospace, monospace',
+              fontSize: 12, letterSpacing: '0.15em',
+              color: TOKENS.phosphor, textTransform: 'uppercase',
+              marginBottom: 4,
+            }}>
+              {p.name}
+            </div>
+            <div style={{ fontSize: 13, lineHeight: 1.55, color: TOKENS.text }}>
+              {p.text}
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );

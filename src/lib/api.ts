@@ -48,6 +48,14 @@ export interface ConditionsResponse {
     status: 'online' | 'offline' | 'stale';
   }>;
   tides: Record<string, { stationId: string; samples: Array<{ t: number; v: number }> }>;
+  /** NWS Coastal Waters Forecast text periods, keyed by zone (PZZ545 etc.). */
+  nwsForecasts: Record<string, {
+    zone: string;
+    description: string;
+    issuedAt: number;
+    advisories: string[];
+    periods: Array<{ name: string; text: string }>;
+  }>;
   meta: { source: 'live' | 'partial'; errors?: string[] };
 }
 
