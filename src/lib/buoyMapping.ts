@@ -70,7 +70,9 @@ export const BUOY_MAPPINGS: BuoyMapping[] = [
   { spotId: 'rivermouth',    primaryBuoy: '46042', tideStation: '9413745', nwsZone: 'PZZ565' },
   { spotId: 'sc-harbor',     primaryBuoy: '46042', tideStation: '9413745', nwsZone: 'PZZ565' },
   { spotId: '26th-ave',      primaryBuoy: '46042', tideStation: '9413745', nwsZone: 'PZZ565' },
-  { spotId: 'pleasure-point',primaryBuoy: '46042', tideStation: '9413745', nwsZone: 'PZZ565' },
+  { spotId: 'pleasure-sewer', primaryBuoy: '46042', tideStation: '9413745', nwsZone: 'PZZ565' },
+  { spotId: 'pleasure-first', primaryBuoy: '46042', tideStation: '9413745', nwsZone: 'PZZ565' },
+  { spotId: 'pleasure-second',primaryBuoy: '46042', tideStation: '9413745', nwsZone: 'PZZ565' },
   { spotId: 'capitola',      primaryBuoy: '46042', tideStation: '9413745', nwsZone: 'PZZ565' },
   { spotId: 'the-hook',      primaryBuoy: '46042', tideStation: '9413745', nwsZone: 'PZZ565' },
 ];

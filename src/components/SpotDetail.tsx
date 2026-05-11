@@ -383,7 +383,9 @@ const INSIGHTS: Record<string, string> = {
   'steamer-indicators': 'Inside Middle Peak. A long classic right with speed sections and lips — the photogenic peak you see in magazines. Needs a lined-up W-NW swell and medium-low tide.',
   'steamer-slot': 'The innermost peak, take-off practically under the cliff with the gallery of onlookers above. Weepy right best on W swells and medium-low tide. Good for tubes and aerials but tends to close out.',
   'cowell': 'Santa Cruz’s learner wave. Very protected — usually tiny. When S swells arrive in summer, it can actually have shape.',
-  'pleasure-point': 'Multiple sections: Sewer Peak, 1st Peak, 2nd Peak, and several reefs east. Sewer Peak on a solid NW swell is one of the best rights in California.',
+  'pleasure-sewer': 'Top of the point. Top-to-bottom barrel over a rock shelf — the most famous and most competitive section. Lefts are decent but rights are cleaner and longer. Heavily surfed by excellent shortboarders. Best with S and W swells and low tide.',
+  'pleasure-first': 'Further down the point from Sewer. A utility right — predictable, surfable on a variety of swell angles and tides. Very crowded. Shifts around and can offer long slopey walls on a big day.',
+  'pleasure-second': 'Further down again. Less of a peak, more of a lined-up wall than First. Not as stellar as Sewer, but it has its days. Popular with the grommet pack.',
   'capitola': 'Perfect longboard wave when conditions allow. Charming village vibe. Good fallback when Santa Cruz proper is too heavy.',
   'the-hook': 'Classic Santa Cruz right-hander. Kelp beds slow the wave face. A step up from Capitola without the intensity of Steamer Lane.',
 };
@@ -429,7 +431,9 @@ const HAZARDS: Record<string, string[]> = {
   'steamer-indicators': ['Heavy localism', 'Crowds', 'Kelp'],
   'steamer-slot': ['Crowds', 'Close-outs', 'Cliff exposure', 'Kelp'],
   'cowell': ['Crowds', 'Kelp'],
-  'pleasure-point': ['Rocks', 'Kelp', 'Localism'],
+  'pleasure-sewer': ['Rocks', 'Kelp', 'Heavy localism', 'Crowds'],
+  'pleasure-first': ['Rocks', 'Kelp', 'Crowds'],
+  'pleasure-second': ['Rocks', 'Kelp', 'Crowds'],
   'capitola': ['Crowds', 'Rocks'],
   'the-hook': ['Rocks', 'Kelp', 'Localism'],
 };
