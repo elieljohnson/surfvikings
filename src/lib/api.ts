@@ -64,9 +64,16 @@ export function hoursToTimeline(spot: Spot, wire: MergedHourWire[], hoursWanted 
     const mock = buildTimeline(spot, hoursWanted);
     while (slice.length < hoursWanted) slice.push(wireFromMock(mock[slice.length]));
   }
+  // Open-Meteo returns open-ocean wave height at the spot's lat/lng. Each spot
+  // has a shadowFactor (0-1) describing how much of that open-ocean energy
+  // actually reaches the break after coastal sheltering — Bolinas sits at
+  // ~0.45-0.55 because Duxbury Reef filters incoming swell. Multiply once
+  // here so both scoring and display use the realistic at-the-break height.
+  const shadow = spot.shadowFactor ?? 1.0;
   return slice.map((h, i) => {
+    const swellHeight = h.swellHeight * shadow;
     const score = computeScore(spot, {
-      swellHeight: h.swellHeight,
+      swellHeight,
       swellPeriod: h.swellPeriod,
       swellDirection: h.swellDirection,
       windSpeed: h.windSpeed,
@@ -76,7 +83,7 @@ export function hoursToTimeline(spot: Spot, wire: MergedHourWire[], hoursWanted 
     });
     return {
       hour: i,
-      swellHeight: h.swellHeight,
+      swellHeight,
       swellPeriod: h.swellPeriod,
       swellDirection: h.swellDirection,
       windWaveHeight: h.windWaveHeight,
