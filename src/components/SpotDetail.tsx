@@ -6,6 +6,7 @@ import {
   swellDirectionScore, windDirectionScore,
 } from '../lib/data';
 import { BUOY_MAP_BY_SPOT } from '../lib/buoyMapping';
+import { getWaterQuality, tierOf, type WaterQualityInfo } from '../lib/waterQuality';
 import { sunriseSunset, moonPhase, formatTime } from '../lib/celestial';
 import { useConditions } from '../hooks/useConditions';
 import { Screen, ScoreBadge, ScoreTimeline, Stat, DifficultyPips, ForecastChart, BackButton, useResponsiveWidth, VectorsPanel } from './Primitives';
@@ -155,6 +156,10 @@ export function SpotDetail({ spotId, onBack }: SpotDetailProps) {
         </div>
       )}
 
+      {(() => {
+        const wq = getWaterQuality(activeSpot.id);
+        return wq && tierOf(wq) ? <WaterQualityPanel info={wq}/> : null;
+      })()}
       <ScoreBreakdown spot={activeSpot} current={current}/>
 
       <div style={{ padding: '4px 20px 14px' }}>
@@ -402,6 +407,42 @@ function SpectralPanel({
             </div>
           );
         })}
+      </div>
+    </div>
+  );
+}
+
+// Water-quality alert. Renders only for spots in the WATER_QUALITY map
+// (per-exception UX) — safe spots show nothing. Two visual tiers:
+//   'advisory' = permanently posted creek mouth / outfall (red)
+//   'caution'  = rain-sensitive runoff spot (yellow)
+function WaterQualityPanel({ info }: { info: WaterQualityInfo }) {
+  const tier = tierOf(info);
+  const isAdvisory = tier === 'advisory';
+  const color = isAdvisory ? TOKENS.poor : TOKENS.fair;
+  const label = isAdvisory ? 'Water Quality · Advisory' : 'Water Quality · Caution';
+  const text = info.permanentAdvisory || info.rainSensitive || '';
+  const bg = isAdvisory ? 'rgba(255, 80, 80, 0.06)' : 'rgba(255, 200, 60, 0.06)';
+  return (
+    <div style={{ padding: '4px 20px 14px' }}>
+      <div style={{
+        fontFamily: 'JetBrains Mono, ui-monospace, monospace',
+        fontSize: 13, letterSpacing: '0.18em',
+        color, textTransform: 'uppercase', marginBottom: 8,
+      }}>
+        {label}
+      </div>
+      <div style={{
+        background: bg,
+        border: `1px solid ${color}`,
+        borderRadius: 8,
+        padding: '12px 14px',
+        display: 'flex', alignItems: 'flex-start', gap: 10,
+      }}>
+        <span style={{ color, fontSize: 16, lineHeight: '20px' }}>⚠</span>
+        <div style={{ fontSize: 13, lineHeight: 1.5, color: TOKENS.text }}>
+          {text}
+        </div>
       </div>
     </div>
   );
