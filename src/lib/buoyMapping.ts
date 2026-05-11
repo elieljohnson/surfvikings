@@ -11,16 +11,22 @@ export interface BuoyMapping {
 
 export const BUOY_MAPPINGS: BuoyMapping[] = [
   // Region 1 — Sonoma
-  { spotId: 'secrets',       primaryBuoy: '46013', tideStation: '9415020', nwsZone: 'PZZ540' },
-  { spotId: 'timber-cove',   primaryBuoy: '46013', tideStation: '9415020', nwsZone: 'PZZ540' },
-  { spotId: 'mystos',        primaryBuoy: '46013', tideStation: '9415020', nwsZone: 'PZZ540' },
-  { spotId: 'russian-rivermouth', primaryBuoy: '46013', tideStation: '9415020', nwsZone: 'PZZ540' },
+  // Northernmost spots (Secrets, Timber Cove, Mystos) sit between Pt Arena
+  // (46014 at 38.85°N) and Bodega Bay (46013 at 38.24°N). 46014 is geographi-
+  // cally closer and faces the same NW open-ocean window, so use as primary
+  // with 46013 as secondary fallback.
+  { spotId: 'secrets',       primaryBuoy: '46014', secondaryBuoy: '46013', tideStation: '9415020', nwsZone: 'PZZ540' },
+  { spotId: 'timber-cove',   primaryBuoy: '46014', secondaryBuoy: '46013', tideStation: '9415020', nwsZone: 'PZZ540' },
+  { spotId: 'mystos',        primaryBuoy: '46014', secondaryBuoy: '46013', tideStation: '9415020', nwsZone: 'PZZ540' },
+  { spotId: 'russian-rivermouth', primaryBuoy: '46013', secondaryBuoy: '46014', tideStation: '9415020', nwsZone: 'PZZ540' },
   { spotId: 'salmon-creek',  primaryBuoy: '46013', tideStation: '9415020', nwsZone: 'PZZ540' },
   { spotId: 'doran-beach',   primaryBuoy: '46013', tideStation: '9415020', nwsZone: 'PZZ540' },
   // Region 2 — Point Reyes / West Marin
-  { spotId: 'point-reyes',   primaryBuoy: '46013', tideStation: '9415020', nwsZone: 'PZZ545' },
-  { spotId: 'drakes-estero', primaryBuoy: '46013', tideStation: '9415020', nwsZone: 'PZZ545' },
-  { spotId: 'dillon-beach',  primaryBuoy: '46013', tideStation: '9415020', nwsZone: 'PZZ540' },
+  // Point Reyes buoy 46214 (37.94°N) sits right offshore of Pt Reyes spots —
+  // primary for these. Bodega Bay 46013 stays as secondary.
+  { spotId: 'point-reyes',   primaryBuoy: '46214', secondaryBuoy: '46013', tideStation: '9415020', nwsZone: 'PZZ545' },
+  { spotId: 'drakes-estero', primaryBuoy: '46214', secondaryBuoy: '46013', tideStation: '9415020', nwsZone: 'PZZ545' },
+  { spotId: 'dillon-beach',  primaryBuoy: '46013', secondaryBuoy: '46214', tideStation: '9415020', nwsZone: 'PZZ540' },
   { spotId: 'bolinas-patch', primaryBuoy: '46026', secondaryBuoy: '46013', tideStation: '9414958', nwsZone: 'PZZ545' },
   { spotId: 'bolinas-jetty', primaryBuoy: '46026', secondaryBuoy: '46013', tideStation: '9414958', nwsZone: 'PZZ545' },
   { spotId: 'bolinas-groin', primaryBuoy: '46026', secondaryBuoy: '46013', tideStation: '9414958', nwsZone: 'PZZ545' },
