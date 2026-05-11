@@ -30,6 +30,14 @@ export type SpecialRule =
       penalty: number;
     };
 
+// DIRECTION CONVENTION (locked-down — do not flip):
+// All compass bearings in this app — optimalSwell, offshore, swellDirection,
+// windDirection — use the meteorological "FROM" convention. A value of 0
+// means "from the North." A value of 180 means "from the South." This
+// matches Open-Meteo's wind_direction_10m and swell_wave_direction (which
+// our /api/conditions pipeline preserves verbatim), and Surfline's display.
+// CompassRose renders arrows that point BACK at the source (rotating 0deg
+// keeps the arrow pointing up = N, matching "wind from N").
 export interface Spot {
   id: string;
   region: RegionId;
@@ -39,9 +47,11 @@ export interface Spot {
   difficulty: number;
   type: string;
   bottom: string;
+  /** Optimal swell direction the wave likes, in deg "FROM" (see convention above). */
   optimalSwell: number;
   optimalSize: [number, number];
   optimalPeriod: [number, number];
+  /** Wind direction (deg "FROM") that's offshore for this break. */
   offshore: number;
   optimalTide: 'low' | 'mid' | 'high' | 'rising';
   lat: number;
