@@ -67,6 +67,8 @@ export const BUOY_MAPPINGS: BuoyMapping[] = [
   { spotId: 'steamer-indicators', primaryBuoy: '46042', tideStation: '9413745', nwsZone: 'PZZ565' },
   { spotId: 'steamer-slot',  primaryBuoy: '46042', tideStation: '9413745', nwsZone: 'PZZ565' },
   { spotId: 'cowell',        primaryBuoy: '46042', tideStation: '9413745', nwsZone: 'PZZ565' },
+  { spotId: 'rivermouth',    primaryBuoy: '46042', tideStation: '9413745', nwsZone: 'PZZ565' },
+  { spotId: 'sc-harbor',     primaryBuoy: '46042', tideStation: '9413745', nwsZone: 'PZZ565' },
   { spotId: 'pleasure-point',primaryBuoy: '46042', tideStation: '9413745', nwsZone: 'PZZ565' },
   { spotId: 'capitola',      primaryBuoy: '46042', tideStation: '9413745', nwsZone: 'PZZ565' },
   { spotId: 'the-hook',      primaryBuoy: '46042', tideStation: '9413745', nwsZone: 'PZZ565' },
