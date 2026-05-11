@@ -65,9 +65,15 @@ export function getWaterQuality(spotId: string): WaterQualityInfo | undefined {
   return WATER_QUALITY[spotId];
 }
 
-/** Severity tier of a water-quality entry — used by the UI to pick color
- *  treatment. 'advisory' > 'caution' > undefined (no panel rendered). */
-export type WaterQualityTier = 'advisory' | 'caution';
+/** Severity tier — used by the UI to pick color treatment.
+ *  'caution' = known concern, amber (permanent posting OR active rain runoff)
+ *  'closed'  = active beach closure from live county/state data — red.
+ *              Phase 3 will introduce this from CA Beach Watch advisories.
+ *
+ *  Red is intentionally reserved for "don't surf" only. Permanent postings
+ *  at spots people surf year-round (Cowells, Rivermouth, Capitola) read as
+ *  caution-tier — be aware, not stop. */
+export type WaterQualityTier = 'caution' | 'closed';
 
 /** Threshold (mm) above which a rain-sensitive spot triggers a caution.
  *  5mm ≈ 0.2 inches — modest rain, enough to produce runoff into nearshore
@@ -75,11 +81,15 @@ export type WaterQualityTier = 'advisory' | 'caution';
 export const RECENT_RAIN_THRESHOLD_MM = 5;
 
 /** Active tier given the spot's info and how much rain has actually
- *  fallen in the last 48h. Permanent advisories are always 'advisory'.
- *  rainSensitive flips to 'caution' only when recentRainMm exceeds the
+ *  fallen in the last 48h.
+ *
+ *  Permanent advisories always render as 'caution' (amber, always-on
+ *  awareness — people still surf these spots, the panel is informational).
+ *
+ *  Rain-sensitive flips to 'caution' only when recentRainMm exceeds the
  *  threshold — quiet on dry days. */
 export function tierOf(info: WaterQualityInfo, recentRainMm = 0): WaterQualityTier | undefined {
-  if (info.permanentAdvisory) return 'advisory';
+  if (info.permanentAdvisory) return 'caution';
   if (info.rainSensitive && recentRainMm >= RECENT_RAIN_THRESHOLD_MM) return 'caution';
   return undefined;
 }

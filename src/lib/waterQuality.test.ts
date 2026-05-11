@@ -31,10 +31,13 @@ describe('getWaterQuality', () => {
 });
 
 describe('tierOf', () => {
-  it('returns advisory for permanent-posting entries regardless of rain', () => {
-    expect(tierOf(getWaterQuality('cowell')!)).toBe('advisory');
-    expect(tierOf(getWaterQuality('cowell')!, 0)).toBe('advisory');
-    expect(tierOf(getWaterQuality('cowell')!, 20)).toBe('advisory');
+  it('permanent advisories always render at caution tier (amber, not red)', () => {
+    // Per design: people surf Cowells year-round despite the permanent
+    // posting. Red is reserved for active 'closed' state (Phase 3).
+    expect(tierOf(getWaterQuality('cowell')!)).toBe('caution');
+    expect(tierOf(getWaterQuality('cowell')!, 0)).toBe('caution');
+    expect(tierOf(getWaterQuality('cowell')!, 20)).toBe('caution');
+    expect(tierOf(getWaterQuality('rivermouth')!)).toBe('caution');
   });
 
   it('rain-sensitive entries stay quiet on dry days', () => {
@@ -54,10 +57,12 @@ describe('tierOf', () => {
     expect(tierOf({}, 100)).toBeUndefined();
   });
 
-  it('prefers advisory tier when both flags are set', () => {
+  it('permanent advisory still wins over rain-sensitive when both are set', () => {
+    // Same caution tier today, but the permanentAdvisory text is shown
+    // (unconditional) rather than the rain-trigger text.
     expect(tierOf({
       permanentAdvisory: 'creek outflow',
       rainSensitive: 'also bad after rain',
-    }, 0)).toBe('advisory');
+    }, 0)).toBe('caution');
   });
 });

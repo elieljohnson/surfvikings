@@ -416,24 +416,25 @@ function SpectralPanel({
 }
 
 // Water-quality alert. Renders only for spots in the WATER_QUALITY map
-// AND only when the active tier resolves to non-undefined — for caution-
-// tier (rain-sensitive) entries, that means recentRainMm has exceeded the
-// threshold. Permanent advisories always render. Visual:
-//   'advisory' = permanently posted creek mouth / outfall (red)
-//   'caution'  = rain-sensitive runoff spot — only after meaningful rain (amber)
+// AND only when the active tier resolves to non-undefined — for rain-
+// sensitive entries, that means recentRainMm has exceeded the threshold.
+// Permanent advisories always render.
+//
+// Phase 1 only emits 'caution' tier (amber) — people surf these spots
+// year-round even with permanent postings, so red would overstate the
+// signal. Red 'closed' tier is reserved for Phase 3 active beach closures.
 function WaterQualityPanel({ info, recentRainMm }: { info: WaterQualityInfo; recentRainMm: number }) {
   const tier = tierOf(info, recentRainMm);
-  const isAdvisory = tier === 'advisory';
-  const color = isAdvisory ? TOKENS.poor : TOKENS.meh;
-  const label = isAdvisory ? 'Water Quality · Advisory' : 'Water Quality · Caution';
+  // Phase 1 always lands at 'caution'; future 'closed' will use TOKENS.poor.
+  const color = tier === 'closed' ? TOKENS.poor : TOKENS.meh;
+  const bg = tier === 'closed' ? 'rgba(239, 68, 68, 0.08)' : 'rgba(249, 115, 22, 0.08)';
   const baseText = info.permanentAdvisory || info.rainSensitive || '';
-  // Append the trigger amount for rain-sensitive caution so the user can
-  // see "this is firing because 12mm fell in the past 48h" rather than
+  // For rain-sensitive cautions, append the trigger amount so the user
+  // sees 'this is firing because 12mm fell in the past 48h' rather than
   // wondering why it's showing today and not yesterday.
-  const text = isAdvisory
-    ? baseText
-    : `${baseText} · ${recentRainMm.toFixed(1)}mm fell in the past 48h`;
-  const bg = isAdvisory ? 'rgba(239, 68, 68, 0.08)' : 'rgba(249, 115, 22, 0.08)';
+  const text = info.rainSensitive
+    ? `${baseText} · ${recentRainMm.toFixed(1)}mm fell in the past 48h`
+    : baseText;
   return (
     <div style={{ padding: '4px 20px 14px' }}>
       <div style={{
@@ -441,7 +442,7 @@ function WaterQualityPanel({ info, recentRainMm }: { info: WaterQualityInfo; rec
         fontSize: 13, letterSpacing: '0.18em',
         color, textTransform: 'uppercase', marginBottom: 8,
       }}>
-        {label}
+        Water Quality · Caution
       </div>
       <div style={{
         background: bg,
