@@ -4,6 +4,7 @@ import {
   SPOTS, Spot, ForecastHour, findBestWindows,
   scoreToRating, hourLabel, degToCardinal, angleDelta, MetricKey,
 } from '../lib/data';
+import { BUOY_MAP_BY_SPOT } from '../lib/buoyMapping';
 import { useConditions } from '../hooks/useConditions';
 import { Screen, ScoreBadge, ScoreTimeline, Stat, DifficultyPips, ForecastChart, BackButton, useResponsiveWidth, VectorsPanel } from './Primitives';
 import { useLocalStorage } from '../hooks/useLocalStorage';
@@ -27,8 +28,10 @@ export function SpotDetail({ spotId, onBack }: SpotDetailProps) {
     () => (isBolinasSpot ? SPOTS.filter((s) => s.id.startsWith('bolinas')).map((s) => s.id) : [activeSpot.id]),
     [isBolinasSpot, activeSpot.id]
   );
-  const { timelines } = useConditions(requestedSpots);
+  const { timelines, response } = useConditions(requestedSpots);
   const timeline = timelines[activeSpot.id] ?? [];
+  const buoyId = BUOY_MAP_BY_SPOT[activeSpot.id]?.primaryBuoy;
+  const buoy = buoyId ? response?.buoys[buoyId] : undefined;
   const current = timeline[0];
   const rating = scoreToRating(current.score, activeSpot.watchOnly);
   const windows = findBestWindows(timeline);
@@ -163,6 +166,9 @@ export function SpotDetail({ spotId, onBack }: SpotDetailProps) {
         <ChartRow label="Tide" unit="ft" spot={activeSpot} current={current.tideHeight} timeline={timeline} metric="tideHeight"/>
       </div>
 
+      {buoy?.swellTrains && buoy.swellTrains.length > 0 && (
+        <SpectralPanel buoyId={buoyId!} buoy={buoy}/>
+      )}
       {activeSpot.bathymetry && <BathymetrySection spot={activeSpot}/>}
       <VectorsPanel spot={activeSpot} current={current}/>
       <LocalInsight spot={activeSpot}/>
@@ -286,6 +292,85 @@ function ChartRow({
 const SHARED_DEPTH_BY_REGION: Partial<Record<Spot['region'], number>> = {
   marin: 25,
 };
+
+// Spectral wave-train decomposition from NDBC .data_spec. Lets the user see
+// e.g. a clean 1.7ft @ 17s SW groundswell hiding under a bigger 4ft @ 7s WNW
+// windswell that's masquerading as the "primary" in our Open-Meteo forecast.
+// Longest period is rendered first and tagged GROUNDSWELL.
+function SpectralPanel({
+  buoyId,
+  buoy,
+}: {
+  buoyId: string;
+  buoy: NonNullable<ReturnType<typeof useConditions>['response']>['buoys'][string];
+}) {
+  const trains = buoy.swellTrains ?? [];
+  const ageMin = Math.max(0, Math.round((Date.now() - buoy.timestamp) / 60000));
+  return (
+    <div style={{ padding: '4px 20px 16px' }}>
+      <div style={{
+        fontFamily: 'JetBrains Mono, ui-monospace, monospace',
+        fontSize: 13, letterSpacing: '0.18em',
+        color: TOKENS.textMute, textTransform: 'uppercase', marginBottom: 10,
+      }}>
+        Spectral · Buoy {buoyId} · {ageMin}m ago
+      </div>
+      <div style={{
+        background: TOKENS.surface, border: `1px solid ${TOKENS.border}`,
+        borderRadius: 10, padding: 14,
+      }}>
+        {trains.map((t, i) => {
+          const isGroundswell = i === 0 && t.period >= 11;
+          return (
+            <div
+              key={i}
+              style={{
+                display: 'flex', alignItems: 'baseline', justifyContent: 'space-between',
+                padding: '8px 0',
+                borderBottom: i < trains.length - 1 ? `1px solid ${TOKENS.border}` : 'none',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 14 }}>
+                <span style={{
+                  fontFamily: 'JetBrains Mono, ui-monospace, monospace',
+                  fontSize: 22, fontWeight: 500,
+                  color: isGroundswell ? TOKENS.phosphor : TOKENS.text,
+                  minWidth: 56,
+                }}>
+                  {t.period.toFixed(1)}<span style={{ fontSize: 13, color: TOKENS.textDim, marginLeft: 2 }}>s</span>
+                </span>
+                <span style={{
+                  fontFamily: 'JetBrains Mono, ui-monospace, monospace',
+                  fontSize: 15, color: TOKENS.text,
+                }}>
+                  {t.height.toFixed(1)}<span style={{ fontSize: 12, color: TOKENS.textDim, marginLeft: 2 }}>ft</span>
+                </span>
+              </div>
+              {isGroundswell && (
+                <span style={{
+                  fontFamily: 'JetBrains Mono, ui-monospace, monospace',
+                  fontSize: 11, letterSpacing: '0.18em',
+                  color: TOKENS.phosphor, textTransform: 'uppercase',
+                }}>
+                  Groundswell
+                </span>
+              )}
+              {!isGroundswell && t.period < 8 && (
+                <span style={{
+                  fontFamily: 'JetBrains Mono, ui-monospace, monospace',
+                  fontSize: 11, letterSpacing: '0.18em',
+                  color: TOKENS.textMute, textTransform: 'uppercase',
+                }}>
+                  Windswell
+                </span>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 function BathymetrySection({ spot }: { spot: Spot }) {
   const b = spot.bathymetry!;

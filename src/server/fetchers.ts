@@ -7,6 +7,15 @@ import { SPOTS, type Spot } from '../lib/data';
 export const M_TO_FT = 3.28084;
 export const MS_TO_KTS = 1.94384;
 
+/** One swell partition extracted from the NDBC directional spectrum.
+ *  Multiple trains can coexist (e.g. 1.7ft @ 17s SW groundswell + 4ft @ 7s WNW
+ *  windswell at the same buoy at the same moment). Trains are sorted longest
+ *  period first so trains[0] is the cleanest groundswell. */
+export interface SwellTrain {
+  height: number;   // ft (Hs computed from spectral variance in this band)
+  period: number;   // s (1 / peak frequency)
+}
+
 export interface BuoyObservation {
   buoyId: string;
   timestamp: number;
@@ -19,6 +28,8 @@ export interface BuoyObservation {
   windGust?: number;         // kts
   airTempF?: number;
   waterTempF?: number;
+  /** Multi-train decomposition from .data_spec, if available. */
+  swellTrains?: SwellTrain[];
   status: 'online' | 'offline' | 'stale';
 }
 
@@ -97,6 +108,124 @@ export function parseBuoy(buoyId: string, text: string): BuoyObservation {
     airTempF: airTempC !== undefined ? airTempC * 9 / 5 + 32 : undefined,
     waterTempF: waterTempC !== undefined ? waterTempC * 9 / 5 + 32 : undefined,
   };
+}
+
+// ───────────────────────────────────────────────────────────────────────────
+// NOAA NDBC Spectral Wave Density — full energy spectrum decomposed into
+// distinct swell trains. Lets us see e.g. 1.7ft 17s SW groundswell hiding
+// under a bigger 4ft 7s WNW windswell. The .txt file's "dominant period"
+// only reports the single highest-energy bin; .data_spec reports all 47.
+//
+// Format (per https://www.ndbc.noaa.gov/measdes.shtml):
+//   #YY MM DD hh mm Sep_Freq spec_1 (freq_1) spec_2 (freq_2) ...
+//   2026 05 11 16 50  .203  0.05 (.0325) 0.10 (.0375) ...
+// Frequencies span 0.0325 Hz (30.8s period) to 0.485 Hz (2.06s). Energy is
+// in m²/Hz (variance spectral density).
+// ───────────────────────────────────────────────────────────────────────────
+
+export interface SpectralObservation {
+  buoyId: string;
+  timestamp: number;
+  trains: SwellTrain[];
+  status: 'online' | 'offline' | 'stale';
+}
+
+export async function fetchSpectral(buoyId: string, signal?: AbortSignal): Promise<SpectralObservation> {
+  const url = `https://www.ndbc.noaa.gov/data/realtime2/${buoyId}.data_spec`;
+  try {
+    const res = await fetch(url, { signal });
+    if (!res.ok) return { buoyId, timestamp: Date.now(), trains: [], status: 'offline' };
+    const text = await res.text();
+    return parseSpectral(buoyId, text);
+  } catch {
+    return { buoyId, timestamp: Date.now(), trains: [], status: 'offline' };
+  }
+}
+
+export function parseSpectral(buoyId: string, text: string): SpectralObservation {
+  const lines = text.split('\n').filter((l) => l && !l.startsWith('#'));
+  if (!lines.length) return { buoyId, timestamp: Date.now(), trains: [], status: 'offline' };
+
+  // Most recent observation is the first non-header line
+  const line = lines[0].trim();
+  const tokens = line.split(/\s+/);
+  // [0..4] YY MM DD hh mm · [5] Sep_Freq · then alternating energy / (freq)
+  const [yy, mm, dd, hh, mi] = tokens.slice(0, 5).map(Number);
+  const timestamp = Date.UTC(yy, mm - 1, dd, hh, mi);
+  const now = Date.now();
+  const status: SpectralObservation['status'] =
+    now - timestamp > 3 * 3600e3 ? 'stale' : 'online';
+
+  // Parse energy/freq pairs starting at index 6
+  const bins: Array<{ freq: number; energy: number }> = [];
+  for (let i = 6; i + 1 < tokens.length; i += 2) {
+    const energy = parseFloat(tokens[i]);
+    const freqStr = tokens[i + 1].replace(/[()]/g, '');
+    const freq = parseFloat(freqStr);
+    if (Number.isFinite(energy) && Number.isFinite(freq) && energy >= 0) {
+      bins.push({ freq, energy });
+    }
+  }
+
+  const trains = decomposeSwellTrains(bins);
+  return { buoyId, timestamp, trains, status };
+}
+
+/** Peak-finding decomposition: locate local maxima in the smoothed spectrum,
+ *  integrate variance in a ±2-bin window around each, convert to Hs = 4·√σ². */
+function decomposeSwellTrains(
+  bins: Array<{ freq: number; energy: number }>,
+): SwellTrain[] {
+  if (bins.length < 5) return [];
+  // Sort by frequency ascending (period descending — long swell first)
+  bins.sort((a, b) => a.freq - b.freq);
+
+  // 3-point moving average smoothing — suppresses single-bin noise while
+  // keeping real peaks intact.
+  const smoothed = bins.map((b, i) => {
+    if (i === 0 || i === bins.length - 1) return b.energy;
+    return (bins[i - 1].energy + b.energy * 2 + bins[i + 1].energy) / 4;
+  });
+
+  // Local-max detection. Threshold is tiny (1e-4 m²/Hz) just to filter the
+  // flat tail; Hs filter below culls anything not surfable.
+  const peaks: number[] = [];
+  for (let i = 1; i < smoothed.length - 1; i++) {
+    if (
+      smoothed[i] > smoothed[i - 1] &&
+      smoothed[i] > smoothed[i + 1] &&
+      smoothed[i] > 1e-4
+    ) {
+      peaks.push(i);
+    }
+  }
+
+  // For each peak, integrate variance in ±2-bin window:
+  //   variance ≈ Σ E(f) · Δf
+  //   Hs (m)   = 4·√variance
+  const trains: SwellTrain[] = [];
+  for (const peakIdx of peaks) {
+    let totalVar = 0;
+    const start = Math.max(0, peakIdx - 2);
+    const end = Math.min(bins.length - 1, peakIdx + 2);
+    for (let j = start; j <= end; j++) {
+      const dF =
+        j === bins.length - 1
+          ? bins[j].freq - bins[j - 1].freq
+          : j === 0
+            ? bins[j + 1].freq - bins[j].freq
+            : (bins[j + 1].freq - bins[j - 1].freq) / 2;
+      totalVar += smoothed[j] * Math.abs(dF);
+    }
+    const hsM = 4 * Math.sqrt(Math.max(0, totalVar));
+    const hsFt = hsM * M_TO_FT;
+    const period = 1 / bins[peakIdx].freq;
+    if (hsFt > 0.3) trains.push({ height: hsFt, period });
+  }
+
+  // Longest-period first (primary groundswell at trains[0])
+  trains.sort((a, b) => b.period - a.period);
+  return trains.slice(0, 4);
 }
 
 // ───────────────────────────────────────────────────────────────────────────
@@ -297,8 +426,9 @@ export async function buildConditions(spotIds: string[], signal?: AbortSignal): 
   const tideIds = Array.from(new Set(spots.map((s) => BUOY_MAP_BY_SPOT[s.id]?.tideStation).filter(Boolean)));
 
   const errors: string[] = [];
-  const [buoyList, tideList, marineList] = await Promise.all([
+  const [buoyList, spectralList, tideList, marineList] = await Promise.all([
     Promise.all(buoyIds.map((id) => fetchBuoy(id, signal))),
+    Promise.all(buoyIds.map((id) => fetchSpectral(id, signal))),
     Promise.all(tideIds.map((id) => fetchTides(id, 72, signal))),
     fetchMarineBatch(spots, 3, signal).catch((e) => {
       errors.push(`openmeteo: ${e.message ?? e}`);
@@ -306,7 +436,13 @@ export async function buildConditions(spotIds: string[], signal?: AbortSignal): 
     }),
   ]);
 
-  const buoys: Record<string, BuoyObservation> = Object.fromEntries(buoyList.map((b) => [b.buoyId, b]));
+  // Merge spectral trains into each buoy's observation
+  const spectralByBuoy: Record<string, SwellTrain[]> = Object.fromEntries(
+    spectralList.map((s) => [s.buoyId, s.trains]),
+  );
+  const buoys: Record<string, BuoyObservation> = Object.fromEntries(
+    buoyList.map((b) => [b.buoyId, { ...b, swellTrains: spectralByBuoy[b.buoyId] }]),
+  );
   const tides: Record<string, TidePrediction> = Object.fromEntries(tideList.map((t) => [t.stationId, t]));
   const marineByspot: Record<string, MarineHour[]> = Object.fromEntries(marineList.map((m) => [m.spotId, m.hours]));
 
