@@ -237,6 +237,9 @@ export interface ForecastHour {
   windSpeed: number;
   windDirection: number;
   windGust: number;
+  cloudcover: number;          // % 0-100
+  precipitation: number;       // mm/h
+  precipitationProb: number;   // % 0-100
   tideHeight: number;
   tideRising: boolean;
   score: number;
@@ -364,6 +367,9 @@ export function buildTimeline(spot: Spot, hours = 48): ForecastHour[] {
       windSpeed: ws,
       windDirection: wd,
       windGust: Math.max(0, ws + 3 + rnd() * 2),
+      cloudcover: Math.round(Math.min(100, Math.max(0, 35 + Math.sin(h / 12) * 30 + (rnd() - 0.5) * 20))),
+      precipitation: 0,
+      precipitationProb: 0,
       tideHeight: tideH,
       tideRising,
       score: computeScore(spot, {
@@ -454,6 +460,19 @@ export function degToCardinal(deg: number): string {
 // suit thickness label surfers actually use ("4/3", "3/2", etc.). Returns
 // null when we don't have a temp reading and the caller should hide the
 // recommendation rather than guess.
+/** Short label summarizing cloud cover + precipitation. `precip` is mm/h,
+ *  `precipProb` is 0-100. Returns CLEAR / FAIR / CLOUDY / OVERCAST when dry,
+ *  or RAIN X% when wet (any meaningful current precip OR ≥60% probability). */
+export function weatherLabel(cloud: number, precip: number, precipProb: number): string {
+  if (precip >= 0.1 || precipProb >= 60) {
+    return precipProb >= 60 ? `RAIN ${Math.round(precipProb)}%` : 'RAIN';
+  }
+  if (cloud >= 75) return 'OVERCAST';
+  if (cloud >= 40) return 'CLOUDY';
+  if (cloud >= 15) return 'FAIR';
+  return 'CLEAR';
+}
+
 export function wetsuitForWaterF(waterF: number | undefined | null): string | null {
   if (typeof waterF !== 'number' || !Number.isFinite(waterF)) return null;
   if (waterF < 52) return '5/4 + boots';

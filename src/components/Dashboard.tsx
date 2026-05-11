@@ -4,7 +4,7 @@ import {
   SPOTS, FAVORITES, Spot, ForecastHour, BestWindow,
   findBestWindows, scoreToRating,
   hourLabel, degToCardinal, angleDelta, metricQuality,
-  wetsuitForWaterF,
+  wetsuitForWaterF, weatherLabel,
 } from '../lib/data';
 import { BUOY_MAP_BY_SPOT } from '../lib/buoyMapping';
 import { useConditions } from '../hooks/useConditions';
@@ -367,7 +367,7 @@ function TopPickCard({
             peak {Math.round(best ? best.peak : current.score)} at {hourLabel(best ? best.peakHour : 0)}
           </div>
           <div style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 12, color: TOKENS.textDim, marginTop: 6, letterSpacing: '0.08em' }}>
-            WATER {waterStr}°F · {wetsuit}
+            WATER {waterStr}°F · {wetsuit} · {weatherLabel(current.cloudcover, current.precipitation, current.precipitationProb)}
           </div>
         </div>
         <ScoreSpark timeline={timeline} width={120} height={38}/>

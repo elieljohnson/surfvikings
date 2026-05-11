@@ -55,6 +55,9 @@ export interface MarineHour {
   windSpeed: number;        // kts
   windDirection: number;    // deg
   windGust: number;         // kts
+  cloudcover: number;       // % (0-100)
+  precipitation: number;    // mm/h
+  precipitationProb: number;// % (0-100)
 }
 
 // ───────────────────────────────────────────────────────────────────────────
@@ -361,9 +364,12 @@ interface OpenMeteoWeatherResponse {
   longitude: number | number[];
   hourly: {
     time: string[];
-    wind_speed_10m?: number[];         // kn (when unit=kn)
-    wind_direction_10m?: number[];     // deg
-    wind_gusts_10m?: number[];         // kn
+    wind_speed_10m?: number[];          // kn (when unit=kn)
+    wind_direction_10m?: number[];      // deg
+    wind_gusts_10m?: number[];          // kn
+    cloudcover?: number[];              // %, 0-100
+    precipitation?: number[];           // mm/h
+    precipitation_probability?: number[]; // %, 0-100
   };
 }
 
@@ -388,7 +394,7 @@ export async function fetchMarineBatch(spots: Spot[], forecastDays = 7, signal?:
   const weatherParams = new URLSearchParams({
     latitude: lats,
     longitude: lngs,
-    hourly: 'wind_speed_10m,wind_direction_10m,wind_gusts_10m',
+    hourly: 'wind_speed_10m,wind_direction_10m,wind_gusts_10m,cloudcover,precipitation,precipitation_probability',
     wind_speed_unit: 'kn',
     forecast_days: String(forecastDays),
     timeformat: 'unixtime',
@@ -429,6 +435,9 @@ export async function fetchMarineBatch(spots: Spot[], forecastDays = 7, signal?:
       const windS = wh?.wind_speed_10m?.[h] ?? 0;
       const windD = wh?.wind_direction_10m?.[h] ?? 0;
       const windG = wh?.wind_gusts_10m?.[h] ?? windS;
+      const cloud = wh?.cloudcover?.[h] ?? 0;
+      const precip = wh?.precipitation?.[h] ?? 0;
+      const precipProb = wh?.precipitation_probability?.[h] ?? 0;
       return {
         t,
         swellHeight: (swellM || 0) * M_TO_FT,
@@ -443,6 +452,9 @@ export async function fetchMarineBatch(spots: Spot[], forecastDays = 7, signal?:
         windSpeed: windS || 0,
         windDirection: windD || 0,
         windGust: windG || 0,
+        cloudcover: cloud,
+        precipitation: precip,
+        precipitationProb: precipProb,
       };
     });
     return { spotId: spot.id, hours };

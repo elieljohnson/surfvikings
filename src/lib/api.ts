@@ -19,6 +19,9 @@ export interface MergedHourWire {
   windSpeed: number;
   windDirection: number;
   windGust: number;
+  cloudcover: number;          // % 0-100
+  precipitation: number;       // mm/h
+  precipitationProb: number;   // % 0-100
   tideHeight: number;
   tideRising: boolean;
 }
@@ -100,6 +103,9 @@ export function hoursToTimeline(spot: Spot, wire: MergedHourWire[], hoursWanted 
       windSpeed: h.windSpeed,
       windDirection: h.windDirection,
       windGust: h.windGust,
+      cloudcover: h.cloudcover,
+      precipitation: h.precipitation,
+      precipitationProb: h.precipitationProb,
       tideHeight: h.tideHeight,
       tideRising: h.tideRising,
       score,
@@ -122,6 +128,9 @@ function wireFromMock(f: ForecastHour): MergedHourWire {
     windSpeed: f.windSpeed,
     windDirection: f.windDirection,
     windGust: f.windGust,
+    cloudcover: f.cloudcover,
+    precipitation: f.precipitation,
+    precipitationProb: f.precipitationProb,
     tideHeight: f.tideHeight,
     tideRising: f.tideRising,
   };
