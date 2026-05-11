@@ -79,16 +79,35 @@ describe('computeScore — wind wave integration', () => {
 
   // Regression: a 68° swell-direction miss used to render green on the
   // compass while showing 0/30 in the Why-this-score breakdown — two
-  // different quality formulas disagreeing on the same hour. Locking the
-  // shape now: at 43°+ off-axis, both score and quality flat-zero.
-  it('swellDirectionScore and quality agree across boundary cases', () => {
-    expect(swellDirectionScore(225, 225)).toBe(30);
-    expect(swellDirectionQuality(225, 225)).toBe(1);
-    expect(swellDirectionScore(225, 235)).toBeCloseTo(23, 1);
-    expect(swellDirectionQuality(225, 235)).toBeCloseTo(23 / 30, 2);
-    // Bolinas case from the bug: actual 293, optimal 225, delta 68
-    expect(swellDirectionScore(293, 225)).toBe(0);
-    expect(swellDirectionQuality(293, 225)).toBe(0);
+  // different quality formulas disagreeing on the same hour. After
+  // unification + cosine² decay, the shape is smooth:
+  //   0°  → 30  (perfect alignment)
+  //   30° → 22.5
+  //   60° → 7.5
+  //   90° → 0  (perpendicular — wave can't enter the window)
+  //  >90° → 0
+  it('swellDirectionScore follows cos² of the delta', () => {
+    expect(swellDirectionScore(225, 225)).toBeCloseTo(30, 5);
+    expect(swellDirectionScore(225, 255)).toBeCloseTo(22.5, 1); // 30° off
+    expect(swellDirectionScore(225, 285)).toBeCloseTo(7.5, 1);  // 60° off
+    expect(swellDirectionScore(225, 315)).toBeCloseTo(0, 5);    // 90° off
+    expect(swellDirectionScore(225, 45)).toBeCloseTo(0, 5);     // 180° off
+  });
+
+  it('swellDirectionQuality is just the score normalized to 0-1', () => {
+    expect(swellDirectionQuality(225, 225)).toBeCloseTo(1, 5);
+    expect(swellDirectionQuality(225, 255)).toBeCloseTo(0.75, 2);
+    expect(swellDirectionQuality(225, 285)).toBeCloseTo(0.25, 2);
+    expect(swellDirectionQuality(225, 315)).toBeCloseTo(0, 5);
+  });
+
+  // The original Bolinas bug case: actual 293, optimal 225, delta 68.
+  // Old linear curve gave 0/30 (flat zero past 43°). New cosine curve
+  // gives ~4/30 — still clearly poor, no longer surreal-feeling.
+  it('Bolinas bug case (delta 68°) returns a small but non-zero score', () => {
+    const s = swellDirectionScore(293, 225);
+    expect(s).toBeGreaterThan(3);
+    expect(s).toBeLessThan(5);
   });
 
   it('windDirectionScore and quality agree across boundary cases', () => {
