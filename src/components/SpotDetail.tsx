@@ -5,6 +5,7 @@ import {
   scoreToRating, hourLabel, degToCardinal, angleDelta, MetricKey,
 } from '../lib/data';
 import { BUOY_MAP_BY_SPOT } from '../lib/buoyMapping';
+import { sunriseSunset, moonPhase, formatTime } from '../lib/celestial';
 import { useConditions } from '../hooks/useConditions';
 import { Screen, ScoreBadge, ScoreTimeline, Stat, DifficultyPips, ForecastChart, BackButton, useResponsiveWidth, VectorsPanel } from './Primitives';
 import { useLocalStorage } from '../hooks/useLocalStorage';
@@ -171,6 +172,7 @@ export function SpotDetail({ spotId, onBack }: SpotDetailProps) {
       )}
       {activeSpot.bathymetry && <BathymetrySection spot={activeSpot}/>}
       <VectorsPanel spot={activeSpot} current={current}/>
+      <SunMoonPanel spot={activeSpot}/>
       <LocalInsight spot={activeSpot}/>
 
       <div style={{ height: 100 }}/>
@@ -389,6 +391,37 @@ function SpectralPanel({
             </div>
           );
         })}
+      </div>
+    </div>
+  );
+}
+
+// Sunrise / sunset for today + tonight's moon, computed entirely client-
+// side from the spot's lat/lng + current date. No API call.
+function SunMoonPanel({ spot }: { spot: Spot }) {
+  const now = new Date();
+  const { sunrise, sunset } = sunriseSunset(now, spot.lat, spot.lng);
+  const moon = moonPhase(now);
+  const dayLengthMin = Math.round((sunset.getTime() - sunrise.getTime()) / 60000);
+  const dayLengthStr = `${Math.floor(dayLengthMin / 60)}h ${dayLengthMin % 60}m`;
+  return (
+    <div style={{ padding: '4px 20px 16px' }}>
+      <div style={{
+        fontFamily: 'JetBrains Mono, ui-monospace, monospace',
+        fontSize: 13, letterSpacing: '0.18em',
+        color: TOKENS.textMute, textTransform: 'uppercase', marginBottom: 10,
+      }}>
+        Sun & Moon · Today
+      </div>
+      <div style={{
+        background: TOKENS.surface, border: `1px solid ${TOKENS.border}`,
+        borderRadius: 10, padding: 14,
+        display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8,
+      }}>
+        <Stat label="Sunrise" value={formatTime(sunrise)} hint="" color={TOKENS.text}/>
+        <Stat label="Sunset"  value={formatTime(sunset)}  hint={dayLengthStr} color={TOKENS.text}/>
+        <Stat label="Moon"    value={`${Math.round(moon.illumination * 100)}%`} hint={moon.label.toLowerCase()} color={TOKENS.text}/>
+        <Stat label="Phase"   value={moon.label.split(' ')[0]} hint={moon.label.split(' ').slice(1).join(' ') || '—'} color={TOKENS.textDim}/>
       </div>
     </div>
   );
