@@ -58,6 +58,7 @@ export const BUOY_MAPPINGS: BuoyMapping[] = [
   // Region 6 — Santa Cruz
   { spotId: 'laguna-creek',  primaryBuoy: '46042', tideStation: '9413745', nwsZone: 'PZZ565' },
   { spotId: 'four-mile',     primaryBuoy: '46042', tideStation: '9413745', nwsZone: 'PZZ565' },
+  { spotId: 'three-mile',    primaryBuoy: '46042', tideStation: '9413745', nwsZone: 'PZZ565' },
   { spotId: 'steamer-lane',  primaryBuoy: '46042', tideStation: '9413745', nwsZone: 'PZZ565' },
   { spotId: 'cowell',        primaryBuoy: '46042', tideStation: '9413745', nwsZone: 'PZZ565' },
   { spotId: 'pleasure-point',primaryBuoy: '46042', tideStation: '9413745', nwsZone: 'PZZ565' },
