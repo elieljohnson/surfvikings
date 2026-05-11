@@ -311,9 +311,20 @@ function evaluateSpecialRules(
  *  math as computeScore. Before these existed, the VectorsPanel computed
  *  a softer `1 - delta/180` quality independently, producing the bug
  *  where the compass arrow rendered green while the score's Direction row
- *  showed 0/30 for the same hour. */
+ *  showed 0/30 for the same hour.
+ *
+ *  Swell direction uses cos²(delta) decay — physically meaningful since
+ *  wave energy reaching a break from off-axis falls as cos² of the angle
+ *  between the wave's approach and the spot's optimal swell window. Smooth
+ *  taper (no flat-zero floor) that hits 0 only when the swell is fully
+ *  perpendicular to the spot's window. Compared to the old linear 0.7×
+ *  taper that flat-zeroed at 43° off, this gives Bolinas-style sheltered
+ *  spots a more honest gradient: a 30° miss still scores 22.5/30 instead
+ *  of 9/30; a 60° miss scores 7.5/30 instead of 0/30. */
 export function swellDirectionScore(actualDir: number, optimalDir: number): number {
-  return Math.max(0, 30 - angleDelta(actualDir, optimalDir) * 0.7);
+  const rad = angleDelta(actualDir, optimalDir) * Math.PI / 180;
+  const factor = Math.max(0, Math.cos(rad));
+  return 30 * factor * factor;
 }
 export function windDirectionScore(actualDir: number, offshoreDir: number): number {
   return Math.max(0, 15 - angleDelta(actualDir, offshoreDir) * 0.09);
