@@ -3,6 +3,50 @@
 Project-specific notes for assistant sessions. The global working-agreement
 rules (root `~/.claude/CLAUDE.md`) still apply.
 
+## Picking up where the last session left off
+
+A new assistant session should read these in order before doing anything else:
+
+1. **`docs/postmortems/`** — latest file is the freshest "what's the state and
+   how did we get here." Read the most recent two for context.
+2. **`docs/technical-overview.md`** — current architecture and pipeline shape.
+3. **`docs/glossary.md`** — terms specific to this project (oceanographic,
+   code, data shapes). Skim past anything obvious.
+4. **`docs/stack.md`** — what depends on what.
+
+Then resume the working todo list. Eliel maintains the active backlog in the
+session's todo state. If the session started fresh and there's no todo state,
+the postmortem's "Backlog state at end of session" lists the pending items
+ranked by user value — start by re-creating the todo list from there.
+
+**Conventions Eliel expects you to already know** (don't ask, just follow):
+
+- Branch-then-preview-deploy for anything touching scoring, the forecast
+  pipeline, a new external API, or a meaningful UI surface. Workflow below.
+- Atomic commits with conventional-commit prefixes (`feat:`, `fix:`,
+  `refactor:`, `style:`, `docs:`, `chore:`). Each commit does one thing.
+  The commit message body explains the *why* not the *what*.
+- Targeted `git add <files>` — never `git add -A` (it picks up untracked
+  scaffolding you didn't mean to commit).
+- Match existing patterns before inventing new ones. The Spot interface,
+  computeScore, ChartRow, SpectralPanel — these are the templates.
+- For spot-data work: trust Stormrider/Surfline *prose* over their
+  *structured fields*. The structured tags are frequently contradicted by
+  the same page's surf description. Trust the prose.
+- Direction values are meteorological "FROM" everywhere (locked down with
+  a comment on the `Spot` interface). Don't flip a convention "to make
+  the math simpler."
+
+**Conventions Eliel expects you to flag, not just follow:**
+
+- When you discover a field is unused (like `shadowFactor` was in May 11),
+  surface that as a finding in the commit message. Don't silently fix.
+- When you make a non-obvious engineering choice (`Map` vs `Object`,
+  spectral peak-finding algorithm, etc.), state what you considered and
+  rejected in 1-2 sentences.
+- When you use a technical term Eliel might not know (he's a senior design
+  leader at a beginner coder level), define it inline. One sentence.
+
 ## Preview deploy workflow for bigger features
 
 For anything bigger than a single-file tweak or data refinement, work on a

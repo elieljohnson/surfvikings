@@ -23,7 +23,9 @@ No CSS framework. Inline styles via the React `style` prop, design tokens centra
 
 | Source | What we pull | URL |
 |---|---|---|
-| **NDBC (NOAA)** | Buoy observations: significant wave height, dominant period, mean wave direction, water temp, air temp | `https://www.ndbc.noaa.gov/data/realtime2/{buoyId}.txt` |
+| **NDBC (NOAA)** — `.txt` | Buoy standard met: significant wave height, dominant period, mean wave direction, water temp, air temp | `https://www.ndbc.noaa.gov/data/realtime2/{buoyId}.txt` |
+| **NDBC (NOAA)** — `.data_spec` | Full energy spectrum at 47 frequency bins (2-30s) per buoy; powers spectral decomposition into multiple swell trains + wave energy flux | `https://www.ndbc.noaa.gov/data/realtime2/{buoyId}.data_spec` |
+| **NDBC (NOAA)** — `.swdir` | Mean direction (alpha1) at each frequency bin; joined to `.data_spec` peaks to give per-train direction | `https://www.ndbc.noaa.gov/data/realtime2/{buoyId}.swdir` |
 | **NOAA CO-OPS** | Tide predictions per station | `https://api.tidesandcurrents.noaa.gov/api/prod/datagetter` |
 | **Open-Meteo Marine** | Wave forecast (height, period, direction) at arbitrary lat/lng | `https://marine-api.open-meteo.com/v1/marine` |
 | **Open-Meteo Forecast** | Wind, air temp, sea surface temp at arbitrary lat/lng | `https://api.open-meteo.com/v1/forecast` |

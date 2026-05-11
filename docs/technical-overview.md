@@ -1,6 +1,6 @@
 # Surf Vikings — Technical Overview
 
-A hyper-local surf forecasting PWA covering 40 NorCal spots from Salt Point to Santa Cruz. Single-user app built around Eliel's actual rotation, not a discovery platform.
+A hyper-local surf forecasting PWA covering 64 NorCal spots from Salt Point to Santa Cruz. Single-user app built around Eliel's actual rotation, not a discovery platform.
 
 ## What it does
 
@@ -8,13 +8,31 @@ For each spot it knows the user's local optimal conditions (swell direction, siz
 
 ## How forecasts are built
 
-Live data from three free public sources, all keyless:
+Live data from public NOAA + European sources, all keyless:
 
-- **NDBC buoys** (NOAA) — significant wave height, dominant period, mean direction, water temp, air temp where the buoy has a met sensor. Each spot is mapped to a primary buoy + optional secondary backup in `src/lib/buoyMapping.ts`.
-- **NOAA CO-OPS tide stations** — hourly tide predictions per spot.
-- **Open-Meteo Marine + Forecast** — wind direction/speed at each spot's lat/lng, plus marine swell when the buoy is silent.
+- **NDBC `.txt`** — buoy standard meteorological: significant wave height, dominant period, mean direction, water/air temp where present. Each spot maps to a primary buoy + optional secondary in `src/lib/buoyMapping.ts`.
+- **NDBC `.data_spec` + `.swdir`** — full energy spectrum (47 frequency bins) + per-bin direction. Parsed into 3–5 swell trains via peak-finding, plus a single wave-energy-flux number. Drives the SpectralPanel on Spot Detail and the buoy footer.
+- **NOAA CO-OPS** — hourly tide predictions per spot.
+- **Open-Meteo Marine + Forecast** — three separate sets of wave data (`swell_wave_*` primary groundswell, `wind_wave_*` local wind chop, combined `wave_*`), plus wind direction/speed at each spot's lat/lng. The forecast pipeline.
 
-The merge happens in `src/server/fetchers.ts` (Vercel serverless function exposed at `/api/conditions`). The client calls it with a list of spot IDs and gets back a 48-hour timeline per spot plus the raw buoy/tide observations.
+The merge happens in `src/server/fetchers.ts` (Vercel serverless function exposed at `/api/conditions`). The client calls it with a list of spot IDs and gets back a 48-hour timeline per spot plus the raw buoy/tide observations including spectral trains.
+
+## Two separate fidelity layers
+
+The pipeline distinguishes between **current observations** (high-fidelity, real spectral data, but only "now") and **forecast hours** (lower-fidelity, model-derived, looking 48 hours out):
+
+- **Current observation** uses NDBC `.data_spec` + `.swdir` from the nearest buoy. Multiple swell trains, per-train direction, total wave energy flux. Displayed in the SpectralPanel on Spot Detail.
+- **Forecast hours** use Open-Meteo's primary-by-Hs swell partition. Less precise than spectral but covers the next 48h. Displayed in the Forecast chart and ForecastHour timeline.
+
+A user looking at "right now" sees the spectral truth. A user looking at "8pm tonight" sees the Open-Meteo forecast.
+
+## shadowFactor applied to displayed swellHeight
+
+Open-Meteo returns open-ocean wave height at each spot's lat/lng. For coastal-sheltered breaks like the Bolinas spots (Duxbury Reef filters incoming swell) we need to discount that height. Each spot has a `shadowFactor` (0–1) describing the fraction of open-ocean energy reaching the break.
+
+Applied once in `hoursToTimeline` in `api.ts`, multiplying `swellHeight` by `spot.shadowFactor ?? 1.0` before scoring and before storing in `ForecastHour`. Single point of application — every downstream reader sees the shadow-adjusted value.
+
+Discovery in the May 11 pass: `shadowFactor` had been defined per-spot since the original schema, documented as a scoring input — but was **never actually consumed** in any function. Display-only. So applying it now didn't double-count.
 
 ## Scoring model
 
@@ -35,17 +53,18 @@ Mavericks uses a different formula (`watchOnly` flag) because it's a spectator a
 ```
 src/
 ├── lib/
-│   ├── data.ts            ← Spot registry, scoring engine, formatting helpers
+│   ├── data.ts            ← Spot registry (64 spots), scoring engine, formatting helpers
 │   ├── buoyMapping.ts     ← spot → buoy + tide station + NWS zone
 │   ├── tokens.ts          ← color palette + scoreColor / qualityColor helpers
-│   ├── api.ts             ← /api/conditions client + timeline → ForecastHour mapping
+│   ├── api.ts             ← /api/conditions client; applies shadowFactor; ForecastHour mapping
 │   └── routing.ts         ← Nominatim geocode + OSRM driving matrix (keyless)
 ├── hooks/
-│   ├── useConditions.ts   ← stale-while-revalidate localStorage cache
+│   ├── useConditions.ts   ← stale-while-revalidate localStorage cache (v2 key)
 │   ├── useDriveTimes.ts   ← per-spot drive-time matrix from home base
 │   └── useLocalStorage.ts
 ├── server/
-│   └── fetchers.ts        ← Vercel function: NDBC + Open-Meteo + tide merge
+│   ├── handler.ts         ← /api/conditions entry: cache + dispatch to buildConditions
+│   └── fetchers.ts        ← NDBC + spectral + .swdir + Open-Meteo + tide merge
 └── components/
     ├── Dashboard.tsx      ← Top Pick hero card, Best Windows strip, My Spots ranked, Mavericks watch
     ├── SpotDetail.tsx     ← per-spot drilldown with 48h chart, Why-this-score, Bathymetry, Vectors, Local Intel
