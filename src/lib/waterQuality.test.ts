@@ -31,25 +31,33 @@ describe('getWaterQuality', () => {
 });
 
 describe('tierOf', () => {
-  it('returns advisory for permanent-posting entries', () => {
+  it('returns advisory for permanent-posting entries regardless of rain', () => {
     expect(tierOf(getWaterQuality('cowell')!)).toBe('advisory');
-    expect(tierOf(getWaterQuality('rivermouth')!)).toBe('advisory');
+    expect(tierOf(getWaterQuality('cowell')!, 0)).toBe('advisory');
+    expect(tierOf(getWaterQuality('cowell')!, 20)).toBe('advisory');
   });
 
-  it('returns caution for rain-sensitive entries', () => {
-    expect(tierOf(getWaterQuality('mitchells-cove')!)).toBe('caution');
-    expect(tierOf(getWaterQuality('26th-ave')!)).toBe('caution');
+  it('rain-sensitive entries stay quiet on dry days', () => {
+    expect(tierOf(getWaterQuality('mitchells-cove')!, 0)).toBeUndefined();
+    expect(tierOf(getWaterQuality('mitchells-cove')!, 2)).toBeUndefined();
+    expect(tierOf(getWaterQuality('26th-ave')!, 4.9)).toBeUndefined();
+  });
+
+  it('rain-sensitive entries flip to caution at the 5mm threshold', () => {
+    expect(tierOf(getWaterQuality('mitchells-cove')!, 5)).toBe('caution');
+    expect(tierOf(getWaterQuality('mitchells-cove')!, 12)).toBe('caution');
+    expect(tierOf(getWaterQuality('26th-ave')!, 25)).toBe('caution');
   });
 
   it('returns undefined for entries with no advisory or sensitivity flag', () => {
-    expect(tierOf({ beachId: '123' })).toBeUndefined();
-    expect(tierOf({})).toBeUndefined();
+    expect(tierOf({ beachId: '123' }, 100)).toBeUndefined();
+    expect(tierOf({}, 100)).toBeUndefined();
   });
 
   it('prefers advisory tier when both flags are set', () => {
     expect(tierOf({
       permanentAdvisory: 'creek outflow',
       rainSensitive: 'also bad after rain',
-    })).toBe('advisory');
+    }, 0)).toBe('advisory');
   });
 });

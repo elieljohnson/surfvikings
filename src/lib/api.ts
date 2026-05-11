@@ -29,6 +29,8 @@ export interface MergedHourWire {
 export interface ConditionsResponse {
   updatedAt: number;
   spots: Record<string, MergedHourWire[]>;
+  /** Per-spot summary fields (recent rain total for water-quality gating). */
+  spotMeta?: Record<string, { recentRainMm: number }>;
   buoys: Record<string, {
     buoyId: string;
     timestamp: number;

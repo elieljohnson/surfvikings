@@ -158,7 +158,10 @@ export function SpotDetail({ spotId, onBack }: SpotDetailProps) {
 
       {(() => {
         const wq = getWaterQuality(activeSpot.id);
-        return wq && tierOf(wq) ? <WaterQualityPanel info={wq}/> : null;
+        const recentRainMm = response?.spotMeta?.[activeSpot.id]?.recentRainMm ?? 0;
+        return wq && tierOf(wq, recentRainMm)
+          ? <WaterQualityPanel info={wq} recentRainMm={recentRainMm}/>
+          : null;
       })()}
       <ScoreBreakdown spot={activeSpot} current={current}/>
 
@@ -413,16 +416,24 @@ function SpectralPanel({
 }
 
 // Water-quality alert. Renders only for spots in the WATER_QUALITY map
-// (per-exception UX) — safe spots show nothing. Two visual tiers:
+// AND only when the active tier resolves to non-undefined — for caution-
+// tier (rain-sensitive) entries, that means recentRainMm has exceeded the
+// threshold. Permanent advisories always render. Visual:
 //   'advisory' = permanently posted creek mouth / outfall (red)
-//   'caution'  = rain-sensitive runoff spot (yellow)
-function WaterQualityPanel({ info }: { info: WaterQualityInfo }) {
-  const tier = tierOf(info);
+//   'caution'  = rain-sensitive runoff spot — only after meaningful rain (amber)
+function WaterQualityPanel({ info, recentRainMm }: { info: WaterQualityInfo; recentRainMm: number }) {
+  const tier = tierOf(info, recentRainMm);
   const isAdvisory = tier === 'advisory';
-  const color = isAdvisory ? TOKENS.poor : TOKENS.fair;
+  const color = isAdvisory ? TOKENS.poor : TOKENS.meh;
   const label = isAdvisory ? 'Water Quality · Advisory' : 'Water Quality · Caution';
-  const text = info.permanentAdvisory || info.rainSensitive || '';
-  const bg = isAdvisory ? 'rgba(255, 80, 80, 0.06)' : 'rgba(255, 200, 60, 0.06)';
+  const baseText = info.permanentAdvisory || info.rainSensitive || '';
+  // Append the trigger amount for rain-sensitive caution so the user can
+  // see "this is firing because 12mm fell in the past 48h" rather than
+  // wondering why it's showing today and not yesterday.
+  const text = isAdvisory
+    ? baseText
+    : `${baseText} · ${recentRainMm.toFixed(1)}mm fell in the past 48h`;
+  const bg = isAdvisory ? 'rgba(239, 68, 68, 0.08)' : 'rgba(249, 115, 22, 0.08)';
   return (
     <div style={{ padding: '4px 20px 14px' }}>
       <div style={{

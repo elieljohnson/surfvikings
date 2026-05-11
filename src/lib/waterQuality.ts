@@ -69,8 +69,17 @@ export function getWaterQuality(spotId: string): WaterQualityInfo | undefined {
  *  treatment. 'advisory' > 'caution' > undefined (no panel rendered). */
 export type WaterQualityTier = 'advisory' | 'caution';
 
-export function tierOf(info: WaterQualityInfo): WaterQualityTier | undefined {
+/** Threshold (mm) above which a rain-sensitive spot triggers a caution.
+ *  5mm ≈ 0.2 inches — modest rain, enough to produce runoff into nearshore
+ *  waters at most CA spots. Below this, the spot reads as fine. */
+export const RECENT_RAIN_THRESHOLD_MM = 5;
+
+/** Active tier given the spot's info and how much rain has actually
+ *  fallen in the last 48h. Permanent advisories are always 'advisory'.
+ *  rainSensitive flips to 'caution' only when recentRainMm exceeds the
+ *  threshold — quiet on dry days. */
+export function tierOf(info: WaterQualityInfo, recentRainMm = 0): WaterQualityTier | undefined {
   if (info.permanentAdvisory) return 'advisory';
-  if (info.rainSensitive) return 'caution';
+  if (info.rainSensitive && recentRainMm >= RECENT_RAIN_THRESHOLD_MM) return 'caution';
   return undefined;
 }

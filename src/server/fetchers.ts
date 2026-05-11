@@ -480,6 +480,11 @@ interface OpenMeteoWeatherResponse {
 export interface SpotMarine {
   spotId: string;
   hours: MarineHour[];
+  /** Total precipitation (mm) over the past 48 hours at this spot's
+   *  lat/lng. Drives the runoff-sensitive water-quality caution: spots
+   *  with `rainSensitive` only show their caution when this exceeds a
+   *  threshold (currently 5mm ≈ 0.2 in). */
+  recentRainMm: number;
 }
 
 export async function fetchMarineBatch(spots: Spot[], forecastDays = 7, signal?: AbortSignal): Promise<SpotMarine[]> {
@@ -492,6 +497,10 @@ export async function fetchMarineBatch(spots: Spot[], forecastDays = 7, signal?:
     longitude: lngs,
     hourly: 'swell_wave_height,swell_wave_period,swell_wave_direction,wind_wave_height,wind_wave_period,wind_wave_direction,wave_height,wave_period,wave_direction',
     forecast_days: String(forecastDays),
+    // Same past_days as the weather endpoint so marine hour indices stay
+    // aligned with weather hour indices (both arrays start at today-2 00:00
+    // local). hoursToTimeline's `findIndex h.t >= now` skips past hours.
+    past_days: '2',
     length_unit: 'metric',
     timeformat: 'unixtime',
   });
@@ -501,6 +510,11 @@ export async function fetchMarineBatch(spots: Spot[], forecastDays = 7, signal?:
     hourly: 'wind_speed_10m,wind_direction_10m,wind_gusts_10m,cloudcover,precipitation,precipitation_probability',
     wind_speed_unit: 'kn',
     forecast_days: String(forecastDays),
+    // Pull 2 days of past data so we can compute a 48h precipitation total
+    // for the runoff-sensitive water-quality caution. Past hours never enter
+    // the forward timeline (we slice from `now`) but their precipitation
+    // values get summed into spotMeta.recentRainMm.
+    past_days: '2',
     timeformat: 'unixtime',
   });
 
@@ -561,7 +575,13 @@ export async function fetchMarineBatch(spots: Spot[], forecastDays = 7, signal?:
         precipitationProb: precipProb,
       };
     });
-    return { spotId: spot.id, hours };
+    // Sum precipitation over past 48 hours for water-quality runoff gating
+    const now = Date.now();
+    const recentRainMm = hours.reduce((sum, hr) => {
+      const ageMs = now - hr.t;
+      return ageMs > 0 && ageMs <= 48 * 3600_000 ? sum + (hr.precipitation || 0) : sum;
+    }, 0);
+    return { spotId: spot.id, hours, recentRainMm };
   });
 }
 
@@ -605,6 +625,10 @@ export function mergeTidesIntoMarine(marine: MarineHour[], tide: TidePrediction)
 export interface ConditionsPayload {
   updatedAt: number;
   spots: Record<string, MergedHour[]>;
+  /** Per-spot summary fields that don't belong on individual hours.
+   *  recentRainMm: total precipitation over past 48h at the spot's lat/lng,
+   *  used to gate the water-quality rain-sensitive caution. */
+  spotMeta: Record<string, { recentRainMm: number }>;
   buoys: Record<string, BuoyObservation>;
   tides: Record<string, TidePrediction>;
   /** NWS Coastal Waters Forecast periods, keyed by zone (PZZ540 etc.). */
@@ -645,19 +669,22 @@ export async function buildConditions(spotIds: string[], signal?: AbortSignal): 
     }),
   );
   const tides: Record<string, TidePrediction> = Object.fromEntries(tideList.map((t) => [t.stationId, t]));
-  const marineByspot: Record<string, MarineHour[]> = Object.fromEntries(marineList.map((m) => [m.spotId, m.hours]));
+  const marineByspot: Record<string, SpotMarine> = Object.fromEntries(marineList.map((m) => [m.spotId, m]));
 
   const spotData: Record<string, MergedHour[]> = {};
+  const spotMeta: Record<string, { recentRainMm: number }> = {};
   for (const s of spots) {
-    const marine = marineByspot[s.id] ?? [];
+    const marine = marineByspot[s.id];
     const mapping = BUOY_MAP_BY_SPOT[s.id];
     const tide = tides[mapping?.tideStation] ?? { stationId: '', samples: [] };
-    spotData[s.id] = mergeTidesIntoMarine(marine, tide);
+    spotData[s.id] = mergeTidesIntoMarine(marine?.hours ?? [], tide);
+    spotMeta[s.id] = { recentRainMm: marine?.recentRainMm ?? 0 };
   }
 
   return {
     updatedAt: Date.now(),
     spots: spotData,
+    spotMeta,
     buoys,
     tides,
     nwsForecasts,
