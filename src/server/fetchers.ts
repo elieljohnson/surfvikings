@@ -372,7 +372,7 @@ export interface SpotMarine {
   hours: MarineHour[];
 }
 
-export async function fetchMarineBatch(spots: Spot[], forecastDays = 3, signal?: AbortSignal): Promise<SpotMarine[]> {
+export async function fetchMarineBatch(spots: Spot[], forecastDays = 7, signal?: AbortSignal): Promise<SpotMarine[]> {
   if (!spots.length) return [];
   const lats = spots.map((s) => s.lat).join(',');
   const lngs = spots.map((s) => s.lng).join(',');
@@ -503,8 +503,9 @@ export async function buildConditions(spotIds: string[], signal?: AbortSignal): 
   const [buoyList, spectralList, tideList, marineList] = await Promise.all([
     Promise.all(buoyIds.map((id) => fetchBuoy(id, signal))),
     Promise.all(buoyIds.map((id) => fetchSpectral(id, signal))),
-    Promise.all(tideIds.map((id) => fetchTides(id, 72, signal))),
-    fetchMarineBatch(spots, 3, signal).catch((e) => {
+    // Tides extend ~7d/168h to cover the marine forecast horizon.
+    Promise.all(tideIds.map((id) => fetchTides(id, 168, signal))),
+    fetchMarineBatch(spots, 7, signal).catch((e) => {
       errors.push(`openmeteo: ${e.message ?? e}`);
       return [] as SpotMarine[];
     }),

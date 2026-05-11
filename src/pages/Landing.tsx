@@ -287,7 +287,7 @@ function DataProof() {
     { n: '28', label: 'NorCal surf spots' },
     { n: '5', label: 'NOAA buoys' },
     { n: '6', label: 'Tide stations' },
-    { n: '48h', label: 'Forecast window' },
+    { n: '7d', label: 'Forecast window' },
   ];
   return (
     <section style={{

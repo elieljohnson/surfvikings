@@ -392,7 +392,7 @@ function BestWindowsStrip({ windows, onOpen }: { windows: (BestWindow & { spot: 
   return (
     <div style={{ padding: '12px 20px 4px' }}>
       <div style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 13, letterSpacing: '0.18em', color: TOKENS.textMute, textTransform: 'uppercase', marginBottom: 10 }}>
-        Best Windows · Next 48h
+        Best Windows · Next 7 days
       </div>
       <div style={{ display: 'flex', gap: 8, overflowX: 'auto', padding: '0 0 4px', margin: '0 -20px', paddingLeft: 20, paddingRight: 20 }}>
         {windows.map((w, i) => (

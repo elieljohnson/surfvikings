@@ -21,7 +21,7 @@ export function Forecast(_props: ForecastProps) {
   return (
     <Screen>
       <div style={{ padding: '52px 20px 14px', borderBottom: `1px solid ${TOKENS.border}` }}>
-        <div style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 13, letterSpacing: '0.18em', color: TOKENS.textMute, textTransform: 'uppercase' }}>Forecast · 48h</div>
+        <div style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 13, letterSpacing: '0.18em', color: TOKENS.textMute, textTransform: 'uppercase' }}>Forecast · 7 days</div>
         <div style={{ fontSize: 22, fontWeight: 600, letterSpacing: '-0.02em', marginTop: 4 }}>Outlook</div>
       </div>
 
@@ -54,7 +54,7 @@ export function Forecast(_props: ForecastProps) {
       <div style={{ padding: '0 20px 16px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10, gap: 12 }}>
           <div style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 13, letterSpacing: '0.18em', color: TOKENS.textMute, textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
-            Conditions · next 48h
+            Conditions · next 7 days
           </div>
           <div style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 12, letterSpacing: '0.12em', textTransform: 'uppercase', color: TOKENS.textDim, whiteSpace: 'nowrap' }}>
             Fit for {spot.name.replace('The ', '')}
@@ -76,15 +76,15 @@ export function Forecast(_props: ForecastProps) {
 }
 
 function HourlyHeatmap({ timeline }: { timeline: ForecastHour[] }) {
-  // Both row labels derive from real local time so they're correct any day
-  // of the week, not hardcoded.
+  // Row labels derive from real local time so they're correct any day of
+  // the week, not hardcoded. Renders up to 7 days (168 hours) of forecast.
   const DAYS = ['SUN','MON','TUE','WED','THU','FRI','SAT'];
   const today = new Date().getDay();
-  const tomorrow = new Date(Date.now() + 24 * 3600_000).getDay();
-  const rows = [
-    { label: DAYS[today],    data: timeline.slice(0, 24) },
-    { label: DAYS[tomorrow], data: timeline.slice(24, 48) },
-  ];
+  const dayCount = Math.min(7, Math.ceil(timeline.length / 24));
+  const rows = Array.from({ length: dayCount }, (_, di) => ({
+    label: DAYS[(today + di) % 7],
+    data: timeline.slice(di * 24, (di + 1) * 24),
+  }));
   return (
     <div style={{ background: TOKENS.surface, border: `1px solid ${TOKENS.border}`, borderRadius: 10, padding: 12 }}>
       <div style={{ display: 'grid', gridTemplateColumns: '36px repeat(24, 1fr)', gap: 1, marginBottom: 4 }}>

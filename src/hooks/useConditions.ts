@@ -27,7 +27,7 @@ const CACHE_TTL = 10 * 60 * 1000; // 10 min
 // Discard cached data older than this — forecasts past 24h are useless.
 const CACHE_MAX_AGE = 24 * 60 * 60 * 1000;
 // Bump this if ConditionsResponse shape changes — old entries get ignored.
-const STORAGE_PREFIX = 'sv:conditions:v2:';
+const STORAGE_PREFIX = 'sv:conditions:v3:';
 
 function readStorageCache(key: string): CacheEntry | null {
   if (typeof window === 'undefined') return null;

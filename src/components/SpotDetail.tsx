@@ -96,7 +96,7 @@ export function SpotDetail({ spotId, onBack }: SpotDetailProps) {
       {/* Quality timeline */}
       <div style={{ padding: '18px 20px 12px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-          <div style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 13, letterSpacing: '0.18em', color: TOKENS.textMute, textTransform: 'uppercase' }}>Quality · 48h</div>
+          <div style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 13, letterSpacing: '0.18em', color: TOKENS.textMute, textTransform: 'uppercase' }}>Quality · 7 days</div>
           <div style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 12, color: TOKENS.textDim }}>
             now <span style={{ color }}>{Math.round(current.score)}</span> · peak{' '}
             <span style={{ color: scoreColor(Math.max(...timeline.map((t) => t.score))) }}>

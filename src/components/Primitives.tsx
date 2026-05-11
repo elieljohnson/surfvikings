@@ -28,7 +28,7 @@ export function useResponsiveWidth(fallback: number) {
   return [ref, width] as const;
 }
 
-// Five evenly spaced ticks across a 48h timeline, anchored so the first and
+// Five evenly spaced ticks across the timeline (now 7-day / 168h), anchored so the first and
 // last labels never run off the SVG edges and the middles stay centered.
 const AXIS_TICKS: ReadonlyArray<{ h: number; anchor: 'start' | 'middle' | 'end' }> = [
   { h: 0,  anchor: 'start'  },

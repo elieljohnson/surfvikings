@@ -58,7 +58,7 @@ export async function fetchConditions(spotIds: string[], signal?: AbortSignal): 
 // Convert an API payload for one spot into the ForecastHour[] the UI expects,
 // running each hour through the PRD scoring engine. `startIdx` aligns hour 0
 // to "now" (first hour >= Date.now()).
-export function hoursToTimeline(spot: Spot, wire: MergedHourWire[], hoursWanted = 48): ForecastHour[] {
+export function hoursToTimeline(spot: Spot, wire: MergedHourWire[], hoursWanted = 168): ForecastHour[] {
   if (!wire.length) return buildTimeline(spot, hoursWanted);
   const now = Date.now();
   let startIdx = wire.findIndex((h) => h.t >= now);
@@ -136,7 +136,7 @@ export function timelinesFromResponse(
     const spot = SPOTS.find((s) => s.id === id);
     if (!spot) continue;
     const wire = res?.spots?.[id] ?? [];
-    out[id] = wire.length ? hoursToTimeline(spot, wire, 48) : buildTimeline(spot);
+    out[id] = wire.length ? hoursToTimeline(spot, wire, 168) : buildTimeline(spot, 168);
   }
   return out;
 }
