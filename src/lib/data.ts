@@ -306,6 +306,26 @@ function evaluateSpecialRules(
   return { penalty, tideOverride };
 }
 
+/** Direction-match score components, exposed so SpotDetail's breakdown
+ *  panel and Dashboard's compass-rose quality dots use the EXACT same
+ *  math as computeScore. Before these existed, the VectorsPanel computed
+ *  a softer `1 - delta/180` quality independently, producing the bug
+ *  where the compass arrow rendered green while the score's Direction row
+ *  showed 0/30 for the same hour. */
+export function swellDirectionScore(actualDir: number, optimalDir: number): number {
+  return Math.max(0, 30 - angleDelta(actualDir, optimalDir) * 0.7);
+}
+export function windDirectionScore(actualDir: number, offshoreDir: number): number {
+  return Math.max(0, 15 - angleDelta(actualDir, offshoreDir) * 0.09);
+}
+/** 0-1 normalized versions for use with qualityColor() in displays. */
+export function swellDirectionQuality(actualDir: number, optimalDir: number): number {
+  return swellDirectionScore(actualDir, optimalDir) / 30;
+}
+export function windDirectionQuality(actualDir: number, offshoreDir: number): number {
+  return windDirectionScore(actualDir, offshoreDir) / 15;
+}
+
 /** Penalty when local wind wave is significant relative to the primary
  *  groundswell. A 2ft @ 18s with 4ft of windswell on top is materially
  *  less surfable than a glassy 2ft @ 18s, even though the headline swell
@@ -334,8 +354,7 @@ export function computeScore(spot: Spot, c: ScoringInput): number {
     const dirOK = 40 - angleDelta(c.swellDirection, spot.optimalSwell) * 0.8;
     return Math.max(0, Math.min(100, sizeOK + periodOK + dirOK));
   }
-  const dirDelta = angleDelta(c.swellDirection, spot.optimalSwell);
-  const dirScore = Math.max(0, 30 - dirDelta * 0.7);
+  const dirScore = swellDirectionScore(c.swellDirection, spot.optimalSwell);
   const [pMin, pMax] = spot.optimalPeriod;
   let pScore: number;
   if (c.swellPeriod >= pMin && c.swellPeriod <= pMax) pScore = 20;
@@ -345,8 +364,7 @@ export function computeScore(spot: Spot, c: ScoringInput): number {
   const sCenter = (sMin + sMax) / 2;
   const sSpread = (sMax - sMin) / 2 + 1;
   const sScore = Math.max(0, 15 - Math.pow((c.swellHeight - sCenter) / sSpread, 2) * 10);
-  const windDelta = angleDelta(c.windDirection, spot.offshore);
-  const windDirScore = Math.max(0, 15 - windDelta * 0.09);
+  const windDirScore = windDirectionScore(c.windDirection, spot.offshore);
   const windPenalty = c.windSpeed > 20 ? -10 : c.windSpeed > 12 ? -(c.windSpeed - 12) : 0;
   const choppy = windWavePenalty(c.swellHeight, c.windWaveHeight);
   const tideScore = tideMatch(spot.optimalTide, c.tideHeight, c.tideRising);

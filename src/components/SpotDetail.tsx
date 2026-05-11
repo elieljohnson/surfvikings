@@ -2,7 +2,8 @@ import React, { useMemo, useState } from 'react';
 import { TOKENS, scoreColor, qualityColor } from '../lib/tokens';
 import {
   SPOTS, Spot, ForecastHour, findBestWindows,
-  scoreToRating, hourLabel, degToCardinal, angleDelta, MetricKey,
+  scoreToRating, hourLabel, degToCardinal, MetricKey,
+  swellDirectionScore, windDirectionScore,
 } from '../lib/data';
 import { BUOY_MAP_BY_SPOT } from '../lib/buoyMapping';
 import { sunriseSunset, moonPhase, formatTime } from '../lib/celestial';
@@ -189,8 +190,10 @@ export function SpotDetail({ spotId, onBack }: SpotDetailProps) {
 }
 
 function ScoreBreakdown({ spot, current }: { spot: Spot; current: ForecastHour }) {
-  const dirDelta = angleDelta(current.swellDirection, spot.optimalSwell);
-  const dirScore = Math.max(0, 30 - dirDelta * 0.7);
+  // Direction-score functions are imported from data.ts so this panel and
+  // computeScore can never drift apart. Period/size/tide are inlined here
+  // because their per-spot range params would make a shared helper awkward.
+  const dirScore = swellDirectionScore(current.swellDirection, spot.optimalSwell);
   const [pMin, pMax] = spot.optimalPeriod;
   const pScore = current.swellPeriod >= pMin && current.swellPeriod <= pMax ? 20
     : current.swellPeriod < pMin ? Math.max(0, 20 - (pMin - current.swellPeriod) * 3)
@@ -198,7 +201,7 @@ function ScoreBreakdown({ spot, current }: { spot: Spot; current: ForecastHour }
   const [sMin, sMax] = spot.optimalSize;
   const sCenter = (sMin + sMax) / 2;
   const sScore = Math.max(0, 15 - Math.pow((current.swellHeight - sCenter) / ((sMax - sMin) / 2 + 1), 2) * 10);
-  const windDirScore = Math.max(0, 15 - angleDelta(current.windDirection, spot.offshore) * 0.09);
+  const windDirScore = windDirectionScore(current.windDirection, spot.offshore);
   const tideScore = (() => {
     const bands: Record<string, [number, number]> = { low:[0,2], mid:[2,4], high:[4,6], rising:[1.5,5] };
     const [lo, hi] = bands[spot.optimalTide] || [0, 6];

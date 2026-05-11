@@ -3,7 +3,12 @@
 // scored the same as a glassy 2ft @ 18s day.
 
 import { describe, expect, it } from 'vitest';
-import { computeScore, windWavePenalty, SPOTS } from './data';
+import {
+  computeScore, windWavePenalty,
+  swellDirectionScore, swellDirectionQuality,
+  windDirectionScore, windDirectionQuality,
+  SPOTS,
+} from './data';
 
 const BOLINAS_PATCH = SPOTS.find((s) => s.id === 'bolinas-patch')!;
 
@@ -70,6 +75,27 @@ describe('computeScore — wind wave integration', () => {
     // 6ft chop on 3ft swell = ratio 2.0 = -15 pts
     expect(clean - buried).toBeGreaterThanOrEqual(14);
     expect(clean - buried).toBeLessThanOrEqual(16);
+  });
+
+  // Regression: a 68° swell-direction miss used to render green on the
+  // compass while showing 0/30 in the Why-this-score breakdown — two
+  // different quality formulas disagreeing on the same hour. Locking the
+  // shape now: at 43°+ off-axis, both score and quality flat-zero.
+  it('swellDirectionScore and quality agree across boundary cases', () => {
+    expect(swellDirectionScore(225, 225)).toBe(30);
+    expect(swellDirectionQuality(225, 225)).toBe(1);
+    expect(swellDirectionScore(225, 235)).toBeCloseTo(23, 1);
+    expect(swellDirectionQuality(225, 235)).toBeCloseTo(23 / 30, 2);
+    // Bolinas case from the bug: actual 293, optimal 225, delta 68
+    expect(swellDirectionScore(293, 225)).toBe(0);
+    expect(swellDirectionQuality(293, 225)).toBe(0);
+  });
+
+  it('windDirectionScore and quality agree across boundary cases', () => {
+    expect(windDirectionScore(0, 0)).toBe(15);
+    expect(windDirectionQuality(0, 0)).toBe(1);
+    expect(windDirectionScore(90, 0)).toBeCloseTo(15 - 90 * 0.09, 2);
+    expect(windDirectionQuality(90, 0)).toBeCloseTo((15 - 90 * 0.09) / 15, 2);
   });
 
   it('never returns a score outside [0, 100]', () => {

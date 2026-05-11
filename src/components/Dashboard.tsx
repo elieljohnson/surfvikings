@@ -3,7 +3,7 @@ import { TOKENS, scoreColor, qualityColor } from '../lib/tokens';
 import {
   SPOTS, FAVORITES, Spot, ForecastHour, BestWindow,
   findBestWindows, scoreToRating,
-  hourLabel, degToCardinal, angleDelta, metricQuality,
+  hourLabel, degToCardinal, angleDelta, swellDirectionQuality, metricQuality,
   wetsuitForWaterF, weatherLabel,
 } from '../lib/data';
 import { BUOY_MAP_BY_SPOT } from '../lib/buoyMapping';
@@ -170,7 +170,9 @@ export function Dashboard({ onOpenSpot }: DashboardProps) {
   const tp = ranked[0];
   const now0 = timelines[tp.id]?.[0];
   const swellQ = now0 ? metricQuality(tp, now0, 'swellHeight') : 0.5;
-  const dirQ = now0 ? Math.max(0, 1 - angleDelta(now0.swellDirection, tp.optimalSwell) / 180) : 0.5;
+  // Direction quality uses the same math as computeScore so the hero card's
+  // colored dots agree with Spot Detail's Why-this-score breakdown.
+  const dirQ = now0 ? swellDirectionQuality(now0.swellDirection, tp.optimalSwell) : 0.5;
   const windQ = now0 ? metricQuality(tp, now0, 'windSpeed') : 0.5;
   const tideQ = now0 ? metricQuality(tp, now0, 'tideHeight') : 0.5;
 
