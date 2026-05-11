@@ -2,7 +2,7 @@ import React from 'react';
 import { TOKENS, scoreColor } from '../lib/tokens';
 import {
   ForecastHour, Spot, MetricKey, metricQuality, hourLabel,
-  degToCardinal, angleDelta,
+  degToCardinal, swellDirectionQuality, windDirectionQuality,
 } from '../lib/data';
 import { qualityColor } from '../lib/tokens';
 
@@ -418,8 +418,12 @@ export function VectorsPanel({
   // here read "is this direction good?" rather than "is the metric good?".
   // Optimal + Offshore stay green as constant per-spot reference labels;
   // live values + their target wedges pick up qualityColor together.
-  const swellDirQ = Math.max(0, 1 - angleDelta(current.swellDirection, spot.optimalSwell) / 180);
-  const windDirQ  = Math.max(0, 1 - angleDelta(current.windDirection,  spot.offshore)     / 180);
+  // Use the same direction-quality math as computeScore so the compass
+  // arrow colors agree with the Why-this-score breakdown. Before this fix,
+  // a 68° swell-direction miss showed 0/30 in the breakdown but a green
+  // arrow on the compass — two different formulas disagreeing.
+  const swellDirQ = swellDirectionQuality(current.swellDirection, spot.optimalSwell);
+  const windDirQ  = windDirectionQuality(current.windDirection, spot.offshore);
   return (
     <div style={{ padding: '0 20px 16px' }}>
       <div style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 13, letterSpacing: '0.18em', color: TOKENS.textMute, textTransform: 'uppercase', marginBottom: 10 }}>
