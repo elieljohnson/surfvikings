@@ -146,7 +146,19 @@ export function SpotDetail({ spotId, onBack }: SpotDetailProps) {
       <ScoreBreakdown spot={activeSpot} current={current}/>
 
       <div style={{ padding: '4px 20px 14px' }}>
-        <ChartRow label="Swell" unit="ft" spot={activeSpot} current={current.swellHeight} timeline={timeline} metric="swellHeight"/>
+        <ChartRow
+          label="Swell"
+          unit="ft"
+          spot={activeSpot}
+          current={current.swellHeight}
+          secondary={
+            current.windWaveHeight > 0.5
+              ? { value: current.windWaveHeight, unit: 'ft', label: 'chop' }
+              : undefined
+          }
+          timeline={timeline}
+          metric="swellHeight"
+        />
         <ChartRow label="Wind" unit="kts" spot={activeSpot} current={current.windSpeed} timeline={timeline} metric="windSpeed"/>
         <ChartRow label="Tide" unit="ft" spot={activeSpot} current={current.tideHeight} timeline={timeline} metric="tideHeight"/>
       </div>
@@ -235,8 +247,13 @@ function ScoreBreakdown({ spot, current }: { spot: Spot; current: ForecastHour }
 }
 
 function ChartRow({
-  label, unit, spot, current, timeline, metric,
-}: { label: string; unit: string; spot: Spot; current: number; timeline: ForecastHour[]; metric: MetricKey }) {
+  label, unit, spot, current, secondary, timeline, metric,
+}: {
+  label: string; unit: string; spot: Spot; current: number;
+  /** Optional muted addendum (e.g. '+1.4ft chop' next to the primary swell). */
+  secondary?: { value: number; unit: string; label: string };
+  timeline: ForecastHour[]; metric: MetricKey;
+}) {
   const values = timeline.map((t) => t[metric] as number);
   const max = Math.max(...values);
   const min = Math.min(...values);
@@ -247,6 +264,11 @@ function ChartRow({
           <span style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 13, letterSpacing: '0.18em', color: TOKENS.textMute, textTransform: 'uppercase' }}>{label}</span>
           <span style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 16, color: TOKENS.text, fontWeight: 500 }}>{current.toFixed(1)}</span>
           <span style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 12, color: TOKENS.textDim }}>{unit}</span>
+          {secondary && (
+            <span style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 13, color: TOKENS.textMute, marginLeft: 4 }}>
+              +{secondary.value.toFixed(1)}{secondary.unit} {secondary.label}
+            </span>
+          )}
         </div>
         <div style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 13, color: TOKENS.textMute }}>
           lo {min.toFixed(1)} · hi {max.toFixed(1)}
