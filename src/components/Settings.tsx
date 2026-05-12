@@ -340,9 +340,20 @@ function FavoritesEditor({ favorites, toggle, reset, isFavorite }: FavoritesEdit
                     fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 11,
                     color: TOKENS.textMute, width: 10, display: 'inline-block',
                   }}>{isOpen ? '▾' : '▸'}</span>
-                  <span style={{ fontSize: 14 }}>{label}</span>
+                  {/* Regions with at least one favorite render bolder + brighter
+                      so users can scan and see where their picks live without
+                      expanding every section. */}
+                  <span style={{
+                    fontSize: 14,
+                    fontWeight: favCount > 0 ? 600 : 400,
+                    color: favCount > 0 ? TOKENS.text : TOKENS.textDim,
+                  }}>{label}</span>
                 </div>
-                <div style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 12, color: TOKENS.textDim }}>
+                <div style={{
+                  fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 12,
+                  fontWeight: favCount > 0 ? 600 : 400,
+                  color: favCount > 0 ? TOKENS.pacific : TOKENS.textDim,
+                }}>
                   {favCount}/{regionSpots.length}
                 </div>
               </button>
