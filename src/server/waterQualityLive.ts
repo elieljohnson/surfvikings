@@ -4,11 +4,13 @@
 // See docs/water-quality-sources.md for the freshness investigation.
 //
 // Current coverage:
-//   Sonoma (HTML tables)            — weekly during in-season
+//   Sonoma (HTML tables)            — weekly during in-season, automated
 //   SF / SFPUC (hidden JSON API)    — weekly year-round, 20+ stations
 //   San Mateo (Google MyMaps KML)   — weekly, 40 stations, no sample date
+//   Marin (hand-curated fixture)    — weekly during Apr–Oct, screenshot-fed
+//                                     because Marin's page is Cloudflare-
+//                                     blocked. See waterQualityMarinManual.ts.
 // Future:
-//   Marin   — Cloudflare-blocked; needs whitelist or Playwright
 //   SC     — date-only fresh data; permanent postings already encoded
 
 export interface LiveBeachReading {
@@ -181,13 +183,15 @@ export async function fetchAllLiveWaterQuality(
   // Import lazily to avoid a circular type-only cycle (SM module imports
   // LiveBeachReading from this file).
   const { fetchSanMateo } = await import('./waterQualitySanMateo');
+  const { fetchMarinManual } = await import('./waterQualityMarinManual');
   const [sonoma, sfpuc, sanMateo] = await Promise.all([
     fetchSonomaCounty(signal),
     fetchSFPUC(signal),
     fetchSanMateo(signal),
   ]);
+  const marin = fetchMarinManual(); // sync, no network
   const out: Record<string, LiveBeachReading> = {};
-  for (const r of [...sonoma, ...sfpuc, ...sanMateo]) out[r.beachName] = r;
+  for (const r of [...sonoma, ...sfpuc, ...sanMateo, ...marin]) out[r.beachName] = r;
   return out;
 }
 

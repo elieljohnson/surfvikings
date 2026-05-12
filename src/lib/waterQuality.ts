@@ -93,6 +93,18 @@ export const WATER_QUALITY: Record<string, WaterQualityInfo> = {
   'ocean-beach':         { liveBeachName: 'Ocean Beach at Lincoln Way' },
   'ocean-beach-south':   { liveBeachName: 'Ocean Beach at Sloat Boulevard' },
 
+  // Marin County (hand-curated weekly fixture; see waterQualityMarinManual.ts).
+  // Pt Reyes Beach is left unmapped — Drakes Beach is 10+ miles south
+  // and isn't an honest proxy for the Great Beach's exposed conditions.
+  'dillon-beach':   { liveBeachName: 'Dillon Beach' },
+  'drakes-estero':  { liveBeachName: 'Drakes Estero' },
+  'bolinas-patch':  { liveBeachName: 'Bolinas Beach' },
+  'bolinas-jetty':  { liveBeachName: 'Bolinas Beach' },
+  'bolinas-groin':  { liveBeachName: 'Bolinas Beach' },
+  'stinson':        { liveBeachName: 'Stinson Beach - Central' },
+  'muir-beach':     { liveBeachName: 'Muir Beach - Central' },
+  'rodeo':          { liveBeachName: 'Rodeo Beach - North' },
+
   // San Mateo County (KML scrape). Beach names match the MyMaps Placemark
   // <name> values verbatim (uppercase). Linda Mar/Pedro Point share the
   // San Pedro Creek station — the creek is the dominant water-quality
