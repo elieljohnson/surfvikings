@@ -104,12 +104,15 @@ describe('stateFor', () => {
     expect(stateFor({ liveBeachName: 'Salmon Creek State Beach' }, 'sonoma', 0, {})).toBeUndefined();
   });
 
-  it('rain-sensitive spot hides on dry days (no live data wired), shows caution on wet', () => {
-    // 26th Ave has rainSensitive set but no liveBeachName (SC scraper
-    // not built yet). On dry days the panel hides entirely; rain
-    // trigger renders an amber caution either way.
+  it('rain-sensitive spot stays informational on dry days, escalates to caution on wet', () => {
+    // 26th Ave has rainSensitive set. The concern is real year-round
+    // (surfers should know), so the panel stays visible on dry days
+    // as 'monitored' (no amber dot) and escalates to 'caution' once
+    // recent rain crosses the threshold.
     const wq = getWaterQuality('26th-ave')!;
-    expect(stateFor(wq, 'sc', 2)).toBeUndefined();
+    const dry = stateFor(wq, 'sc', 2);
+    expect(dry?.status).toBe('monitored');
+    expect(dry?.text).toMatch(/runoff/);
     expect(stateFor(wq, 'sc', 8)?.status).toBe('caution');
   });
 

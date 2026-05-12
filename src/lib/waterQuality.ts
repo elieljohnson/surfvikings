@@ -178,13 +178,19 @@ export function stateFor(
       sampleDate: reading?.sampleDate,
     };
   }
-  // Rain-sensitive caution gated on actual recent rain
-  if (info?.rainSensitive && recentRainMm >= RECENT_RAIN_THRESHOLD_MM) {
+  // Rain-sensitive: always render (it's a known concern). Escalate to
+  // caution when recent rain crosses the threshold; otherwise stay
+  // informational ('monitored') so surfers see the rain-sensitivity note
+  // year-round without an amber dot on dry days.
+  if (info?.rainSensitive) {
     const fallbackSource = defaultMonitor(region);
     const reading = info.liveBeachName ? liveReadings[info.liveBeachName] : undefined;
+    const wet = recentRainMm >= RECENT_RAIN_THRESHOLD_MM;
     return {
-      status: 'caution',
-      text: `${info.rainSensitive} · ${recentRainMm.toFixed(1)}mm fell in past 48h`,
+      status: wet ? 'caution' : 'monitored',
+      text: wet
+        ? `${info.rainSensitive} · ${recentRainMm.toFixed(1)}mm fell in past 48h`
+        : info.rainSensitive,
       source: reading?.source ?? fallbackSource,
       sampleDate: reading?.sampleDate,
     };
