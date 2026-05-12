@@ -148,9 +148,11 @@ export function stateFor(
       source,
     };
   }
-  // Spot is in a monitored region but has no known concern
+  // Spot is in a monitored region but has no known concern. No body text —
+  // the 'Clean' status pill in the UI is the message; supplementary copy
+  // would be redundant.
   if (source) {
-    return { status: 'monitored', text: 'No known year-round concerns', source };
+    return { status: 'monitored', text: '', source };
   }
   return undefined;
 }

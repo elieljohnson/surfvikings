@@ -413,69 +413,84 @@ function SpectralPanel({
   );
 }
 
-// Water-quality panel — always renders when stateFor() returns a state,
-// which is "any spot in a county-monitored region" plus the explicit
-// not-monitored exceptions (Salt Point / Fort Ross). Three visual tiers:
+// Water-quality panel — renders for every spot with a known monitor or
+// concern. Status-pill UI: ● Clean (green) / ⚠ Caution (amber) /
+// ◌ Not Monitored (dim) / ⚠ Closed (red, Phase 3).
 //
-//   'caution'        amber — permanent posting OR active rain runoff
-//   'monitored'      neutral — county samples, no known year-round concern
-//   'not-monitored'  dim — outside any county's sampling list
-//   'closed'         red — Phase 3 (live closure data, not yet wired)
-//
-// Source attribution shows up on every state (Eliel: "Seeing what the
-// water quality is from a source is valuable even when there is no
-// caution"). Phase 3 will add live last-sample-date next to source.
+// Live test-date is queued for the next preview iteration — wiring the
+// CA Beach Watch CSV server-side then plumbing per-spot last-sample
+// dates through the conditions payload. UI shape is set so when that
+// data lands it slots into the placeholder line below the status.
 function WaterQualityPanel({ state }: { state: WaterQualityState }) {
-  const isCaution = state.status === 'caution';
   const isClosed = state.status === 'closed';
+  const isCaution = state.status === 'caution';
+  const isMonitored = state.status === 'monitored';
   const isNotMonitored = state.status === 'not-monitored';
-  const accent = isClosed
+
+  const dotColor = isClosed
     ? TOKENS.poor
     : isCaution
       ? TOKENS.mediocre
-      : isNotMonitored
-        ? TOKENS.textDim
-        : TOKENS.textMute;
+      : isMonitored
+        ? TOKENS.epic           // green ● for the all-clear
+        : TOKENS.textDim;       // dim ◌ for not-monitored
+  const statusLabel = isClosed
+    ? 'Closed'
+    : isCaution
+      ? 'Caution'
+      : isMonitored
+        ? 'Clean'
+        : 'Not monitored';
+  const borderColor = isCaution || isClosed ? dotColor : TOKENS.border;
   const bg = isClosed
     ? 'rgba(239, 68, 68, 0.08)'
     : isCaution
       ? 'rgba(234, 179, 8, 0.08)'
       : TOKENS.surface;
-  const label = isClosed
-    ? 'Water Quality · Closed'
-    : isCaution
-      ? 'Water Quality · Caution'
-      : isNotMonitored
-        ? 'Water Quality · Not Monitored'
-        : 'Water Quality';
+
   return (
     <div style={{ padding: '4px 20px 16px' }}>
       <div style={{
         fontFamily: 'JetBrains Mono, ui-monospace, monospace',
         fontSize: 13, letterSpacing: '0.18em',
-        color: accent, textTransform: 'uppercase', marginBottom: 8,
+        color: TOKENS.textMute, textTransform: 'uppercase', marginBottom: 8,
       }}>
-        {label}
+        Water Quality
       </div>
       <div style={{
-        background: bg,
-        border: `1px solid ${isCaution || isClosed ? accent : TOKENS.border}`,
-        borderRadius: 8,
-        padding: '12px 14px',
+        background: bg, border: `1px solid ${borderColor}`,
+        borderRadius: 8, padding: '12px 14px',
       }}>
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-          {(isCaution || isClosed) && (
-            <span style={{ color: accent, fontSize: 16, lineHeight: '20px' }}>⚠</span>
-          )}
-          <div style={{ fontSize: 13, lineHeight: 1.5, color: TOKENS.text, flex: 1 }}>
-            {state.text}
-            {state.proxy && (
-              <div style={{ fontSize: 12, color: TOKENS.textDim, marginTop: 4 }}>
-                Nearest sampled beach: {state.proxy.name} (~{state.proxy.miles} mi)
-              </div>
-            )}
-          </div>
+        {/* Status row: colored dot + status word + (later) tested date */}
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 6 }}>
+          <span style={{
+            display: 'inline-block', width: 8, height: 8, borderRadius: '50%',
+            background: dotColor, flexShrink: 0, marginRight: 4,
+            transform: 'translateY(-1px)',
+          }}/>
+          <span style={{ fontSize: 16, fontWeight: 500, color: dotColor }}>
+            {statusLabel}
+          </span>
+          <span style={{
+            fontFamily: 'JetBrains Mono, ui-monospace, monospace',
+            fontSize: 12, color: TOKENS.textDim,
+          }}>
+            · Tested data: live feed pending
+          </span>
         </div>
+
+        {/* Context: concern text (caution) or scope description (others) */}
+        {state.text && (
+          <div style={{ fontSize: 13, lineHeight: 1.5, color: TOKENS.text }}>
+            {state.text}
+          </div>
+        )}
+        {state.proxy && (
+          <div style={{ fontSize: 12, color: TOKENS.textDim, marginTop: 4 }}>
+            Nearest sampled beach: {state.proxy.name} (~{state.proxy.miles} mi)
+          </div>
+        )}
+
         {state.source && (
           <div style={{
             fontFamily: 'JetBrains Mono, ui-monospace, monospace',
