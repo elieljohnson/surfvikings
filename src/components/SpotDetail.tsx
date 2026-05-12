@@ -461,7 +461,16 @@ function WaterQualityPanel({ state }: { state: WaterQualityState }) {
         background: bg, border: `1px solid ${borderColor}`,
         borderRadius: 8, padding: '12px 14px',
       }}>
-        {/* Status row: colored dot + status word + (later) tested date */}
+        {/* Status row: colored dot + status word. We had a 'Tested data:
+         * live feed pending' line here originally, anticipating that the
+         * CA Open Data Portal Beach Watch CSV would supply per-spot
+         * last-sample dates. Direct API queries on May 11 2026 confirmed
+         * that source is essentially historical (most recent Santa Cruz
+         * Bacteria sample: 9/9/2024; most recent advisory record creation:
+         * 2015). Wiring it would surface 'Tested 9/9/2024' which reads as
+         * 'app is broken,' not 'state data is stale.' Per-county scrapers
+         * are the only path to real freshness; until that ships, the
+         * status pill stands on its own with source attribution. */}
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 6 }}>
           <span style={{
             display: 'inline-block', width: 8, height: 8, borderRadius: '50%',
@@ -470,12 +479,6 @@ function WaterQualityPanel({ state }: { state: WaterQualityState }) {
           }}/>
           <span style={{ fontSize: 16, fontWeight: 500, color: dotColor }}>
             {statusLabel}
-          </span>
-          <span style={{
-            fontFamily: 'JetBrains Mono, ui-monospace, monospace',
-            fontSize: 12, color: TOKENS.textDim,
-          }}>
-            · Tested data: live feed pending
           </span>
         </div>
 
