@@ -65,7 +65,7 @@ describe('parseSanMateoKML', () => {
     const readings = parseSanMateoKML(SAMPLE_KML);
     const fitz = readings.find((r) => r.beachName === 'FITZGERALD MARINE RESERVE');
     expect(fitz?.status).toBe('caution');
-    expect(fitz?.rawStatus).toMatch(/Posted/);
+    expect(fitz?.rawStatus).toMatch(/advisory posted/i);
   });
 
   it('drops Not Sampled (gray) placemarks rather than emitting a meaningless reading', () => {

@@ -41,9 +41,9 @@ export async function fetchSanMateo(signal?: AbortSignal): Promise<LiveBeachRead
 /** Map an icon hex color to our normalized status tier. */
 function colorToStatus(hex: string): { status: LiveBeachReading['status']; raw: string } | undefined {
   const h = hex.toUpperCase();
-  if (h === '0F9D58') return { status: 'open',    raw: 'Not Posted' };
-  if (h === 'A52714') return { status: 'caution', raw: 'Posted' };
-  if (h === 'FFA500') return { status: 'caution', raw: 'Posted (Not Sampled)' };
+  if (h === '0F9D58') return { status: 'open',    raw: 'No advisory posted' };
+  if (h === 'A52714') return { status: 'caution', raw: 'Water quality advisory posted' };
+  if (h === 'FFA500') return { status: 'caution', raw: 'Water quality advisory posted (last sample missed)' };
   // 757575 (gray / Not Sampled) and anything unknown — drop the reading,
   // we'd rather hide than guess.
   return undefined;
