@@ -19,9 +19,12 @@ const REGION_ORDER: { id: string; label: string }[] = [
 ];
 
 /** Default min score threshold — chips below this are hidden from the
- *  dashboard. 55 is "fair" on our score scale; below that conditions
- *  aren't worth the drive for most surfers. */
-export const DEFAULT_MIN_SCORE = 55;
+ *  dashboard. Set to 25 (effectively "show almost everything") so new
+ *  visitors evaluating the app — recruiters, interviewers, surfers
+ *  curious what it does — see populated chips even on flat days.
+ *  Returning users with their own preference set in localStorage are
+ *  unaffected; this only changes the first-load experience. */
+export const DEFAULT_MIN_SCORE = 25;
 
 interface HomeBase {
   lat: number;
@@ -67,7 +70,7 @@ export function Settings() {
 
       <Group title="Alerts">
         <Toggle label="Epic window alerts" hint="Notify when a tracked spot hits 75+" on={notifyEpic} onChange={setNotifyEpic}/>
-        <Slider label="Min score threshold" hint="Hide chips below this score on the dashboard" value={minScore} onChange={setMinScore} min={30} max={85}/>
+        <Slider label="Min score threshold" hint="Hide chips below this score on the dashboard" value={minScore} onChange={setMinScore} min={25} max={85}/>
         {/* Mavericks watch toggle removed pending push-notifications infra
             (backlog item: push notifications). Restore when notifications
             actually have a delivery path. */}
