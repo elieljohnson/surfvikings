@@ -84,7 +84,7 @@ export function Settings() {
         <div style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 13, letterSpacing: '0.18em', color: TOKENS.textMute, textTransform: 'uppercase' }}>Settings</div>
         <div style={{ fontSize: 22, fontWeight: 600, letterSpacing: '-0.02em', marginTop: 4 }}>Surf Vikings</div>
         <div style={{ fontSize: 12, color: TOKENS.textMute, marginTop: 6, lineHeight: 1.5 }}>
-          Preferences are saved to this browser only. No account, no sync, no tracking.
+          Preferences are saved to this device only. No account, no sync, no tracking.
         </div>
       </div>
 
