@@ -92,6 +92,25 @@ export const WATER_QUALITY: Record<string, WaterQualityInfo> = {
   'ocean-beach-north':   { liveBeachName: 'Ocean Beach at Balboa Street' },
   'ocean-beach':         { liveBeachName: 'Ocean Beach at Lincoln Way' },
   'ocean-beach-south':   { liveBeachName: 'Ocean Beach at Sloat Boulevard' },
+
+  // San Mateo County (KML scrape). Beach names match the MyMaps Placemark
+  // <name> values verbatim (uppercase). Linda Mar/Pedro Point share the
+  // San Pedro Creek station — the creek is the dominant water-quality
+  // signal for that stretch. Martin's/Tunitas/Año Nuevo aren't on SM's
+  // sampling list and stay unmapped (panel hides).
+  'sharp-park':    { liveBeachName: 'SHARP PARK #3' },
+  'linda-mar':     { liveBeachName: 'LINDA MAR #5 (at San Pedro Creek)' },
+  'pedro-point':   { liveBeachName: 'LINDA MAR #5 (at San Pedro Creek)' },
+  'rockaway':      { liveBeachName: 'ROCKAWAY BEACH' },
+  'montara':       { liveBeachName: 'MONTARA BEACH' },
+  'princeton':     { liveBeachName: 'PILLAR POINT #9' },
+  'mavericks':     { liveBeachName: 'PILLAR POINT #8' },
+  'francis-beach': { liveBeachName: 'FRANCIS BEACH' },
+  'san-gregorio':  { liveBeachName: 'SAN GREGORIO BEACH' },
+  'pomponio':      { liveBeachName: 'POMPONIO BEACH' },
+  'pescadero':     { liveBeachName: 'PESCADERO BEACH' },
+  'bean-hollow':   { liveBeachName: 'BEAN HOLLOW BEACH' },
+  'gazos':         { liveBeachName: 'GAZOS CREEK BEACH ACCESS' },
 };
 
 /** Default monitor source for a spot's region. Counties run their own
