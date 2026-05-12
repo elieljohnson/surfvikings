@@ -13,9 +13,13 @@ describe('getWaterQuality', () => {
     expect(getWaterQuality('capitola-rivermouth')).toBeDefined();
   });
 
-  it('returns info for the two rain-sensitive spots from source notes', () => {
-    expect(getWaterQuality('mitchells-cove')).toBeDefined();
-    expect(getWaterQuality('26th-ave')).toBeDefined();
+  it('classifies structural vs rain-only concerns from source notes', () => {
+    // Mitchell's Cove: sewage outfall offshore is structural — always amber
+    expect(getWaterQuality('mitchells-cove')?.permanentAdvisory).toMatch(/Sewage outfall/);
+    // 26th Ave: water quality is "decent" baseline per Surfline, only
+    // worth flagging post-rain — rainSensitive, not permanentAdvisory
+    expect(getWaterQuality('26th-ave')?.rainSensitive).toMatch(/runoff/);
+    expect(getWaterQuality('26th-ave')?.permanentAdvisory).toBeUndefined();
   });
 
   it('returns proxy info for the unmonitored Salt Point stretch', () => {
@@ -62,9 +66,15 @@ describe('stateFor', () => {
   });
 
   it('rain-sensitive spot returns monitored on dry days, caution on wet', () => {
-    const wq = getWaterQuality('mitchells-cove')!;
+    const wq = getWaterQuality('26th-ave')!;
     expect(stateFor(wq, 'sc', 2)?.status).toBe('monitored');
     expect(stateFor(wq, 'sc', 8)?.status).toBe('caution');
+  });
+
+  it('structural concerns (Mitchell\'s sewage outfall) stay caution year-round', () => {
+    const wq = getWaterQuality('mitchells-cove')!;
+    expect(stateFor(wq, 'sc', 0)?.status).toBe('caution');
+    expect(stateFor(wq, 'sc', 20)?.status).toBe('caution');
   });
 
   it('returns not-monitored with proxy info for Salt Point spots', () => {

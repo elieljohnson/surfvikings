@@ -56,11 +56,13 @@ export const WATER_QUALITY: Record<string, WaterQualityInfo> = {
   'capitola-rivermouth': {
     permanentAdvisory: 'Soquel Creek — direct outflow at the break',
   },
-  // Rain-sensitive runoff spots (flagged during the May data pass; documented
-  // in Surfline / Stormrider notes but not on county permanent-posting lists)
+  // Structural water-quality concerns — always amber regardless of rain
+  // (the underlying issue is present year-round, not weather-dependent).
   'mitchells-cove': {
-    rainSensitive: 'Sewage outfall just offshore — caution after heavy rain',
+    permanentAdvisory: 'Sewage outfall just offshore — baseline fair, worse after rain',
   },
+  // Rain-sensitive runoff spots — baseline is OK, only elevated post-rain.
+  // Per Surfline, 26th Ave's water quality is "decent" except after storms.
   '26th-ave': {
     rainSensitive: 'Sand sensitive to rain runoff — caution after heavy rain',
   },
