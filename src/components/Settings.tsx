@@ -39,17 +39,43 @@ export function Settings() {
   // Home base is editable here AND from the dashboard header — both
   // write to the same localStorage keys, so changing it from either
   // surface is reflected on the other. Geocoding runs in the background
-  // on commit so the home coords stay in sync with the label string.
+  // on commit; localStorage is only updated when geocoding succeeds, so
+  // bad input ("asdfg") can't leave the label and coords mismatched.
   const [home, setHome] = useLocalStorage<HomeBaseGeo | null>('sv:user:home', null);
   const [homeLoc, setHomeLoc] = useLocalStorage<string>('sv:user:location', 'Mill Valley');
   const [editingHome, setEditingHome] = useState(false);
+  // Geocode lifecycle for UI feedback: idle (default), loading (request
+  // in flight), error (no match found). `lastTriedQuery` lets us echo
+  // the failed query back in the error message — "Couldn't find 'X'".
+  const [geocodeStatus, setGeocodeStatus] = useState<'idle' | 'loading' | 'error'>('idle');
+  const [lastTriedQuery, setLastTriedQuery] = useState('');
   const homeLabel = home?.label ?? homeLoc ?? 'Mill Valley, CA';
 
   const commitHome = (label: string) => {
     setEditingHome(false);
-    if (!label) return;
-    setHomeLoc(label);
-    geocode(label).then((g) => { if (g) setHome(g); });
+    // No-op on blank input or no change — don't fire a geocode for
+    // identical labels (avoid the loading flash on a casual tap-out).
+    if (!label || label === homeLoc) return;
+    setLastTriedQuery(label);
+    setGeocodeStatus('loading');
+    geocode(label).then((g) => {
+      if (g) {
+        // Only commit to storage on a successful geocode. Failed input
+        // never touches the live label/coords — old values stay valid.
+        setHomeLoc(label);
+        setHome(g);
+        setGeocodeStatus('idle');
+      } else {
+        setGeocodeStatus('error');
+      }
+    });
+  };
+
+  // Clear any error state when the user starts editing again so they
+  // get a fresh slate to retry.
+  const startEditingHome = () => {
+    setGeocodeStatus('idle');
+    setEditingHome(true);
   };
 
   return (
@@ -67,7 +93,9 @@ export function Settings() {
           label="Location"
           value={homeLabel}
           editing={editingHome}
-          onEditStart={() => setEditingHome(true)}
+          status={geocodeStatus}
+          lastTriedQuery={lastTriedQuery}
+          onEditStart={startEditingHome}
           onCommit={commitHome}
           onCancel={() => setEditingHome(false)}
         />
@@ -132,15 +160,32 @@ function Group({ title, children }: { title: string; children: React.ReactNode }
  *  short ("Tap to edit") because the whole row is the affordance —
  *  no need to direct the user elsewhere. */
 function EditableRow({
-  label, value, editing, onEditStart, onCommit, onCancel,
+  label, value, editing, status = 'idle', lastTriedQuery = '',
+  onEditStart, onCommit, onCancel,
 }: {
   label: string;
   value: string;
   editing: boolean;
+  /** Geocode lifecycle state — drives the hint copy + color. */
+  status?: 'idle' | 'loading' | 'error';
+  /** The free-text the user typed; echoed back in the error message. */
+  lastTriedQuery?: string;
   onEditStart: () => void;
   onCommit: (value: string) => void;
   onCancel: () => void;
 }) {
+  // Hint slot reflects the geocode lifecycle when not editing.
+  // The pacific/error coloring makes status changes scannable.
+  let hintText = 'Tap to edit';
+  let hintColor: string = TOKENS.textMute;
+  if (status === 'loading') {
+    hintText = `Searching for "${lastTriedQuery}"…`;
+    hintColor = TOKENS.pacific;
+  } else if (status === 'error') {
+    hintText = `Couldn't find "${lastTriedQuery}". Try adding a state or country.`;
+    hintColor = '#EF4444'; // red-500 — matches the existing error semantic
+  }
+
   const content = (
     <>
       {/* Label cell shrinks first when the row gets tight so the value
@@ -148,7 +193,7 @@ function EditableRow({
       <div style={{ minWidth: 0, flex: 1 }}>
         <div style={{ fontSize: 14, color: TOKENS.text }}>{label}</div>
         {!editing && (
-          <div style={{ fontSize: 12, color: TOKENS.textMute, marginTop: 2 }}>Tap to edit</div>
+          <div style={{ fontSize: 12, color: hintColor, marginTop: 2, lineHeight: 1.4 }}>{hintText}</div>
         )}
       </div>
       {editing ? (
