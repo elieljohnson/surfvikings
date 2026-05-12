@@ -425,9 +425,12 @@ function SpectralPanel({
 // signal. Red 'closed' tier is reserved for Phase 3 active beach closures.
 function WaterQualityPanel({ info, recentRainMm }: { info: WaterQualityInfo; recentRainMm: number }) {
   const tier = tierOf(info, recentRainMm);
-  // Phase 1 always lands at 'caution'; future 'closed' will use TOKENS.poor.
-  const color = tier === 'closed' ? TOKENS.poor : TOKENS.meh;
-  const bg = tier === 'closed' ? 'rgba(239, 68, 68, 0.08)' : 'rgba(249, 115, 22, 0.08)';
+  // Phase 1 always lands at 'caution' — true yellow (mediocre token, the
+  // existing scoreColor mid-tier). Orange/meh leans too red; the previous
+  // pass with that color read as 'red alert' to Eliel. Yellow is the
+  // 'be aware' register. Future 'closed' tier will use TOKENS.poor red.
+  const color = tier === 'closed' ? TOKENS.poor : TOKENS.mediocre;
+  const bg = tier === 'closed' ? 'rgba(239, 68, 68, 0.08)' : 'rgba(234, 179, 8, 0.08)';
   const baseText = info.permanentAdvisory || info.rainSensitive || '';
   // For rain-sensitive cautions, append the trigger amount so the user
   // sees 'this is firing because 12mm fell in the past 48h' rather than
