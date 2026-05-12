@@ -23,7 +23,7 @@ export function Landing() {
       <FeatureSection
         eyebrow="Best Window detection"
         headline="Know exactly when to paddle out."
-        body="The score engine runs every spot across a 48-hour forecast. When a clean window opens, the app finds it and labels it: tide rising into optimal, swell peaking, wind dropping below 10 kts. No more guessing which hour to set the alarm for."
+        body="The score engine runs every spot across a 7-day forecast. When a clean window opens, the app finds it and labels it: tide rising into optimal, swell peaking, wind dropping below 10 kts. No more guessing which hour to set the alarm for."
         imageSlug="dashboard"
         imageAlt="Dashboard showing Top Pick and Best Window cards"
         reversed
