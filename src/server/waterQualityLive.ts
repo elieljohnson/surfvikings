@@ -10,8 +10,9 @@
 //   Marin (hand-curated fixture)    — weekly during Apr–Oct, screenshot-fed
 //                                     because Marin's page is Cloudflare-
 //                                     blocked. See waterQualityMarinManual.ts.
-// Future:
-//   SC     — date-only fresh data; permanent postings already encoded
+//   Santa Cruz (ArcGIS FeatureSvc)  — weekly, 4-tier model, 21 ocean stations
+//                                     + creek mouths. Only source that can
+//                                     emit the 'closed' tier (Serious Risk).
 
 export interface LiveBeachReading {
   /** Canonical beach name used by the source (matches what we put in the
@@ -183,15 +184,19 @@ export async function fetchAllLiveWaterQuality(
   // Import lazily to avoid a circular type-only cycle (SM module imports
   // LiveBeachReading from this file).
   const { fetchSanMateo } = await import('./waterQualitySanMateo');
+  const { fetchSantaCruz } = await import('./waterQualitySantaCruz');
   const { fetchMarinManual } = await import('./waterQualityMarinManual');
-  const [sonoma, sfpuc, sanMateo] = await Promise.all([
+  const [sonoma, sfpuc, sanMateo, santaCruz] = await Promise.all([
     fetchSonomaCounty(signal),
     fetchSFPUC(signal),
     fetchSanMateo(signal),
+    fetchSantaCruz(signal),
   ]);
   const marin = fetchMarinManual(); // sync, no network
   const out: Record<string, LiveBeachReading> = {};
-  for (const r of [...sonoma, ...sfpuc, ...sanMateo, ...marin]) out[r.beachName] = r;
+  for (const r of [...sonoma, ...sfpuc, ...sanMateo, ...santaCruz, ...marin]) {
+    out[r.beachName] = r;
+  }
   return out;
 }
 

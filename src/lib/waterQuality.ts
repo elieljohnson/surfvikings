@@ -45,29 +45,62 @@ export interface WaterQualityInfo {
  *  concern (permanentAdvisory / rainSensitive) or with an explicit
  *  notMonitored flag for spots outside any county's sampling list. */
 export const WATER_QUALITY: Record<string, WaterQualityInfo> = {
-  // Santa Cruz County permanent postings (per SCCEH; never lifted)
+  // Santa Cruz County permanent postings (per SCCEH; never lifted).
+  // liveBeachName is the SC ArcGIS feature service station name —
+  // live readings drive the colored tier; the permanentAdvisory text
+  // appears as year-round context when the live reading is clean.
   'cowell': {
     permanentAdvisory: 'Neary Lagoon outfall — bacterial contamination present year-round',
+    liveBeachName: 'Cowell Beach',
   },
   'rivermouth': {
     permanentAdvisory: 'San Lorenzo River — direct outflow at the break',
+    liveBeachName: 'Main Beach at San Lorenzo River',
   },
   'capitola': {
     permanentAdvisory: 'Soquel Creek outflow adjacent — caution especially after rain',
+    liveBeachName: 'Capitola Beach at Jetty',
   },
   'capitola-rivermouth': {
     permanentAdvisory: 'Soquel Creek — direct outflow at the break',
+    liveBeachName: 'Capitola Beach at Soquel Creek',
   },
-  // Structural water-quality concerns — always amber regardless of rain
-  // (the underlying issue is present year-round, not weather-dependent).
+  // Structural water-quality concerns — sewage outfall is a year-round
+  // issue but live readings show whether it's actually elevated today.
   'mitchells-cove': {
     permanentAdvisory: 'Sewage outfall just offshore — baseline fair, worse after rain',
+    liveBeachName: "Mitchell's Cove Beach",
   },
-  // Rain-sensitive runoff spots — baseline is OK, only elevated post-rain.
-  // Per Surfline, 26th Ave's water quality is "decent" except after storms.
+  // Rain-sensitive runoff spot — baseline OK, elevated post-rain.
+  // Twin Lakes is the closest SC sampling station (~1mi east, same
+  // coastal sand system).
   '26th-ave': {
     rainSensitive: 'Sand sensitive to rain runoff — caution after heavy rain',
+    liveBeachName: 'Twin Lakes Beach',
   },
+  // SC spots without permanent advisories — pure live wiring. Sub-peaks
+  // of a single break (Steamer Lane, Pleasure Point) share one station
+  // because they sit on the same nearshore reef and read the same water.
+  'natural-bridges':    { liveBeachName: 'Natural Bridges Beach' },
+  'stockton-ave':       { liveBeachName: "Mitchell's Cove Beach" },
+  'four-mile':          { liveBeachName: 'San Vicente Beach' },
+  'steamer-indicators': { liveBeachName: 'Lighthouse Beach' },
+  'steamer-middle':     { liveBeachName: 'Lighthouse Beach' },
+  'steamer-point':      { liveBeachName: 'Lighthouse Beach' },
+  'steamer-slot':       { liveBeachName: 'Lighthouse Beach' },
+  'sc-harbor':          { liveBeachName: 'Seabright Beach' },
+  'privates':           { liveBeachName: 'Pleasure Point Beach' },
+  'pleasure-first':     { liveBeachName: 'Pleasure Point Beach' },
+  'pleasure-second':    { liveBeachName: 'Pleasure Point Beach' },
+  'pleasure-sewer':     { liveBeachName: 'Pleasure Point Beach' },
+  'pleasure-insides':   { liveBeachName: 'Pleasure Point Beach' },
+  'the-hook':           { liveBeachName: 'Pleasure Point Beach' },
+  'jacks':              { liveBeachName: 'Pleasure Point Beach' },
+  'beer-can':           { liveBeachName: 'Pleasure Point Beach' },
+  // Waddell + Scott Creek are tagged sm-south in our region grouping but
+  // physically sit in Santa Cruz County and appear in SC's sampling list.
+  'waddell':            { liveBeachName: 'Waddell Creek Beach' },
+  'scott-creek':        { liveBeachName: 'Scott Creek Beach' },
   // Sonoma Coast: Salt Point / Fort Ross stretch is not on the county's
   // 7-beach monitoring list. Nearest sampled beach is Stillwater Cove.
   'secrets':     { proxyName: 'Stillwater Cove', proxyMiles: 3 },
@@ -198,32 +231,58 @@ export function stateFor(
   recentRainMm = 0,
   liveReadings: Record<string, LiveReading> = {},
 ): WaterQualityState | undefined {
-  // Permanent advisory always wins, with or without live data
+  // Live reading takes precedence over encoded concerns — the colored
+  // tier reflects this week's actual sample, not a year-round assumption.
+  // The permanentAdvisory text doesn't go away; it becomes the body copy
+  // that explains WHY this spot is sampled in the first place (Neary
+  // Lagoon outfall at Cowells, San Lorenzo river mouth, etc.). On clean
+  // weeks: green dot + permanent-advisory context. On bad weeks: amber
+  // or red dot + the live status as primary text.
+  const liveReading = info?.liveBeachName ? liveReadings[info.liveBeachName] : undefined;
+
+  if (liveReading) {
+    const text = info?.permanentAdvisory
+      ? (liveReading.status === 'open'
+          // Live is clean — lead with the permanent context so users still
+          // see the year-round concern even on a fine sample week.
+          ? info.permanentAdvisory
+          // Live is elevated — lead with the live status. The permanent
+          // context is implicit in the amber/red color; repeating it
+          // would crowd the panel with redundant copy.
+          : liveReading.rawStatus)
+      : (liveReading.status === 'open' ? '' : liveReading.rawStatus);
+    return {
+      status: liveReading.status === 'closed' ? 'closed'
+            : liveReading.status === 'caution' ? 'caution'
+            : 'monitored',
+      text,
+      source: liveReading.source,
+      sampleDate: liveReading.sampleDate,
+    };
+  }
+
+  // No live reading. Fall through to encoded concerns.
   if (info?.permanentAdvisory) {
     const fallbackSource = defaultMonitor(region);
-    const reading = info.liveBeachName ? liveReadings[info.liveBeachName] : undefined;
     return {
       status: 'caution',
       text: info.permanentAdvisory,
-      source: reading?.source ?? fallbackSource,
-      sampleDate: reading?.sampleDate,
+      source: fallbackSource,
     };
   }
   // Rain-sensitive: always render (it's a known concern). Escalate to
   // caution when recent rain crosses the threshold; otherwise stay
   // informational ('monitored') so surfers see the rain-sensitivity note
-  // year-round without an amber dot on dry days.
+  // year-round without an amber dot on dry days. (Live reading is already
+  // consumed above — if execution reaches here, no live reading existed.)
   if (info?.rainSensitive) {
-    const fallbackSource = defaultMonitor(region);
-    const reading = info.liveBeachName ? liveReadings[info.liveBeachName] : undefined;
     const wet = recentRainMm >= RECENT_RAIN_THRESHOLD_MM;
     return {
       status: wet ? 'caution' : 'monitored',
       text: wet
         ? `${info.rainSensitive} · ${recentRainMm.toFixed(1)}mm fell in past 48h`
         : info.rainSensitive,
-      source: reading?.source ?? fallbackSource,
-      sampleDate: reading?.sampleDate,
+      source: defaultMonitor(region),
     };
   }
   // Explicit "not monitored" entry (Salt Point stretch). Always show —
@@ -236,22 +295,7 @@ export function stateFor(
       source: defaultMonitor(region),
     };
   }
-  // Live reading available — map to status/Clean and show the date
-  if (info?.liveBeachName) {
-    const reading = liveReadings[info.liveBeachName];
-    if (reading) {
-      const status: WaterQualityStatus =
-        reading.status === 'closed' ? 'closed'
-          : reading.status === 'caution' ? 'caution'
-            : 'monitored';
-      return {
-        status,
-        text: reading.status === 'open' ? '' : reading.rawStatus,
-        source: reading.source,
-        sampleDate: reading.sampleDate,
-      };
-    }
-  }
-  // No hand-encoded concern AND no live data wired — hide the panel.
+  // info.liveBeachName was set but no matching reading (network failure /
+  // beach renamed upstream / wrong key) — hide rather than show stale.
   return undefined;
 }

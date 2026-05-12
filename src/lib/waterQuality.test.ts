@@ -140,4 +140,70 @@ describe('stateFor', () => {
   it('returns undefined when the spot is in an unknown region with no info', () => {
     expect(stateFor(undefined, 'atlantis', 0)).toBeUndefined();
   });
+
+  describe('live reading takes precedence over permanent advisory (option B)', () => {
+    // The whole point of wiring live data is to surface real-time state.
+    // A spot with a permanent advisory + a fresh "Acceptable" reading should
+    // render green this week — the structural concern is still mentioned in
+    // the body copy as context, but the colored tier reflects truth.
+    const cowell = getWaterQuality('cowell')!;
+
+    it('live "open" reading flips a permanent-advisory spot to monitored', () => {
+      const live = {
+        'Cowell Beach': {
+          beachName: 'Cowell Beach', sampleDate: '2026-05-04', status: 'open' as const,
+          rawStatus: 'No advisory posted', source: 'Santa Cruz County Env. Health',
+        },
+      };
+      const s = stateFor(cowell, 'sc', 0, live);
+      expect(s?.status).toBe('monitored');
+      // Permanent-advisory text still appears as year-round context
+      expect(s?.text).toMatch(/Neary Lagoon/);
+      expect(s?.sampleDate).toBe('2026-05-04');
+    });
+
+    it('live "caution" reading replaces the permanent text with the live status', () => {
+      const live = {
+        'Cowell Beach': {
+          beachName: 'Cowell Beach', sampleDate: '2026-05-04', status: 'caution' as const,
+          rawStatus: 'Health advisory — bacterial threshold exceeded',
+          source: 'Santa Cruz County Env. Health',
+        },
+      };
+      const s = stateFor(cowell, 'sc', 0, live);
+      expect(s?.status).toBe('caution');
+      // Live status wins as primary text — permanent context is implicit
+      // in the amber color, repeating it would be redundant
+      expect(s?.text).toMatch(/Health advisory/);
+    });
+
+    it('live "closed" (Serious Risk) emits the red tier', () => {
+      // First source-produced 'closed' reading in the app. Until SC was
+      // wired, the red UI tier existed in the type system but nothing
+      // emitted it.
+      const live = {
+        'Cowell Beach': {
+          beachName: 'Cowell Beach', sampleDate: '2026-05-04', status: 'closed' as const,
+          rawStatus: 'Serious risk — bacterial levels significantly elevated',
+          source: 'Santa Cruz County Env. Health',
+        },
+      };
+      const s = stateFor(cowell, 'sc', 0, live);
+      expect(s?.status).toBe('closed');
+      expect(s?.text).toMatch(/Serious risk/);
+    });
+
+    it('falls back to permanent advisory when live key is set but no matching reading', () => {
+      // Network failure / station renamed upstream. For a spot WITH a
+      // permanent advisory we fall back to that (Cowells' Neary Lagoon
+      // outfall is a real year-round concern surfers should still see).
+      // For a spot with ONLY liveBeachName and no encoded concern, the
+      // panel hides (that case is covered separately).
+      const s = stateFor(cowell, 'sc', 0, {});
+      expect(s?.status).toBe('caution');
+      expect(s?.text).toMatch(/Neary Lagoon/);
+      // No live reading → no sampleDate
+      expect(s?.sampleDate).toBeUndefined();
+    });
+  });
 });
