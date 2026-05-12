@@ -284,8 +284,8 @@ function PhoneMockup({ imageSlug, imageAlt }: { imageSlug: string; imageAlt: str
 
 function DataProof() {
   const stats: { n: string; label: string }[] = [
-    { n: '28', label: 'NorCal surf spots' },
-    { n: '5', label: 'NOAA buoys' },
+    { n: '64', label: 'NorCal surf spots' },
+    { n: '7', label: 'NOAA buoys' },
     { n: '6', label: 'Tide stations' },
     { n: '7d', label: 'Forecast window' },
   ];
