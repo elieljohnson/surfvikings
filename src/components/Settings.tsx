@@ -143,7 +143,9 @@ function EditableRow({
 }) {
   const content = (
     <>
-      <div>
+      {/* Label cell shrinks first when the row gets tight so the value
+          on the right stays on one line. Hint will wrap if needed. */}
+      <div style={{ minWidth: 0, flex: 1 }}>
         <div style={{ fontSize: 14, color: TOKENS.text }}>{label}</div>
         {!editing && (
           <div style={{ fontSize: 12, color: TOKENS.textMute, marginTop: 2 }}>Tap to edit</div>
@@ -164,6 +166,7 @@ function EditableRow({
         <div style={{
           fontFamily: 'JetBrains Mono, ui-monospace, monospace',
           fontSize: 13, color: TOKENS.textDim,
+          whiteSpace: 'nowrap', flexShrink: 0,
         }}>{value}</div>
       )}
     </>
