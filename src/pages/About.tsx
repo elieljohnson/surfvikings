@@ -14,8 +14,8 @@ export function About() {
           to Santa Cruz. 64 spots, each with its own bathymetry, swell shadow, and tide dependency
           encoded into the scoring model. Built on free public data: wave and weather forecasts from
           NOAA NDBC, NOAA CO-OPS tides, NOAA NWS coastal waters, and Open-Meteo; water-quality
-          results from Sonoma County Environmental Health, SFPUC, San Mateo County, and Marin
-          County Environmental Health.
+          results from Sonoma County Environmental Health, SFPUC, San Mateo County, Marin
+          County Environmental Health, and Santa Cruz County Environmental Health.
         </p>
         <p style={{ marginTop: 16, fontSize: 17, color: '#64748B', lineHeight: 1.6 }}>
           The whole point is to answer one question: should I go now, or wait.

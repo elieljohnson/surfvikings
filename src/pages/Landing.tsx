@@ -287,7 +287,7 @@ function DataProof() {
     { n: '64', label: 'NorCal surf spots' },
     { n: '7', label: 'NOAA buoys' },
     { n: '6', label: 'Tide stations' },
-    { n: '38', label: 'Water quality spots' },
+    { n: '56', label: 'Water quality spots' },
     { n: '7d', label: 'Forecast window' },
   ];
   return (
@@ -333,7 +333,7 @@ function FeatureGrid() {
     { icon: '🔒', title: 'Privacy-first',          body: 'No accounts, no tracking, no ads. Your spots stay on your device.' },
     { icon: '📱', title: 'No app store',           body: 'Install straight from the browser. Works on iOS, Android, desktop.' },
     { icon: '🔌', title: 'Works offline',          body: 'Tide and forecast cached for the dead zones.' },
-    { icon: '💧', title: 'Water quality',          body: 'Weekly bacteria results from 4 county health departments. Know before you paddle out.' },
+    { icon: '💧', title: 'Water quality',          body: 'Weekly bacteria results from 5 county health departments. Know before you paddle out.' },
     { icon: '📊', title: 'Open methodology',       body: 'Scoring model is documented and inspectable.' },
   ];
   return (

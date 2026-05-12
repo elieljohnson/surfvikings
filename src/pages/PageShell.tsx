@@ -281,6 +281,7 @@ function Footer() {
             <FooterLink href="https://sfwater.org" external>SFPUC</FooterLink>
             <FooterLink href="https://www.smchealth.org/" external>San Mateo County</FooterLink>
             <FooterLink href="https://www.marincounty.gov/departments/cda/env-health-svcs/prgm-beach-water-monitoring" external>Marin County EH</FooterLink>
+            <FooterLink href="https://scceh.com/NewHome/Programs/WaterResources/SurfaceWaterStewardship/WaterQualityMonitoring/SurfaceWaterQuality.aspx" external>Santa Cruz County EH</FooterLink>
           </FooterCol>
         </div>
 
