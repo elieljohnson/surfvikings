@@ -58,7 +58,7 @@ export function Settings() {
       </div>
 
       <Group title="Home base">
-        <Row label="Location" value={homeLabel} hint="Tap the dashboard header to edit" mono/>
+        <Row label="Location" value={homeLabel} hint="Tap the location pill in the top-right of the dashboard to edit" mono/>
       </Group>
 
       <FavoritesEditor

@@ -33,6 +33,21 @@ const RESET_BUTTON: React.CSSProperties = {
 
 // Tiny inline text editor. Autofocuses, selects all, commits on Enter/blur,
 // cancels on Escape. Swaps in place for a label so the header never jumps.
+/** Subtle pencil icon used to signal that a piece of header text is
+ *  actually a tap target. The text alone (small uppercase muted-gray
+ *  caption, or large greeting) reads as a label otherwise — users
+ *  don't realize tapping it opens an inline editor. */
+function EditIcon({ size = 10 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 12 12" aria-hidden="true"
+      style={{ flexShrink: 0, opacity: 0.55 }}>
+      <path d="M8.5 1.5 L10.5 3.5 L4 10 L1.5 10.5 L2 8 Z"
+        fill="none" stroke="currentColor" strokeWidth="1.2"
+        strokeLinejoin="round" strokeLinecap="round"/>
+    </svg>
+  );
+}
+
 /** Dashboard's empty state — surfaces when the user has un-favorited
  *  every spot. Sends them to Settings to pick at least one rather than
  *  trying to render a meaningless "no spots" hero card. */
@@ -267,9 +282,11 @@ export function Dashboard({ onOpenSpot }: DashboardProps) {
                   ...RESET_BUTTON,
                   fontSize: 24, fontWeight: 600, letterSpacing: '-0.02em', marginTop: 6,
                   color: TOKENS.text, textAlign: 'left', width: '100%',
+                  display: 'inline-flex', alignItems: 'baseline', gap: 8,
                 }}
               >
-                {name ? `${greeting}, ${name}.` : `${greeting}. Tap to add name`}
+                <span>{name ? `${greeting}, ${name}.` : `${greeting}. Tap to add name`}</span>
+                {name && <EditIcon/>}
               </button>
             )}
           </div>
@@ -296,9 +313,11 @@ export function Dashboard({ onOpenSpot }: DashboardProps) {
                   fontFamily: 'JetBrains Mono, ui-monospace, monospace',
                   fontSize: 13, letterSpacing: '0.12em',
                   color: TOKENS.textMute, textTransform: 'uppercase',
+                  display: 'inline-flex', alignItems: 'center', gap: 6,
                 }}
               >
-                {homeLoc}
+                <span>{homeLoc}</span>
+                <EditIcon/>
               </button>
             )}
             <div style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 14, fontWeight: 500, color: TOKENS.text, marginTop: 4 }}>
