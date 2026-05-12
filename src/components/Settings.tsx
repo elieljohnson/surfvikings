@@ -82,7 +82,7 @@ export function Settings() {
 
       <Group title="Alerts">
         <Toggle label="Epic window alerts" hint="Notify when a tracked spot hits 75+" on={notifyEpic} onChange={setNotifyEpic}/>
-        <Slider label="Min score threshold" hint="Hide chips below this score on the dashboard" value={minScore} onChange={setMinScore} min={25} max={85}/>
+        <Slider label="Min score threshold" hint="Hide chips below this score on the dashboard" value={minScore} onChange={setMinScore} min={0} max={100}/>
         {/* Mavericks watch toggle removed pending push-notifications infra
             (backlog item: push notifications). Restore when notifications
             actually have a delivery path. */}
