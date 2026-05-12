@@ -184,7 +184,12 @@ export function SpotDetail({ spotId, onBack }: SpotDetailProps) {
       <VectorsPanel spot={activeSpot} current={current}/>
       {(() => {
         const recentRainMm = response?.spotMeta?.[activeSpot.id]?.recentRainMm ?? 0;
-        const wq = stateFor(getWaterQuality(activeSpot.id), activeSpot.region, recentRainMm);
+        const wq = stateFor(
+          getWaterQuality(activeSpot.id),
+          activeSpot.region,
+          recentRainMm,
+          response?.waterQuality ?? {},
+        );
         return wq ? <WaterQualityPanel state={wq}/> : null;
       })()}
       <SunMoonPanel spot={activeSpot}/>
@@ -413,6 +418,15 @@ function SpectralPanel({
   );
 }
 
+/** Format a YYYY-MM-DD sample date as e.g. "5/4 · 7d ago". */
+function formatSampleDate(iso: string): string {
+  const d = new Date(`${iso}T12:00:00`);  // noon avoids TZ-edge off-by-one
+  if (Number.isNaN(d.getTime())) return iso;
+  const days = Math.floor((Date.now() - d.getTime()) / 86400000);
+  const ageStr = days === 0 ? 'today' : days === 1 ? '1d ago' : `${days}d ago`;
+  return `${d.getMonth() + 1}/${d.getDate()} · ${ageStr}`;
+}
+
 // Water-quality panel — renders for every spot with a known monitor or
 // concern. Status-pill UI: ● Clean (green) / ⚠ Caution (amber) /
 // ◌ Not Monitored (dim) / ⚠ Closed (red, Phase 3).
@@ -461,16 +475,10 @@ function WaterQualityPanel({ state }: { state: WaterQualityState }) {
         background: bg, border: `1px solid ${borderColor}`,
         borderRadius: 8, padding: '12px 14px',
       }}>
-        {/* Status row: colored dot + status word. We had a 'Tested data:
-         * live feed pending' line here originally, anticipating that the
-         * CA Open Data Portal Beach Watch CSV would supply per-spot
-         * last-sample dates. Direct API queries on May 11 2026 confirmed
-         * that source is essentially historical (most recent Santa Cruz
-         * Bacteria sample: 9/9/2024; most recent advisory record creation:
-         * 2015). Wiring it would surface 'Tested 9/9/2024' which reads as
-         * 'app is broken,' not 'state data is stale.' Per-county scrapers
-         * are the only path to real freshness; until that ships, the
-         * status pill stands on its own with source attribution. */}
+        {/* Status row: colored dot + status word + (when a live county
+         * reading is matched) "Tested 5/4 · 7d ago". State CSV approach
+         * was abandoned because it's historical-only (May 2026 dig); now
+         * driven by per-county scrapers in src/server/waterQualityLive.ts. */}
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 6 }}>
           <span style={{
             display: 'inline-block', width: 8, height: 8, borderRadius: '50%',
@@ -480,6 +488,14 @@ function WaterQualityPanel({ state }: { state: WaterQualityState }) {
           <span style={{ fontSize: 16, fontWeight: 500, color: dotColor }}>
             {statusLabel}
           </span>
+          {state.sampleDate && (
+            <span style={{
+              fontFamily: 'JetBrains Mono, ui-monospace, monospace',
+              fontSize: 12, color: TOKENS.textDim,
+            }}>
+              · Tested {formatSampleDate(state.sampleDate)}
+            </span>
+          )}
         </div>
 
         {/* Context: concern text (caution) or scope description (others) */}

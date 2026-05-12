@@ -3,6 +3,7 @@
 
 import { BUOY_MAP_BY_SPOT } from '../lib/buoyMapping';
 import { SPOTS, type Spot } from '../lib/data';
+import { fetchAllLiveWaterQuality, type LiveBeachReading } from './waterQualityLive';
 
 export const M_TO_FT = 3.28084;
 export const MS_TO_KTS = 1.94384;
@@ -633,6 +634,9 @@ export interface ConditionsPayload {
   tides: Record<string, TidePrediction>;
   /** NWS Coastal Waters Forecast periods, keyed by zone (PZZ540 etc.). */
   nwsForecasts: Record<string, NwsZoneForecast>;
+  /** Live water-quality readings keyed by source-side beach name. The
+   *  client looks up by waterQuality.liveBeachName for the active spot. */
+  waterQuality: Record<string, LiveBeachReading>;
   meta: { source: 'live' | 'partial'; errors?: string[] };
 }
 
@@ -642,7 +646,7 @@ export async function buildConditions(spotIds: string[], signal?: AbortSignal): 
   const tideIds = Array.from(new Set(spots.map((s) => BUOY_MAP_BY_SPOT[s.id]?.tideStation).filter(Boolean)));
 
   const errors: string[] = [];
-  const [buoyList, spectralList, tideList, marineList, nwsForecasts] = await Promise.all([
+  const [buoyList, spectralList, tideList, marineList, nwsForecasts, waterQuality] = await Promise.all([
     Promise.all(buoyIds.map((id) => fetchBuoy(id, signal))),
     Promise.all(buoyIds.map((id) => fetchSpectral(id, signal))),
     // Tides extend ~7d/168h to cover the marine forecast horizon.
@@ -655,6 +659,13 @@ export async function buildConditions(spotIds: string[], signal?: AbortSignal): 
     fetchNwsCwf('MTR', signal).catch((e) => {
       errors.push(`nws: ${e.message ?? e}`);
       return {} as Record<string, NwsZoneForecast>;
+    }),
+    // Per-county water quality (Sonoma HTML + SFPUC JSON API). Marin /
+    // San Mateo / Santa Cruz live paths not wired yet (see preview/wq-
+    // live-data commit history); those spots' panels hide.
+    fetchAllLiveWaterQuality(signal).catch((e) => {
+      errors.push(`waterQuality: ${e.message ?? e}`);
+      return {} as Record<string, LiveBeachReading>;
     }),
   ]);
 
@@ -688,6 +699,7 @@ export async function buildConditions(spotIds: string[], signal?: AbortSignal): 
     buoys,
     tides,
     nwsForecasts,
+    waterQuality,
     meta: { source: errors.length ? 'partial' : 'live', errors: errors.length ? errors : undefined },
   };
 }

@@ -18,18 +18,20 @@ export interface WaterQualityInfo {
   permanentAdvisory?: string;
 
   /** Yellow caution: spot is known to degrade after rain but is not
-   *  permanently posted. Renders as a passive year-round note today;
-   *  Phase 2 will gate it on actual recent precipitation (we already
-   *  have precipitation + precipitationProb in the forecast pipeline). */
+   *  permanently posted. Gated by recentRainMm at runtime. */
   rainSensitive?: string;
 
-  /** Phase 2: opaque CA Beach Watch monitoring station ID. */
-  beachId?: string;
-  beachName?: string;
+  /** Live-data lookup key — the beach name as it appears in the source's
+   *  feed (Sonoma County HTML table caption, or SFPUC stationname). When
+   *  set, server-side fetches the latest reading and merges it into the
+   *  panel. Without this the panel can't show a fresh date or live status,
+   *  so it hides entirely (per Eliel: 'only display the card when we have
+   *  data wired'). */
+  liveBeachName?: string;
 
-  /** Phase 2: when the spot itself isn't sampled, the nearest sampled
-   *  beach's name and distance (Salt Point → Stillwater Cove ~8 mi).
-   *  Honest fallback for the spots in unmonitored stretches. */
+  /** When the spot itself isn't sampled, the nearest sampled beach's
+   *  name and distance (Salt Point → Stillwater Cove ~8 mi). Honest
+   *  fallback for the spots in unmonitored stretches. */
   proxyName?: string;
   proxyMiles?: number;
 }
@@ -71,6 +73,25 @@ export const WATER_QUALITY: Record<string, WaterQualityInfo> = {
   'secrets':     { proxyName: 'Stillwater Cove', proxyMiles: 3 },
   'timber-cove': { proxyName: 'Stillwater Cove', proxyMiles: 4 },
   'mystos':      { proxyName: 'Stillwater Cove', proxyMiles: 1 },
+
+  // ─────────────────────────────────────────────────────────────────────
+  // Live-data spot → beach name mappings. Strings here must match the
+  // source's beach name exactly so the merge in /api/conditions can join.
+  // ─────────────────────────────────────────────────────────────────────
+
+  // Sonoma County (HTML scrape)
+  'russian-rivermouth': { liveBeachName: 'Goat Rock State Beach' },
+  'salmon-creek':       { liveBeachName: 'Salmon Creek State Beach' },
+  'doran-beach':        { liveBeachName: 'Doran Regional Park Beach' },
+
+  // SFPUC (JSON API). Multiple OB stations exist — picked the geographically
+  // nearest match for each spot. Fort Point uses Crissy Field West (~500m
+  // east of the actual surf spot, but it's the closest SFPUC station).
+  'fort-point':          { liveBeachName: 'Crissy Field Beach West' },
+  'kellys-cove':         { liveBeachName: 'Ocean Beach at Balboa Street' },
+  'ocean-beach-north':   { liveBeachName: 'Ocean Beach at Balboa Street' },
+  'ocean-beach':         { liveBeachName: 'Ocean Beach at Lincoln Way' },
+  'ocean-beach-south':   { liveBeachName: 'Ocean Beach at Sloat Boulevard' },
 };
 
 /** Default monitor source for a spot's region. Counties run their own
@@ -113,48 +134,87 @@ export interface WaterQualityState {
   /** Human-written description of the concern (caution) or scope of
    *  monitoring. Empty for 'monitored' (no concern, just attribution). */
   text: string;
-  /** Source attribution for the panel footer. Always shown when present. */
+  /** Source attribution for the panel footer. */
   source?: string;
   /** Set on 'not-monitored' status. Renders as 'Nearest sampled beach:
    *  Stillwater Cove (~3 mi)' below the main copy. */
   proxy?: { name: string; miles: number };
+  /** ISO date (YYYY-MM-DD) of the most recent county sample, when a live
+   *  reading was matched. UI renders 'Tested 5/4 · 7d ago' next to status. */
+  sampleDate?: string;
 }
 
-/** Compute the active water-quality state for a spot, given an explicit
- *  WaterQualityInfo override (or none), the spot's region (for default
- *  monitor source), and how much rain has fallen in the last 48h. */
+/** Minimal shape of a live reading needed by stateFor. Server-side type
+ *  is LiveBeachReading in src/server/waterQualityLive.ts. */
+export interface LiveReading {
+  beachName: string;
+  sampleDate: string;
+  status: 'open' | 'caution' | 'closed';
+  rawStatus: string;
+  source: string;
+}
+
+/** Compute the active water-quality state for a spot.
+ *
+ *  Per Eliel's spec: "only display the card when we have data wired."
+ *  The panel renders only when there's either a hand-encoded concern
+ *  (permanent advisory / rain-sensitive / not-monitored proxy) OR a
+ *  live reading matched via liveBeachName. Spots with neither return
+ *  undefined and skip the panel entirely. */
 export function stateFor(
   info: WaterQualityInfo | undefined,
   region: string,
   recentRainMm = 0,
+  liveReadings: Record<string, LiveReading> = {},
 ): WaterQualityState | undefined {
-  const source = defaultMonitor(region);
-  // Permanent advisory always wins
+  // Permanent advisory always wins, with or without live data
   if (info?.permanentAdvisory) {
-    return { status: 'caution', text: info.permanentAdvisory, source };
+    const fallbackSource = defaultMonitor(region);
+    const reading = info.liveBeachName ? liveReadings[info.liveBeachName] : undefined;
+    return {
+      status: 'caution',
+      text: info.permanentAdvisory,
+      source: reading?.source ?? fallbackSource,
+      sampleDate: reading?.sampleDate,
+    };
   }
   // Rain-sensitive caution gated on actual recent rain
   if (info?.rainSensitive && recentRainMm >= RECENT_RAIN_THRESHOLD_MM) {
+    const fallbackSource = defaultMonitor(region);
+    const reading = info.liveBeachName ? liveReadings[info.liveBeachName] : undefined;
     return {
       status: 'caution',
       text: `${info.rainSensitive} · ${recentRainMm.toFixed(1)}mm fell in past 48h`,
-      source,
+      source: reading?.source ?? fallbackSource,
+      sampleDate: reading?.sampleDate,
     };
   }
-  // Explicit "not monitored" entry (Salt Point stretch)
+  // Explicit "not monitored" entry (Salt Point stretch). Always show —
+  // the proxy info IS the value, fresh data is irrelevant by definition.
   if (info?.proxyName && info?.proxyMiles !== undefined) {
     return {
       status: 'not-monitored',
       text: 'Not on the county sampling list',
       proxy: { name: info.proxyName, miles: info.proxyMiles },
-      source,
+      source: defaultMonitor(region),
     };
   }
-  // Spot is in a monitored region but has no known concern. No body text —
-  // the 'Clean' status pill in the UI is the message; supplementary copy
-  // would be redundant.
-  if (source) {
-    return { status: 'monitored', text: '', source };
+  // Live reading available — map to status/Clean and show the date
+  if (info?.liveBeachName) {
+    const reading = liveReadings[info.liveBeachName];
+    if (reading) {
+      const status: WaterQualityStatus =
+        reading.status === 'closed' ? 'closed'
+          : reading.status === 'caution' ? 'caution'
+            : 'monitored';
+      return {
+        status,
+        text: reading.status === 'open' ? '' : reading.rawStatus,
+        source: reading.source,
+        sampleDate: reading.sampleDate,
+      };
+    }
   }
+  // No hand-encoded concern AND no live data wired — hide the panel.
   return undefined;
 }

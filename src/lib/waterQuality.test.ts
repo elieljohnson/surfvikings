@@ -59,15 +59,57 @@ describe('stateFor', () => {
     expect(stateFor(wq, 'sc', 20)?.status).toBe('caution');
   });
 
-  it('returns monitored status for spots without concerns in a monitored region', () => {
-    const s = stateFor(undefined, 'marin', 0);
-    expect(s?.status).toBe('monitored');
-    expect(s?.source).toMatch(/Marin/);
+  it('returns undefined for spots without concerns AND without live data', () => {
+    // Per Eliel: "only display the card when we have data wired."
+    // A spot in a monitored region with no live reading + no encoded
+    // concern returns undefined — the panel hides.
+    expect(stateFor(undefined, 'marin', 0)).toBeUndefined();
+    expect(stateFor(undefined, 'sc', 0)).toBeUndefined();
   });
 
-  it('rain-sensitive spot returns monitored on dry days, caution on wet', () => {
+  it('returns monitored + sampleDate when a live reading is matched', () => {
+    const info = { liveBeachName: 'Salmon Creek State Beach' };
+    const live = {
+      'Salmon Creek State Beach': {
+        beachName: 'Salmon Creek State Beach',
+        sampleDate: '2026-05-04',
+        status: 'open' as const,
+        rawStatus: 'Open',
+        source: 'Sonoma County Env. Health',
+      },
+    };
+    const s = stateFor(info, 'sonoma', 0, live);
+    expect(s?.status).toBe('monitored');
+    expect(s?.sampleDate).toBe('2026-05-04');
+    expect(s?.source).toMatch(/Sonoma/);
+  });
+
+  it('promotes live status of caution / closed to the panel', () => {
+    const info = { liveBeachName: 'Test Beach' };
+    const cautionReading = {
+      beachName: 'Test Beach',
+      sampleDate: '2026-05-04',
+      status: 'caution' as const,
+      rawStatus: 'Caution: elevated coliform',
+      source: 'Test County',
+    };
+    const s = stateFor(info, 'sonoma', 0, { 'Test Beach': cautionReading });
+    expect(s?.status).toBe('caution');
+    expect(s?.text).toContain('Caution');
+  });
+
+  it('hides spot panel when liveBeachName is set but no matching reading', () => {
+    // Server fetch failed / county unreachable / beach name mis-spelled —
+    // return undefined so panel hides rather than showing stale/blank.
+    expect(stateFor({ liveBeachName: 'Salmon Creek State Beach' }, 'sonoma', 0, {})).toBeUndefined();
+  });
+
+  it('rain-sensitive spot hides on dry days (no live data wired), shows caution on wet', () => {
+    // 26th Ave has rainSensitive set but no liveBeachName (SC scraper
+    // not built yet). On dry days the panel hides entirely; rain
+    // trigger renders an amber caution either way.
     const wq = getWaterQuality('26th-ave')!;
-    expect(stateFor(wq, 'sc', 2)?.status).toBe('monitored');
+    expect(stateFor(wq, 'sc', 2)).toBeUndefined();
     expect(stateFor(wq, 'sc', 8)?.status).toBe('caution');
   });
 
@@ -85,10 +127,11 @@ describe('stateFor', () => {
     expect(s?.proxy?.miles).toBe(3);
   });
 
-  it('always includes source attribution when the region is monitored', () => {
-    expect(stateFor(undefined, 'sc', 0)?.source).toMatch(/Santa Cruz/);
-    expect(stateFor(undefined, 'sf', 0)?.source).toMatch(/SFPUC/);
-    expect(stateFor(undefined, 'sonoma', 0)?.source).toMatch(/Sonoma/);
+  it('includes source attribution on permanent-advisory spots via fallback', () => {
+    // Cowells: permanentAdvisory set but no liveBeachName wired. Source
+    // attribution comes from defaultMonitor(region).
+    const wq = getWaterQuality('cowell')!;
+    expect(stateFor(wq, 'sc', 0)?.source).toMatch(/Santa Cruz/);
   });
 
   it('returns undefined when the spot is in an unknown region with no info', () => {

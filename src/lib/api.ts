@@ -58,6 +58,15 @@ export interface ConditionsResponse {
     advisories: string[];
     periods: Array<{ name: string; text: string }>;
   }>;
+  /** Live water-quality readings keyed by source-side beach name.
+   *  Client looks up by waterQuality info's liveBeachName. */
+  waterQuality?: Record<string, {
+    beachName: string;
+    sampleDate: string;
+    status: 'open' | 'caution' | 'closed';
+    rawStatus: string;
+    source: string;
+  }>;
   meta: { source: 'live' | 'partial'; errors?: string[] };
 }
 
