@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { SPOTS } from './data';
-import { getWaterQuality, tierOf, WATER_QUALITY } from './waterQuality';
+import {
+  defaultMonitor, getWaterQuality, stateFor,
+  WATER_QUALITY,
+} from './waterQuality';
 
 describe('getWaterQuality', () => {
   it('returns info for the four Santa Cruz County permanent postings', () => {
@@ -15,14 +18,13 @@ describe('getWaterQuality', () => {
     expect(getWaterQuality('26th-ave')).toBeDefined();
   });
 
-  it('returns undefined for spots without documented water-quality concerns', () => {
-    expect(getWaterQuality('bolinas-patch')).toBeUndefined();
-    expect(getWaterQuality('steamer-lane')).toBeUndefined();
-    expect(getWaterQuality('mavericks')).toBeUndefined();
+  it('returns proxy info for the unmonitored Salt Point stretch', () => {
+    expect(getWaterQuality('secrets')?.proxyName).toBe('Stillwater Cove');
+    expect(getWaterQuality('timber-cove')?.proxyName).toBe('Stillwater Cove');
+    expect(getWaterQuality('mystos')?.proxyName).toBe('Stillwater Cove');
   });
 
   it('every entry in WATER_QUALITY maps to a real spot', () => {
-    // Lock down against typos in spot IDs that would silently never trigger.
     const allSpotIds = new Set(SPOTS.map((s) => s.id));
     for (const id of Object.keys(WATER_QUALITY)) {
       expect(allSpotIds.has(id)).toBe(true);
@@ -30,39 +32,56 @@ describe('getWaterQuality', () => {
   });
 });
 
-describe('tierOf', () => {
-  it('permanent advisories always render at caution tier (amber, not red)', () => {
-    // Per design: people surf Cowells year-round despite the permanent
-    // posting. Red is reserved for active 'closed' state (Phase 3).
-    expect(tierOf(getWaterQuality('cowell')!)).toBe('caution');
-    expect(tierOf(getWaterQuality('cowell')!, 0)).toBe('caution');
-    expect(tierOf(getWaterQuality('cowell')!, 20)).toBe('caution');
-    expect(tierOf(getWaterQuality('rivermouth')!)).toBe('caution');
+describe('defaultMonitor', () => {
+  it('maps each known region to its county/agency', () => {
+    expect(defaultMonitor('sonoma')).toMatch(/Sonoma/);
+    expect(defaultMonitor('marin')).toMatch(/Marin/);
+    expect(defaultMonitor('pt-reyes')).toMatch(/Marin/);
+    expect(defaultMonitor('sf')).toMatch(/SFPUC/);
+    expect(defaultMonitor('sm-north')).toMatch(/San Mateo/);
+    expect(defaultMonitor('sm-south')).toMatch(/San Mateo/);
+    expect(defaultMonitor('sc')).toMatch(/Santa Cruz/);
   });
 
-  it('rain-sensitive entries stay quiet on dry days', () => {
-    expect(tierOf(getWaterQuality('mitchells-cove')!, 0)).toBeUndefined();
-    expect(tierOf(getWaterQuality('mitchells-cove')!, 2)).toBeUndefined();
-    expect(tierOf(getWaterQuality('26th-ave')!, 4.9)).toBeUndefined();
+  it('returns undefined for unknown regions', () => {
+    expect(defaultMonitor('atlantis')).toBeUndefined();
+  });
+});
+
+describe('stateFor', () => {
+  it('returns caution status for permanent advisories regardless of rain', () => {
+    const wq = getWaterQuality('cowell')!;
+    expect(stateFor(wq, 'sc', 0)?.status).toBe('caution');
+    expect(stateFor(wq, 'sc', 20)?.status).toBe('caution');
   });
 
-  it('rain-sensitive entries flip to caution at the 5mm threshold', () => {
-    expect(tierOf(getWaterQuality('mitchells-cove')!, 5)).toBe('caution');
-    expect(tierOf(getWaterQuality('mitchells-cove')!, 12)).toBe('caution');
-    expect(tierOf(getWaterQuality('26th-ave')!, 25)).toBe('caution');
+  it('returns monitored status for spots without concerns in a monitored region', () => {
+    const s = stateFor(undefined, 'marin', 0);
+    expect(s?.status).toBe('monitored');
+    expect(s?.source).toMatch(/Marin/);
   });
 
-  it('returns undefined for entries with no advisory or sensitivity flag', () => {
-    expect(tierOf({ beachId: '123' }, 100)).toBeUndefined();
-    expect(tierOf({}, 100)).toBeUndefined();
+  it('rain-sensitive spot returns monitored on dry days, caution on wet', () => {
+    const wq = getWaterQuality('mitchells-cove')!;
+    expect(stateFor(wq, 'sc', 2)?.status).toBe('monitored');
+    expect(stateFor(wq, 'sc', 8)?.status).toBe('caution');
   });
 
-  it('permanent advisory still wins over rain-sensitive when both are set', () => {
-    // Same caution tier today, but the permanentAdvisory text is shown
-    // (unconditional) rather than the rain-trigger text.
-    expect(tierOf({
-      permanentAdvisory: 'creek outflow',
-      rainSensitive: 'also bad after rain',
-    }, 0)).toBe('caution');
+  it('returns not-monitored with proxy info for Salt Point spots', () => {
+    const wq = getWaterQuality('secrets')!;
+    const s = stateFor(wq, 'sonoma', 0);
+    expect(s?.status).toBe('not-monitored');
+    expect(s?.proxy?.name).toBe('Stillwater Cove');
+    expect(s?.proxy?.miles).toBe(3);
+  });
+
+  it('always includes source attribution when the region is monitored', () => {
+    expect(stateFor(undefined, 'sc', 0)?.source).toMatch(/Santa Cruz/);
+    expect(stateFor(undefined, 'sf', 0)?.source).toMatch(/SFPUC/);
+    expect(stateFor(undefined, 'sonoma', 0)?.source).toMatch(/Sonoma/);
+  });
+
+  it('returns undefined when the spot is in an unknown region with no info', () => {
+    expect(stateFor(undefined, 'atlantis', 0)).toBeUndefined();
   });
 });

@@ -6,7 +6,7 @@ import {
   swellDirectionScore, windDirectionScore,
 } from '../lib/data';
 import { BUOY_MAP_BY_SPOT } from '../lib/buoyMapping';
-import { getWaterQuality, tierOf, type WaterQualityInfo } from '../lib/waterQuality';
+import { getWaterQuality, stateFor, type WaterQualityState } from '../lib/waterQuality';
 import { sunriseSunset, moonPhase, formatTime } from '../lib/celestial';
 import { useConditions } from '../hooks/useConditions';
 import { Screen, ScoreBadge, ScoreTimeline, Stat, DifficultyPips, ForecastChart, BackButton, useResponsiveWidth, VectorsPanel } from './Primitives';
@@ -156,13 +156,6 @@ export function SpotDetail({ spotId, onBack }: SpotDetailProps) {
         </div>
       )}
 
-      {(() => {
-        const wq = getWaterQuality(activeSpot.id);
-        const recentRainMm = response?.spotMeta?.[activeSpot.id]?.recentRainMm ?? 0;
-        return wq && tierOf(wq, recentRainMm)
-          ? <WaterQualityPanel info={wq} recentRainMm={recentRainMm}/>
-          : null;
-      })()}
       <ScoreBreakdown spot={activeSpot} current={current}/>
 
       <div style={{ padding: '4px 20px 14px' }}>
@@ -189,6 +182,11 @@ export function SpotDetail({ spotId, onBack }: SpotDetailProps) {
       {nws && nws.periods.length > 0 && <NwsPanel nws={nws}/>}
       {activeSpot.bathymetry && <BathymetrySection spot={activeSpot}/>}
       <VectorsPanel spot={activeSpot} current={current}/>
+      {(() => {
+        const recentRainMm = response?.spotMeta?.[activeSpot.id]?.recentRainMm ?? 0;
+        const wq = stateFor(getWaterQuality(activeSpot.id), activeSpot.region, recentRainMm);
+        return wq ? <WaterQualityPanel state={wq}/> : null;
+      })()}
       <SunMoonPanel spot={activeSpot}/>
       <LocalInsight spot={activeSpot}/>
 
@@ -415,49 +413,80 @@ function SpectralPanel({
   );
 }
 
-// Water-quality alert. Renders only for spots in the WATER_QUALITY map
-// AND only when the active tier resolves to non-undefined — for rain-
-// sensitive entries, that means recentRainMm has exceeded the threshold.
-// Permanent advisories always render.
+// Water-quality panel — always renders when stateFor() returns a state,
+// which is "any spot in a county-monitored region" plus the explicit
+// not-monitored exceptions (Salt Point / Fort Ross). Three visual tiers:
 //
-// Phase 1 only emits 'caution' tier (amber) — people surf these spots
-// year-round even with permanent postings, so red would overstate the
-// signal. Red 'closed' tier is reserved for Phase 3 active beach closures.
-function WaterQualityPanel({ info, recentRainMm }: { info: WaterQualityInfo; recentRainMm: number }) {
-  const tier = tierOf(info, recentRainMm);
-  // Phase 1 always lands at 'caution' — true yellow (mediocre token, the
-  // existing scoreColor mid-tier). Orange/meh leans too red; the previous
-  // pass with that color read as 'red alert' to Eliel. Yellow is the
-  // 'be aware' register. Future 'closed' tier will use TOKENS.poor red.
-  const color = tier === 'closed' ? TOKENS.poor : TOKENS.mediocre;
-  const bg = tier === 'closed' ? 'rgba(239, 68, 68, 0.08)' : 'rgba(234, 179, 8, 0.08)';
-  const baseText = info.permanentAdvisory || info.rainSensitive || '';
-  // For rain-sensitive cautions, append the trigger amount so the user
-  // sees 'this is firing because 12mm fell in the past 48h' rather than
-  // wondering why it's showing today and not yesterday.
-  const text = info.rainSensitive
-    ? `${baseText} · ${recentRainMm.toFixed(1)}mm fell in the past 48h`
-    : baseText;
+//   'caution'        amber — permanent posting OR active rain runoff
+//   'monitored'      neutral — county samples, no known year-round concern
+//   'not-monitored'  dim — outside any county's sampling list
+//   'closed'         red — Phase 3 (live closure data, not yet wired)
+//
+// Source attribution shows up on every state (Eliel: "Seeing what the
+// water quality is from a source is valuable even when there is no
+// caution"). Phase 3 will add live last-sample-date next to source.
+function WaterQualityPanel({ state }: { state: WaterQualityState }) {
+  const isCaution = state.status === 'caution';
+  const isClosed = state.status === 'closed';
+  const isNotMonitored = state.status === 'not-monitored';
+  const accent = isClosed
+    ? TOKENS.poor
+    : isCaution
+      ? TOKENS.mediocre
+      : isNotMonitored
+        ? TOKENS.textDim
+        : TOKENS.textMute;
+  const bg = isClosed
+    ? 'rgba(239, 68, 68, 0.08)'
+    : isCaution
+      ? 'rgba(234, 179, 8, 0.08)'
+      : TOKENS.surface;
+  const label = isClosed
+    ? 'Water Quality · Closed'
+    : isCaution
+      ? 'Water Quality · Caution'
+      : isNotMonitored
+        ? 'Water Quality · Not Monitored'
+        : 'Water Quality';
   return (
-    <div style={{ padding: '4px 20px 14px' }}>
+    <div style={{ padding: '4px 20px 16px' }}>
       <div style={{
         fontFamily: 'JetBrains Mono, ui-monospace, monospace',
         fontSize: 13, letterSpacing: '0.18em',
-        color, textTransform: 'uppercase', marginBottom: 8,
+        color: accent, textTransform: 'uppercase', marginBottom: 8,
       }}>
-        Water Quality · Caution
+        {label}
       </div>
       <div style={{
         background: bg,
-        border: `1px solid ${color}`,
+        border: `1px solid ${isCaution || isClosed ? accent : TOKENS.border}`,
         borderRadius: 8,
         padding: '12px 14px',
-        display: 'flex', alignItems: 'flex-start', gap: 10,
       }}>
-        <span style={{ color, fontSize: 16, lineHeight: '20px' }}>⚠</span>
-        <div style={{ fontSize: 13, lineHeight: 1.5, color: TOKENS.text }}>
-          {text}
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+          {(isCaution || isClosed) && (
+            <span style={{ color: accent, fontSize: 16, lineHeight: '20px' }}>⚠</span>
+          )}
+          <div style={{ fontSize: 13, lineHeight: 1.5, color: TOKENS.text, flex: 1 }}>
+            {state.text}
+            {state.proxy && (
+              <div style={{ fontSize: 12, color: TOKENS.textDim, marginTop: 4 }}>
+                Nearest sampled beach: {state.proxy.name} (~{state.proxy.miles} mi)
+              </div>
+            )}
+          </div>
         </div>
+        {state.source && (
+          <div style={{
+            fontFamily: 'JetBrains Mono, ui-monospace, monospace',
+            fontSize: 11, letterSpacing: '0.12em',
+            color: TOKENS.textMute, textTransform: 'uppercase',
+            marginTop: 10, paddingTop: 8,
+            borderTop: `1px solid ${TOKENS.border}`,
+          }}>
+            Source · {state.source}
+          </div>
+        )}
       </div>
     </div>
   );

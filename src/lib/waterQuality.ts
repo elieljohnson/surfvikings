@@ -34,9 +34,14 @@ export interface WaterQualityInfo {
   proxyMiles?: number;
 }
 
-/** Per-spot water-quality info. Spots not listed here have no known
- *  always-on advisory or rain sensitivity — Phase 2 will fill in
- *  station-based data; Phase 3 will fill in live status. */
+/** Per-spot water-quality info. Spots not listed here fall back to the
+ *  default monitor source for their region (see defaultMonitor() below).
+ *  Phase 2 will fill in station-based data; Phase 3 will fill in live
+ *  status from CA Beach Watch.
+ *
+ *  An entry here OVERRIDES the regional default — either with a known
+ *  concern (permanentAdvisory / rainSensitive) or with an explicit
+ *  notMonitored flag for spots outside any county's sampling list. */
 export const WATER_QUALITY: Record<string, WaterQualityInfo> = {
   // Santa Cruz County permanent postings (per SCCEH; never lifted)
   'cowell': {
@@ -59,37 +64,93 @@ export const WATER_QUALITY: Record<string, WaterQualityInfo> = {
   '26th-ave': {
     rainSensitive: 'Sand sensitive to rain runoff — caution after heavy rain',
   },
+  // Sonoma Coast: Salt Point / Fort Ross stretch is not on the county's
+  // 7-beach monitoring list. Nearest sampled beach is Stillwater Cove.
+  'secrets':     { proxyName: 'Stillwater Cove', proxyMiles: 3 },
+  'timber-cove': { proxyName: 'Stillwater Cove', proxyMiles: 4 },
+  'mystos':      { proxyName: 'Stillwater Cove', proxyMiles: 1 },
 };
+
+/** Default monitor source for a spot's region. Counties run their own
+ *  monitoring programs and submit to the state. Returns undefined for
+ *  regions outside any county's regular sampling (those rely on a
+ *  proxyName + proxyMiles override in WATER_QUALITY above). */
+export function defaultMonitor(region: string): string | undefined {
+  switch (region) {
+    case 'sonoma':       return 'Sonoma County Env. Health';
+    case 'pt-reyes':
+    case 'marin':        return 'Marin County Env. Health';
+    case 'sf':           return 'SFPUC Beach Monitoring';
+    case 'sm-north':
+    case 'sm-south':     return 'San Mateo County Health';
+    case 'sc':           return 'Santa Cruz County Env. Health';
+    default:             return undefined;
+  }
+}
 
 export function getWaterQuality(spotId: string): WaterQualityInfo | undefined {
   return WATER_QUALITY[spotId];
 }
-
-/** Severity tier — used by the UI to pick color treatment.
- *  'caution' = known concern, amber (permanent posting OR active rain runoff)
- *  'closed'  = active beach closure from live county/state data — red.
- *              Phase 3 will introduce this from CA Beach Watch advisories.
- *
- *  Red is intentionally reserved for "don't surf" only. Permanent postings
- *  at spots people surf year-round (Cowells, Rivermouth, Capitola) read as
- *  caution-tier — be aware, not stop. */
-export type WaterQualityTier = 'caution' | 'closed';
 
 /** Threshold (mm) above which a rain-sensitive spot triggers a caution.
  *  5mm ≈ 0.2 inches — modest rain, enough to produce runoff into nearshore
  *  waters at most CA spots. Below this, the spot reads as fine. */
 export const RECENT_RAIN_THRESHOLD_MM = 5;
 
-/** Active tier given the spot's info and how much rain has actually
- *  fallen in the last 48h.
- *
- *  Permanent advisories always render as 'caution' (amber, always-on
- *  awareness — people still surf these spots, the panel is informational).
- *
- *  Rain-sensitive flips to 'caution' only when recentRainMm exceeds the
- *  threshold — quiet on dry days. */
-export function tierOf(info: WaterQualityInfo, recentRainMm = 0): WaterQualityTier | undefined {
-  if (info.permanentAdvisory) return 'caution';
-  if (info.rainSensitive && recentRainMm >= RECENT_RAIN_THRESHOLD_MM) return 'caution';
+/** Status states for the water-quality panel.
+ *  'caution' = known concern (amber); always renders when triggered.
+ *  'monitored' = county samples this stretch, no known year-round concern;
+ *               source attribution surfaced even when "clean."
+ *  'not-monitored' = outside any county's regular sampling list; show the
+ *               nearest sampled beach as a proxy (Salt Point stretch).
+ *  'closed' = Phase 3 — active closure from live CA Beach Watch (red). */
+export type WaterQualityStatus = 'caution' | 'monitored' | 'not-monitored' | 'closed';
+
+export interface WaterQualityState {
+  status: WaterQualityStatus;
+  /** Human-written description of the concern (caution) or scope of
+   *  monitoring. Empty for 'monitored' (no concern, just attribution). */
+  text: string;
+  /** Source attribution for the panel footer. Always shown when present. */
+  source?: string;
+  /** Set on 'not-monitored' status. Renders as 'Nearest sampled beach:
+   *  Stillwater Cove (~3 mi)' below the main copy. */
+  proxy?: { name: string; miles: number };
+}
+
+/** Compute the active water-quality state for a spot, given an explicit
+ *  WaterQualityInfo override (or none), the spot's region (for default
+ *  monitor source), and how much rain has fallen in the last 48h. */
+export function stateFor(
+  info: WaterQualityInfo | undefined,
+  region: string,
+  recentRainMm = 0,
+): WaterQualityState | undefined {
+  const source = defaultMonitor(region);
+  // Permanent advisory always wins
+  if (info?.permanentAdvisory) {
+    return { status: 'caution', text: info.permanentAdvisory, source };
+  }
+  // Rain-sensitive caution gated on actual recent rain
+  if (info?.rainSensitive && recentRainMm >= RECENT_RAIN_THRESHOLD_MM) {
+    return {
+      status: 'caution',
+      text: `${info.rainSensitive} · ${recentRainMm.toFixed(1)}mm fell in past 48h`,
+      source,
+    };
+  }
+  // Explicit "not monitored" entry (Salt Point stretch)
+  if (info?.proxyName && info?.proxyMiles !== undefined) {
+    return {
+      status: 'not-monitored',
+      text: 'Not on the county sampling list',
+      proxy: { name: info.proxyName, miles: info.proxyMiles },
+      source,
+    };
+  }
+  // Spot is in a monitored region but has no known concern
+  if (source) {
+    return { status: 'monitored', text: 'No known year-round concerns', source };
+  }
   return undefined;
 }
