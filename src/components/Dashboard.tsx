@@ -9,6 +9,7 @@ import {
 import { BUOY_MAP_BY_SPOT } from '../lib/buoyMapping';
 import { useConditions } from '../hooks/useConditions';
 import { useLocalStorage } from '../hooks/useLocalStorage';
+import { DEFAULT_MIN_SCORE } from './Settings';
 import { useNow } from '../hooks/useNow';
 import { useDriveTimes } from '../hooks/useDriveTimes';
 import { greetingForHour, formatHeaderDate } from '../lib/greeting';
@@ -125,6 +126,18 @@ export function Dashboard({ onOpenSpot }: DashboardProps) {
     (a, b) => (timelines[b.id]?.[0]?.score ?? 0) - (timelines[a.id]?.[0]?.score ?? 0)
   );
 
+  // Min-score filter from Settings. Hides the SECONDARY chips (ranked
+  // rows + best-windows strip) when a spot scores below the threshold.
+  // Top Pick always shows regardless — it's the answer to "should I
+  // go now?" and a blank dashboard on a flat day would be useless.
+  const [minScore] = useLocalStorage<number>('sv:minScore', DEFAULT_MIN_SCORE);
+  const hiddenCount = ranked.slice(1).filter(
+    (s) => (timelines[s.id]?.[0]?.score ?? 0) < minScore
+  ).length;
+  const visibleRest = ranked.slice(1).filter(
+    (s) => (timelines[s.id]?.[0]?.score ?? 0) >= minScore
+  );
+
   const mavTimeline = timelines['mavericks'] ?? [];
   const mavScore = mavTimeline[0]?.score ?? 0;
   // Find the largest peak in the next 72h to drive the watch panel copy.
@@ -164,6 +177,10 @@ export function Dashboard({ onOpenSpot }: DashboardProps) {
       if (!tl?.length) return [];
       return findBestWindows(tl).slice(0, 1).map((w) => ({ ...w, spot: s }));
     })
+    // Respect the min-score threshold from Settings. Windows below the
+    // bar drop out of the strip — future-peak chips are exactly the
+    // kind of "not bothered unless it's good" signal the threshold gates.
+    .filter((w) => w.peak >= minScore)
     .sort((a, b) => b.peak - a.peak)
     .slice(0, 4);
 
@@ -278,12 +295,27 @@ export function Dashboard({ onOpenSpot }: DashboardProps) {
       <div style={{ padding: '16px 20px 16px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
           <div style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 13, letterSpacing: '0.18em', color: TOKENS.textMute, textTransform: 'uppercase' }}>My Spots · Ranked</div>
-          <div style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 13, color: TOKENS.textDim }}>{favorites.length} tracked</div>
+          <div style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 13, color: TOKENS.textDim }}>
+            {hiddenCount > 0
+              ? `${visibleRest.length}/${ranked.slice(1).length} · hiding ${hiddenCount} below ${minScore}`
+              : `${favorites.length} tracked`}
+          </div>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {ranked.slice(1).map((s) => (
-            <SpotRow key={s.id} spot={s} timeline={timelines[s.id]} onClick={() => onOpenSpot(s.id)}/>
-          ))}
+          {visibleRest.length > 0
+            ? visibleRest.map((s) => (
+                <SpotRow key={s.id} spot={s} timeline={timelines[s.id]} onClick={() => onOpenSpot(s.id)}/>
+              ))
+            : (
+              <div style={{
+                padding: '20px 14px', background: TOKENS.surface,
+                border: `1px solid ${TOKENS.border}`, borderRadius: 10,
+                fontSize: 13, color: TOKENS.textMute, textAlign: 'center',
+              }}>
+                All other favorites scored below {minScore}. Top Pick is your best option today.
+              </div>
+            )
+          }
         </div>
       </div>
 
