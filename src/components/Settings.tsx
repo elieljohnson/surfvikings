@@ -31,7 +31,6 @@ export function Settings() {
   // User prefs persist in localStorage — per-browser, per-visitor. No
   // server, no auth, no cross-device sync. Each visitor gets their own
   // copy; visitors can't change Eliel's app.
-  const [units, setUnits] = useLocalStorage<'imperial' | 'metric'>('sv:units', 'imperial');
   const [notifyEpic, setNotifyEpic] = useLocalStorage<boolean>('sv:notifyEpic', true);
   const [minScore, setMinScore] = useLocalStorage<number>('sv:minScore', DEFAULT_MIN_SCORE);
   const { favorites, toggle: toggleFavorite, reset: resetFavorites, isFavorite } = useFavorites();
@@ -117,11 +116,12 @@ export function Settings() {
       </Group>
 
       <Group title="Units">
-        <Segmented label="System" value={units} onChange={setUnits} options={[['imperial', 'Imperial'], ['metric', 'Metric']]}/>
-        <Row label="Swell" value={units === 'imperial' ? 'ft · s' : 'm · s'} mono/>
-        <Row label="Wind" value={units === 'imperial' ? 'knots' : 'm/s'} mono/>
-        <Row label="Temp" value={units === 'imperial' ? '°F' : '°C'} mono/>
-        <Row label="Coming soon" value="Views still display imperial" hint="Setting saves; thread-through is a follow-up"/>
+        {/* Display-only — this is a US-focused personal app and we report
+            in imperial everywhere. Listed here so visitors know what to
+            expect from numbers across the app. */}
+        <Row label="Swell" value="ft · s" mono/>
+        <Row label="Wind" value="knots" mono/>
+        <Row label="Temp" value="°F" mono/>
       </Group>
 
       <Group title="Data sources">
@@ -301,27 +301,6 @@ function Slider({ label, hint, value, onChange, min, max }: { label: string; hin
       {hint && <div style={{ fontSize: 12, color: TOKENS.textMute, marginBottom: 8 }}>{hint}</div>}
       <input type="range" min={min} max={max} value={value} onChange={(e) => onChange(+e.target.value)}
         style={{ width: '100%', accentColor: TOKENS.pacific }}/>
-    </div>
-  );
-}
-
-function Segmented<T extends string>({
-  label, value, onChange, options,
-}: { label: string; value: T; onChange: (v: T) => void; options: [T, string][] }) {
-  return (
-    <div style={{ padding: '12px 14px', borderBottom: `1px solid ${TOKENS.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
-      <span style={{ fontSize: 14, color: TOKENS.text }}>{label}</span>
-      <div style={{ display: 'flex', background: TOKENS.surface2, borderRadius: 6, padding: 2, border: `1px solid ${TOKENS.border}` }}>
-        {options.map(([v, l]) => (
-          <button key={v} onClick={() => onChange(v)} style={{
-            padding: '4px 10px', borderRadius: 4,
-            background: value === v ? TOKENS.surface3 : 'transparent',
-            border: 'none', color: value === v ? TOKENS.text : TOKENS.textDim,
-            fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 12, letterSpacing: '0.1em',
-            cursor: 'pointer', textTransform: 'uppercase',
-          }}>{l}</button>
-        ))}
-      </div>
     </div>
   );
 }
