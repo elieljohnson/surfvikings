@@ -332,7 +332,7 @@ function FeatureGrid() {
     { icon: '🔒', title: 'Privacy-first',          body: 'No accounts, no tracking, no ads. Your spots stay on your device.' },
     { icon: '📱', title: 'No app store',           body: 'Install straight from the browser. Works on iOS, Android, desktop.' },
     { icon: '🔌', title: 'Works offline',          body: 'Tide and forecast cached for the dead zones.' },
-    { icon: '🦈', title: 'Shark advisory',         body: 'Persistent warning banner for Año Nuevo elephant seal waters.' },
+    { icon: '💧', title: 'Water quality',          body: 'Weekly bacteria results from 4 county health departments. Know before you paddle out.' },
     { icon: '📊', title: 'Open methodology',       body: 'Scoring model is documented and inspectable.' },
   ];
   return (
