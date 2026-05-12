@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { TOKENS, scoreColor } from '../lib/tokens';
-import { Screen } from './Primitives';
+import { Screen, InlineEdit } from './Primitives';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { useFavorites } from '../hooks/useFavorites';
 import { SPOTS, DEFAULT_FAVORITES } from '../lib/data';
+import { geocode, type HomeBase as HomeBaseGeo } from '../lib/routing';
 
 /** Canonical north-to-south region order for the Favorites editor.
  *  Matches how surfers think about the coast — Salt Point at the top,
@@ -26,12 +27,6 @@ const REGION_ORDER: { id: string; label: string }[] = [
  *  unaffected; this only changes the first-load experience. */
 export const DEFAULT_MIN_SCORE = 25;
 
-interface HomeBase {
-  lat: number;
-  lng: number;
-  label: string;
-}
-
 export function Settings() {
   // User prefs persist in localStorage — per-browser, per-visitor. No
   // server, no auth, no cross-device sync. Each visitor gets their own
@@ -41,11 +36,21 @@ export function Settings() {
   const [minScore, setMinScore] = useLocalStorage<number>('sv:minScore', DEFAULT_MIN_SCORE);
   const { favorites, toggle: toggleFavorite, reset: resetFavorites, isFavorite } = useFavorites();
 
-  // Display-only: home base is set via dashboard inline-edit, we just
-  // mirror the truth here so Settings doesn't lie about it.
-  const [home] = useLocalStorage<HomeBase | null>('sv:user:home', null);
-  const [homeLoc] = useLocalStorage<string>('sv:user:location', 'Mill Valley');
+  // Home base is editable here AND from the dashboard header — both
+  // write to the same localStorage keys, so changing it from either
+  // surface is reflected on the other. Geocoding runs in the background
+  // on commit so the home coords stay in sync with the label string.
+  const [home, setHome] = useLocalStorage<HomeBaseGeo | null>('sv:user:home', null);
+  const [homeLoc, setHomeLoc] = useLocalStorage<string>('sv:user:location', 'Mill Valley');
+  const [editingHome, setEditingHome] = useState(false);
   const homeLabel = home?.label ?? homeLoc ?? 'Mill Valley, CA';
+
+  const commitHome = (label: string) => {
+    setEditingHome(false);
+    if (!label) return;
+    setHomeLoc(label);
+    geocode(label).then((g) => { if (g) setHome(g); });
+  };
 
   return (
     <Screen>
@@ -58,7 +63,14 @@ export function Settings() {
       </div>
 
       <Group title="Home base">
-        <Row label="Location" value={homeLabel} hint="Tap the location pill in the top-right of the dashboard to edit" mono/>
+        <EditableRow
+          label="Location"
+          value={homeLabel}
+          editing={editingHome}
+          onEditStart={() => setEditingHome(true)}
+          onCommit={commitHome}
+          onCancel={() => setEditingHome(false)}
+        />
       </Group>
 
       <FavoritesEditor
@@ -112,6 +124,77 @@ function Group({ title, children }: { title: string; children: React.ReactNode }
         {children}
       </div>
     </div>
+  );
+}
+
+/** Row variant where the whole row is a tap target that swaps the value
+ *  cell to an InlineEdit. Used for the Home base location. Hint stays
+ *  short ("Tap to edit") because the whole row is the affordance —
+ *  no need to direct the user elsewhere. */
+function EditableRow({
+  label, value, editing, onEditStart, onCommit, onCancel,
+}: {
+  label: string;
+  value: string;
+  editing: boolean;
+  onEditStart: () => void;
+  onCommit: (value: string) => void;
+  onCancel: () => void;
+}) {
+  const content = (
+    <>
+      <div>
+        <div style={{ fontSize: 14, color: TOKENS.text }}>{label}</div>
+        {!editing && (
+          <div style={{ fontSize: 12, color: TOKENS.textMute, marginTop: 2 }}>Tap to edit</div>
+        )}
+      </div>
+      {editing ? (
+        <InlineEdit
+          initial={value}
+          placeholder="Home base"
+          onCommit={onCommit}
+          onCancel={onCancel}
+          style={{
+            fontFamily: 'JetBrains Mono, ui-monospace, monospace',
+            fontSize: 13, textAlign: 'right', minWidth: 140,
+          }}
+        />
+      ) : (
+        <div style={{
+          fontFamily: 'JetBrains Mono, ui-monospace, monospace',
+          fontSize: 13, color: TOKENS.textDim,
+        }}>{value}</div>
+      )}
+    </>
+  );
+
+  const baseStyle: React.CSSProperties = {
+    padding: '12px 14px',
+    borderBottom: `1px solid ${TOKENS.border}`,
+    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+    gap: 12,
+  };
+
+  // Editing: render as plain div so taps inside the input don't re-trigger
+  // edit mode. Not editing: render as a full-row button for the affordance.
+  if (editing) {
+    return <div style={baseStyle}>{content}</div>;
+  }
+  return (
+    <button
+      type="button"
+      onClick={onEditStart}
+      aria-label={`Edit ${label.toLowerCase()}`}
+      style={{
+        ...baseStyle,
+        width: '100%', background: 'none', border: 'none',
+        borderBottom: `1px solid ${TOKENS.border}`,
+        textAlign: 'left', cursor: 'pointer',
+        font: 'inherit', color: 'inherit',
+        WebkitTapHighlightColor: 'transparent',
+      }}
+    >{content}</button>
   );
 }
 

@@ -15,7 +15,7 @@ import { useNow } from '../hooks/useNow';
 import { useDriveTimes } from '../hooks/useDriveTimes';
 import { greetingForHour, formatHeaderDate } from '../lib/greeting';
 import { geocode, type HomeBase } from '../lib/routing';
-import { Screen, ScoreBadge, ScoreSpark, Stat } from './Primitives';
+import { Screen, ScoreBadge, ScoreSpark, Stat, InlineEdit } from './Primitives';
 
 // Reset the UA's default <button> chrome so it looks like plain text but still
 // gets the touch-target + a11y benefits of a real button.
@@ -66,53 +66,6 @@ function NoFavoritesEmptyState() {
   );
 }
 
-function InlineEdit({
-  initial,
-  placeholder,
-  onCommit,
-  onCancel,
-  style,
-}: {
-  initial: string;
-  placeholder?: string;
-  onCommit: (value: string) => void;
-  onCancel: () => void;
-  style?: React.CSSProperties;
-}) {
-  return (
-    <input
-      type="text"
-      defaultValue={initial}
-      placeholder={placeholder}
-      autoFocus
-      // iOS mobile keyboard niceties
-      autoComplete="off"
-      autoCorrect="off"
-      spellCheck={false}
-      enterKeyHint="done"
-      onFocus={(e) => e.currentTarget.select()}
-      onBlur={(e) => onCommit(e.currentTarget.value.trim())}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter') {
-          e.preventDefault();
-          (e.currentTarget as HTMLInputElement).blur();
-        } else if (e.key === 'Escape') {
-          e.preventDefault();
-          onCancel();
-        }
-      }}
-      style={{
-        background: 'transparent',
-        border: `1px dashed ${TOKENS.border}`,
-        borderRadius: 6,
-        padding: '2px 6px',
-        color: TOKENS.text,
-        outline: 'none',
-        ...style,
-      }}
-    />
-  );
-}
 
 interface DashboardProps {
   onOpenSpot: (id: string) => void;

@@ -275,6 +275,56 @@ export function Stat({
   );
 }
 
+/** Self-contained inline text editor — swaps in over a label when the
+ *  user taps it. Commits on blur or Enter, cancels on Escape. Mobile
+ *  keyboard hints set so iOS doesn't try to autocorrect place names. */
+export function InlineEdit({
+  initial,
+  placeholder,
+  onCommit,
+  onCancel,
+  style,
+}: {
+  initial: string;
+  placeholder?: string;
+  onCommit: (value: string) => void;
+  onCancel: () => void;
+  style?: React.CSSProperties;
+}) {
+  return (
+    <input
+      type="text"
+      defaultValue={initial}
+      placeholder={placeholder}
+      autoFocus
+      autoComplete="off"
+      autoCorrect="off"
+      spellCheck={false}
+      enterKeyHint="done"
+      onFocus={(e) => e.currentTarget.select()}
+      onBlur={(e) => onCommit(e.currentTarget.value.trim())}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          (e.currentTarget as HTMLInputElement).blur();
+        } else if (e.key === 'Escape') {
+          e.preventDefault();
+          onCancel();
+        }
+      }}
+      style={{
+        background: 'transparent',
+        border: `1px dashed ${TOKENS.border}`,
+        borderRadius: 6,
+        padding: '2px 6px',
+        color: TOKENS.text,
+        outline: 'none',
+        ...style,
+      }}
+    />
+  );
+}
+
 export function Rule({ label }: { label?: string }) {
   if (!label) return <div style={{ height: 1, background: TOKENS.border }}/>;
   return (
