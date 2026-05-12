@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { TOKENS, scoreColor, qualityColor } from '../lib/tokens';
 import {
-  SPOTS, FAVORITES, Spot, ForecastHour, MetricKey,
+  SPOTS, Spot, ForecastHour, MetricKey,
   hourLabel, degToCardinal, metricQuality, angleDelta,
 } from '../lib/data';
 import { useConditions } from '../hooks/useConditions';
+import { useFavorites } from '../hooks/useFavorites';
 import { Screen, Stat, ForecastChart, VectorsPanel } from './Primitives';
 
 interface ForecastProps {
@@ -12,11 +13,33 @@ interface ForecastProps {
 }
 
 export function Forecast(_props: ForecastProps) {
-  const favorites = FAVORITES.map((id) => SPOTS.find((s) => s.id === id)).filter(Boolean) as Spot[];
-  const { timelines } = useConditions(FAVORITES);
-  const [spotId, setSpotId] = useState(favorites[0].id);
-  const spot = favorites.find((s) => s.id === spotId)!;
-  const timeline = timelines[spotId] ?? [];
+  const { favorites: favoriteIds } = useFavorites();
+  const favorites = favoriteIds.map((id) => SPOTS.find((s) => s.id === id)).filter(Boolean) as Spot[];
+  const { timelines } = useConditions(favoriteIds);
+  // User's tab pick. If they un-favorite the currently-selected spot,
+  // spot falls back to favorites[0] but spotId stays — re-derive the
+  // active highlight from the resolved spot so the chip strip stays
+  // honest with the body.
+  const [spotId, setSpotId] = useState(favorites[0]?.id ?? '');
+  const spot = favorites.find((s) => s.id === spotId) ?? favorites[0];
+  const currentId = spot?.id ?? '';
+  const timeline = (spot ? timelines[spot.id] : undefined) ?? [];
+
+  // Empty state — no favorites means the whole forecast view has
+  // nothing to render. Send them to Settings to pick at least one.
+  if (!spot) {
+    return (
+      <Screen>
+        <div style={{ padding: '52px 20px 14px', borderBottom: `1px solid ${TOKENS.border}` }}>
+          <div style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 13, letterSpacing: '0.18em', color: TOKENS.textMute, textTransform: 'uppercase' }}>Forecast · 7 days</div>
+          <div style={{ fontSize: 22, fontWeight: 600, letterSpacing: '-0.02em', marginTop: 4 }}>Outlook</div>
+        </div>
+        <div style={{ padding: '40px 20px', textAlign: 'center', color: TOKENS.textMute, fontSize: 14 }}>
+          No favorites selected. Pick at least one spot in Settings to see the forecast.
+        </div>
+      </Screen>
+    );
+  }
 
   return (
     <Screen>
@@ -28,7 +51,7 @@ export function Forecast(_props: ForecastProps) {
       <div style={{ display: 'flex', gap: 6, padding: '12px 20px 10px', overflowX: 'auto' }}>
         {favorites.map((s) => {
           const score = timelines[s.id]?.[0]?.score ?? 0;
-          const on = s.id === spotId;
+          const on = s.id === currentId;
           return (
             <button key={s.id} onClick={() => setSpotId(s.id)} style={{
               padding: '6px 10px', borderRadius: 6,

@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { TOKENS, scoreColor, qualityColor } from '../lib/tokens';
 import {
-  SPOTS, FAVORITES, Spot, ForecastHour, BestWindow,
+  SPOTS, Spot, ForecastHour, BestWindow,
   findBestWindows, scoreToRating,
   hourLabel, degToCardinal, angleDelta, swellDirectionQuality, metricQuality,
   wetsuitForWaterF, weatherLabel,
@@ -9,6 +9,7 @@ import {
 import { BUOY_MAP_BY_SPOT } from '../lib/buoyMapping';
 import { useConditions } from '../hooks/useConditions';
 import { useLocalStorage } from '../hooks/useLocalStorage';
+import { useFavorites } from '../hooks/useFavorites';
 import { DEFAULT_MIN_SCORE } from './Settings';
 import { useNow } from '../hooks/useNow';
 import { useDriveTimes } from '../hooks/useDriveTimes';
@@ -32,6 +33,24 @@ const RESET_BUTTON: React.CSSProperties = {
 
 // Tiny inline text editor. Autofocuses, selects all, commits on Enter/blur,
 // cancels on Escape. Swaps in place for a label so the header never jumps.
+/** Dashboard's empty state — surfaces when the user has un-favorited
+ *  every spot. Sends them to Settings to pick at least one rather than
+ *  trying to render a meaningless "no spots" hero card. */
+function NoFavoritesEmptyState() {
+  return (
+    <Screen>
+      <div style={{ padding: '52px 20px 14px', borderBottom: `1px solid ${TOKENS.border}` }}>
+        <div style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 13, letterSpacing: '0.18em', color: TOKENS.textMute, textTransform: 'uppercase' }}>Surf Vikings</div>
+        <div style={{ fontSize: 22, fontWeight: 600, letterSpacing: '-0.02em', marginTop: 4 }}>No favorites yet</div>
+      </div>
+      <div style={{ padding: '40px 20px', textAlign: 'center', color: TOKENS.textMute, fontSize: 14, lineHeight: 1.6 }}>
+        Pick at least one spot in Settings to see your forecast,<br/>
+        ranked chips, and best windows.
+      </div>
+    </Screen>
+  );
+}
+
 function InlineEdit({
   initial,
   placeholder,
@@ -85,8 +104,11 @@ interface DashboardProps {
 }
 
 export function Dashboard({ onOpenSpot }: DashboardProps) {
-  const favorites = FAVORITES.map((id) => SPOTS.find((s) => s.id === id)).filter(Boolean) as Spot[];
-  const tracked = useMemo(() => [...FAVORITES, 'mavericks'], []);
+  const { favorites: favoriteIds } = useFavorites();
+  const favorites = favoriteIds.map((id) => SPOTS.find((s) => s.id === id)).filter(Boolean) as Spot[];
+  // Mavericks always fetched alongside favorites — the watch panel
+  // surfaces it on contest-grade days regardless of user pref.
+  const tracked = useMemo(() => [...favoriteIds, 'mavericks'], [favoriteIds]);
   const { timelines, response, loading, error, stale } = useConditions(tracked);
 
   // Live clock, updates every minute.
@@ -121,6 +143,14 @@ export function Dashboard({ onOpenSpot }: DashboardProps) {
     setHomeLoc(label);
     geocode(label).then((g) => { if (g) setHome(g); });
   };
+
+  // No favorites selected — short-circuit before any ranked[0] deref.
+  // The user opens Settings to pick at least one. Keep this above the
+  // ranked / tp / metricQuality block since everything downstream
+  // assumes at least one favorite exists.
+  if (favorites.length === 0) {
+    return <NoFavoritesEmptyState />;
+  }
 
   const ranked = [...favorites].sort(
     (a, b) => (timelines[b.id]?.[0]?.score ?? 0) - (timelines[a.id]?.[0]?.score ?? 0)

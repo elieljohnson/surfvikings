@@ -1,7 +1,22 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { TOKENS, scoreColor } from '../lib/tokens';
 import { Screen } from './Primitives';
 import { useLocalStorage } from '../hooks/useLocalStorage';
+import { useFavorites } from '../hooks/useFavorites';
+import { SPOTS, DEFAULT_FAVORITES } from '../lib/data';
+
+/** Canonical north-to-south region order for the Favorites editor.
+ *  Matches how surfers think about the coast — Salt Point at the top,
+ *  Santa Cruz at the bottom — rather than alphabetical. */
+const REGION_ORDER: { id: string; label: string }[] = [
+  { id: 'sonoma',   label: 'Sonoma · Salt Point' },
+  { id: 'pt-reyes', label: 'Point Reyes' },
+  { id: 'marin',    label: 'Marin' },
+  { id: 'sf',       label: 'San Francisco' },
+  { id: 'sm-north', label: 'Pacifica · HMB' },
+  { id: 'sm-south', label: 'Hwy 1 South' },
+  { id: 'sc',       label: 'Santa Cruz' },
+];
 
 /** Default min score threshold — chips below this are hidden from the
  *  dashboard. 55 is "fair" on our score scale; below that conditions
@@ -21,6 +36,7 @@ export function Settings() {
   const [units, setUnits] = useLocalStorage<'imperial' | 'metric'>('sv:units', 'imperial');
   const [notifyEpic, setNotifyEpic] = useLocalStorage<boolean>('sv:notifyEpic', true);
   const [minScore, setMinScore] = useLocalStorage<number>('sv:minScore', DEFAULT_MIN_SCORE);
+  const { favorites, toggle: toggleFavorite, reset: resetFavorites, isFavorite } = useFavorites();
 
   // Display-only: home base is set via dashboard inline-edit, we just
   // mirror the truth here so Settings doesn't lie about it.
@@ -41,6 +57,13 @@ export function Settings() {
       <Group title="Home base">
         <Row label="Location" value={homeLabel} hint="Tap the dashboard header to edit" mono/>
       </Group>
+
+      <FavoritesEditor
+        favorites={favorites}
+        toggle={toggleFavorite}
+        reset={resetFavorites}
+        isFavorite={isFavorite}
+      />
 
       <Group title="Alerts">
         <Toggle label="Epic window alerts" hint="Notify when a tracked spot hits 75+" on={notifyEpic} onChange={setNotifyEpic}/>
@@ -165,6 +188,112 @@ function Segmented<T extends string>({
           }}>{l}</button>
         ))}
       </div>
+    </div>
+  );
+}
+
+interface FavoritesEditorProps {
+  favorites: string[];
+  toggle: (id: string) => void;
+  reset: () => void;
+  isFavorite: (id: string) => boolean;
+}
+
+/** Collapsed-by-region favorites editor. Each region row shows the
+ *  region name, total spot count, and how many are favorited. Tap to
+ *  expand a per-spot toggle list. "Reset to defaults" in the section
+ *  header restores DEFAULT_FAVORITES — useful after experimenting. */
+function FavoritesEditor({ favorites, toggle, reset, isFavorite }: FavoritesEditorProps) {
+  // Each region's collapsed/expanded state is local UI, not persisted —
+  // every visit starts collapsed so the page stays scannable.
+  const [openRegions, setOpenRegions] = useState<Record<string, boolean>>({});
+
+  const isDefault = favorites.length === DEFAULT_FAVORITES.length
+    && favorites.every((id) => DEFAULT_FAVORITES.includes(id));
+
+  return (
+    <div style={{ padding: '18px 20px 0' }}>
+      <div style={{
+        display: 'flex', alignItems: 'baseline', justifyContent: 'space-between',
+        marginBottom: 8, gap: 8,
+      }}>
+        <div style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 13, letterSpacing: '0.18em', color: TOKENS.textMute, textTransform: 'uppercase' }}>
+          Favorites · {favorites.length}/{SPOTS.length}
+        </div>
+        {!isDefault && (
+          <button onClick={reset} style={{
+            background: 'none', border: 'none', padding: 0,
+            fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 11,
+            letterSpacing: '0.1em', textTransform: 'uppercase',
+            color: TOKENS.pacific, cursor: 'pointer',
+          }}>Reset to defaults</button>
+        )}
+      </div>
+      <div style={{ background: TOKENS.surface, border: `1px solid ${TOKENS.border}`, borderRadius: 10, overflow: 'hidden' }}>
+        {REGION_ORDER.map(({ id: regionId, label }) => {
+          const regionSpots = SPOTS.filter((s) => s.region === regionId);
+          if (regionSpots.length === 0) return null;
+          const favCount = regionSpots.filter((s) => isFavorite(s.id)).length;
+          const isOpen = !!openRegions[regionId];
+          return (
+            <div key={regionId}>
+              <button
+                onClick={() => setOpenRegions((prev) => ({ ...prev, [regionId]: !prev[regionId] }))}
+                style={{
+                  width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  padding: '12px 14px', borderBottom: `1px solid ${TOKENS.border}`,
+                  background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left',
+                  color: TOKENS.text,
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{
+                    fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 11,
+                    color: TOKENS.textMute, width: 10, display: 'inline-block',
+                  }}>{isOpen ? '▾' : '▸'}</span>
+                  <span style={{ fontSize: 14 }}>{label}</span>
+                </div>
+                <div style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 12, color: TOKENS.textDim }}>
+                  {favCount}/{regionSpots.length}
+                </div>
+              </button>
+              {isOpen && regionSpots.map((s) => (
+                <div key={s.id} onClick={() => toggle(s.id)} style={{
+                  padding: '10px 14px 10px 32px',
+                  borderBottom: `1px solid ${TOKENS.border}`,
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  cursor: 'pointer',
+                }}>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontSize: 14, color: TOKENS.text }}>{s.name}</div>
+                    <div style={{ fontSize: 12, color: TOKENS.textMute, marginTop: 2 }}>{s.subtitle}</div>
+                  </div>
+                  <Checkbox on={isFavorite(s.id)}/>
+                </div>
+              ))}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function Checkbox({ on }: { on: boolean }) {
+  return (
+    <div style={{
+      width: 22, height: 22, borderRadius: 5,
+      border: `1.5px solid ${on ? TOKENS.pacific : TOKENS.borderHi}`,
+      background: on ? TOKENS.pacific : 'transparent',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      flexShrink: 0,
+    }}>
+      {on && (
+        <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
+          <path d="M2 6.5L5 9.5L10 3.5" stroke="white" strokeWidth="2"
+            strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+        </svg>
+      )}
     </div>
   );
 }

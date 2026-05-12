@@ -187,7 +187,11 @@ export const SPOTS: Spot[] = [
   { id: 'beer-can',      region: 'sc',       regionLabel: 'Santa Cruz',   name: 'Beer Can Beach',      subtitle: 'Small sand beachbreak · High-tide peaks', difficulty: 5,  type: 'Beach',                bottom: 'Sand',          optimalSwell: 270, optimalSize: [2,6], optimalPeriod: [10,14], offshore: 45,  optimalTide: 'high',   lat: 36.9646, lng: -121.9197, driveMin: 138 },
 ];
 
-export const FAVORITES = ['bolinas-patch', 'bolinas-jetty', 'bolinas-groin', 'stinson', 'rodeo', 'muir-beach'];
+/** Baked-in default favorites — Eliel's local rotation. New visitors
+ *  see this list on first load; their edits via Settings persist to
+ *  localStorage (see useFavorites). Stays exported so Settings can
+ *  offer "Reset to defaults". */
+export const DEFAULT_FAVORITES = ['bolinas-patch', 'bolinas-jetty', 'bolinas-groin', 'stinson', 'rodeo', 'muir-beach'];
 
 export interface CurrentConditions {
   swellHeight: number;
