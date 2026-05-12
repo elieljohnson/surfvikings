@@ -15,7 +15,7 @@ export function Landing() {
       <FeatureSection
         eyebrow="Per-spot bathymetry"
         headline="Every break has its own profile."
-        body="28 NorCal surf spots, Salt Point to Santa Cruz. Each with hardcoded coefficients for bathymetry, swell shadow, tide dependency, and wind exposure. Generic models say &ldquo;4ft at 12s.&rdquo; Surf Vikings tells you what that swell does at The Patch vs The Groin vs Ocean Beach. Different math, different answers, one app."
+        body="64 NorCal surf spots, Salt Point to Santa Cruz. Each with hardcoded coefficients for bathymetry, swell shadow, tide dependency, and wind exposure. Generic models say &ldquo;4ft at 12s.&rdquo; Surf Vikings tells you what that swell does at The Patch vs The Groin vs Ocean Beach. Different math, different answers, one app."
         imageAlt="Spot detail screen showing Why This Score breakdown"
         imageSlug="spot-detail"
         reversed={false}
@@ -29,11 +29,11 @@ export function Landing() {
         reversed
       />
       <FeatureSection
-        eyebrow="28 spots · 150 miles"
+        eyebrow="64 spots · 150 miles"
         headline="Every break from Salt Point to Santa Cruz."
         body="Scan the whole coast at a glance. Colored pins show current quality score per spot, grouped by region. Filter by difficulty to hide spots outside your range. Offline-cached, so the whole map still works in the Bolinas dead zone."
         imageSlug="map"
-        imageAlt="Region map showing all 28 spots with colored score pins"
+        imageAlt="Region map showing all 64 spots with colored score pins"
         reversed={false}
       />
       <DataProof />
@@ -119,7 +119,7 @@ function Hero() {
           maxWidth: 620,
           lineHeight: 1.5,
         }}>
-          Hyper-local surf forecasts from Salt Point to Santa Cruz. 28 breaks, each with its own scoring model. Built for NorCal surfers who already know that &ldquo;good&rdquo; at Rodeo isn&rsquo;t &ldquo;good&rdquo; at The Patch.
+          Hyper-local surf forecasts from Salt Point to Santa Cruz. 64 breaks, each with its own scoring model. Built for NorCal surfers who already know that &ldquo;good&rdquo; at Rodeo isn&rsquo;t &ldquo;good&rdquo; at The Patch.
         </p>
 
         <div style={{ display: 'flex', gap: 12, marginTop: 36, flexWrap: 'wrap' }}>

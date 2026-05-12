@@ -271,9 +271,16 @@ function Footer() {
           </FooterCol>
 
           <FooterCol title="Data sources">
+            <FooterSubhead>Forecasts</FooterSubhead>
             <FooterLink href="https://www.ndbc.noaa.gov" external>NOAA NDBC</FooterLink>
             <FooterLink href="https://tidesandcurrents.noaa.gov" external>NOAA CO-OPS</FooterLink>
+            <FooterLink href="https://www.weather.gov/marine/" external>NOAA NWS Marine</FooterLink>
             <FooterLink href="https://open-meteo.com" external>Open-Meteo</FooterLink>
+            <FooterSubhead>Water quality</FooterSubhead>
+            <FooterLink href="https://sonomacounty.gov/health-and-human-services/health-services/divisions/public-health/environmental-health/programs-and-services/ocean-water-quality" external>Sonoma County EH</FooterLink>
+            <FooterLink href="https://sfwater.org" external>SFPUC</FooterLink>
+            <FooterLink href="https://www.smchealth.org/" external>San Mateo County</FooterLink>
+            <FooterLink href="https://www.marincounty.gov/departments/cda/env-health-svcs/prgm-beach-water-monitoring" external>Marin County EH</FooterLink>
           </FooterCol>
         </div>
 
@@ -286,7 +293,7 @@ function Footer() {
         }}>
           <div>© 2026 Surf Vikings. Designed in Northern California.</div>
           <div style={{ display: 'flex', gap: 20 }}>
-            <span>Built with live NOAA data</span>
+            <span>Built with live public data</span>
             <span>·</span>
             <span>No ads, no trackers</span>
           </div>
@@ -307,6 +314,19 @@ function FooterCol({ title, children }: { title: string; children: React.ReactNo
         {children}
       </div>
     </div>
+  );
+}
+
+/** Inline subheading inside a FooterCol — used by the Data sources column
+ *  to visually separate forecast sources from water-quality sources without
+ *  introducing a second column (which would break the 4-col footer grid). */
+function FooterSubhead({ children }: { children: React.ReactNode }) {
+  return (
+    <div style={{
+      fontSize: 10, fontWeight: 700, textTransform: 'uppercase',
+      letterSpacing: '0.08em', color: '#94A3B8',
+      marginTop: 4, marginBottom: -2,
+    }}>{children}</div>
   );
 }
 

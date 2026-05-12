@@ -11,8 +11,11 @@ export function About() {
         <h1 style={{ margin: 0, fontSize: 36, fontWeight: 800, letterSpacing: '-0.03em' }}>About</h1>
         <p style={{ marginTop: 16, fontSize: 17, color: '#64748B', lineHeight: 1.6 }}>
           Surf Vikings is a hyper-local forecast engine for Northern California surfers, Salt Point
-          to Santa Cruz. 28 spots, each with its own bathymetry, swell shadow, and tide dependency
-          encoded into the scoring model. Built on free public data from NOAA and Open-Meteo.
+          to Santa Cruz. 64 spots, each with its own bathymetry, swell shadow, and tide dependency
+          encoded into the scoring model. Built on free public data: wave and weather forecasts from
+          NOAA NDBC, NOAA CO-OPS tides, NOAA NWS coastal waters, and Open-Meteo; water-quality
+          results from Sonoma County Environmental Health, SFPUC, San Mateo County, and Marin
+          County Environmental Health.
         </p>
         <p style={{ marginTop: 16, fontSize: 17, color: '#64748B', lineHeight: 1.6 }}>
           The whole point is to answer one question: should I go now, or wait.
