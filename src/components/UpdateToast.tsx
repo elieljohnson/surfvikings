@@ -19,6 +19,20 @@ export function UpdateToast() {
     needRefresh: [needRefresh, setNeedRefresh],
     updateServiceWorker,
   } = useRegisterSW({
+    onRegisteredSW(_swUrl, registration) {
+      // Poll for new SW versions every 10 minutes while the tab is
+      // open. Without this, useRegisterSW only checks on initial page
+      // load, so a user who keeps the app open all day would never
+      // see the toast until they reload — defeating the point.
+      if (!registration) return;
+      const POLL_MS = 10 * 60 * 1000;
+      setInterval(() => {
+        // r.update() prompts the browser to refetch sw.js and compare
+        // against the installed version. Fails silently on network
+        // errors (offline, captive portals, etc.).
+        registration.update().catch(() => { /* ignore */ });
+      }, POLL_MS);
+    },
     onRegisterError(err) {
       // Don't crash on registration failures (private windows, dev
       // mode, etc.) — just log and let the app run un-cached.
