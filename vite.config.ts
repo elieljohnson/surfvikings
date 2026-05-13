@@ -8,7 +8,13 @@ export default defineConfig({
     react(),
     devApiPlugin(),
     VitePWA({
-      registerType: 'autoUpdate',
+      // 'prompt' instead of 'autoUpdate' so the SW doesn't silently
+      // wait for all tabs to close before activating a new version.
+      // We pair this with <UpdateToast/>, which surfaces a "new
+      // version available" banner the moment a fresh SW is detected.
+      // Tap to apply + reload — no more "hard refresh to bypass the
+      // SW" every deploy.
+      registerType: 'prompt',
       includeAssets: ['favicon.svg', 'apple-touch-icon.png'],
       manifest: {
         name: 'Surf Vikings',
@@ -31,6 +37,10 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,ico,woff2}'],
+        // Prune stale entries from previous SW versions when a new one
+        // activates. Without this, old hashed bundles would accumulate
+        // in the cache forever even after they're no longer reachable.
+        cleanupOutdatedCaches: true,
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,

@@ -5,6 +5,7 @@ import { RegionMap } from './components/RegionMap';
 import { Forecast } from './components/Forecast';
 import { Settings } from './components/Settings';
 import { TabBar, TabId } from './components/Primitives';
+import { UpdateToast } from './components/UpdateToast';
 import { SPOTS } from './lib/data';
 
 type Screen = TabId | 'spot';
@@ -56,6 +57,7 @@ export function App() {
       {screen === 'map' && <RegionMap onOpenSpot={openSpot}/>}
       {screen === 'forecast' && <Forecast onOpenSpot={openSpot}/>}
       {screen === 'settings' && <Settings/>}
+      <UpdateToast/>
       {screen !== 'spot' && <TabBar active={screen} onChange={(id) => setScreen(id)}/>}
     </div>
   );
