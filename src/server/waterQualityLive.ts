@@ -7,9 +7,10 @@
 //   Sonoma (HTML tables)            — weekly during in-season, automated
 //   SF / SFPUC (hidden JSON API)    — weekly year-round, 20+ stations
 //   San Mateo (Google MyMaps KML)   — weekly, 40 stations, no sample date
-//   Marin (hand-curated fixture)    — weekly during Apr–Oct, screenshot-fed
-//                                     because Marin's page is Cloudflare-
-//                                     blocked. See waterQualityMarinManual.ts.
+//   Marin (ArcGIS FeatureService)   — weekly Thursdays, automated. Endpoint
+//                                     provided directly by Marin IT after a
+//                                     polite email. Retired the screenshot-
+//                                     fed manual fixture this enabled.
 //   Santa Cruz (ArcGIS FeatureSvc)  — weekly, 4-tier model, 21 ocean stations
 //                                     + creek mouths. Only source that can
 //                                     emit the 'closed' tier (Serious Risk).
@@ -185,14 +186,14 @@ export async function fetchAllLiveWaterQuality(
   // LiveBeachReading from this file).
   const { fetchSanMateo } = await import('./waterQualitySanMateo');
   const { fetchSantaCruz } = await import('./waterQualitySantaCruz');
-  const { fetchMarinManual } = await import('./waterQualityMarinManual');
-  const [sonoma, sfpuc, sanMateo, santaCruz] = await Promise.all([
+  const { fetchMarin } = await import('./waterQualityMarin');
+  const [sonoma, sfpuc, sanMateo, santaCruz, marin] = await Promise.all([
     fetchSonomaCounty(signal),
     fetchSFPUC(signal),
     fetchSanMateo(signal),
     fetchSantaCruz(signal),
+    fetchMarin(signal),
   ]);
-  const marin = fetchMarinManual(); // sync, no network
   const out: Record<string, LiveBeachReading> = {};
   for (const r of [...sonoma, ...sfpuc, ...sanMateo, ...santaCruz, ...marin]) {
     out[r.beachName] = r;
