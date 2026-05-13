@@ -818,6 +818,27 @@ function LocalInsight({ spot }: { spot: Spot }) {
             }}>⚠ {hz}</span>
           ))}
         </div>
+        {/* Forecast caveat: explicit "the model doesn't know about X"
+            note from surfers on the ground. Different visual flavor
+            from the character note above so users understand it's
+            actionable now (read this when reading the score) rather
+            than reference info (what the spot is in general). */}
+        {spot.localNote && (
+          <div style={{
+            marginTop: 14,
+            paddingTop: 12,
+            borderTop: `1px solid ${TOKENS.border}`,
+          }}>
+            <div style={{
+              fontFamily: 'JetBrains Mono, ui-monospace, monospace',
+              fontSize: 11, letterSpacing: '0.12em', textTransform: 'uppercase',
+              color: TOKENS.pacific, marginBottom: 6,
+            }}>Forecast note</div>
+            <div style={{ fontSize: 13, lineHeight: 1.55, color: TOKENS.text }}>
+              {spot.localNote}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

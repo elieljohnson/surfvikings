@@ -69,6 +69,13 @@ export interface Spot {
   specialRules?: SpecialRule[];
   watchOnly?: boolean;
   sharkAdvisory?: boolean;
+  /** Short note about local knowledge the static scoring model can't
+   *  capture — cove wind wraps, refraction quirks, tide-channel tricks,
+   *  whatever the locals know. Surfaces on Spot Detail under a "Local"
+   *  tag so users can mentally adjust the numeric score. Keep it to
+   *  one or two sentences. Honest disclosure beats over-fitting the
+   *  model to a single ground-truth report. */
+  localNote?: string;
 }
 
 export const SPOTS: Spot[] = [
@@ -113,7 +120,12 @@ export const SPOTS: Spot[] = [
   { id: 'stinson',       region: 'marin',  regionLabel: 'Stinson',      name: 'Stinson Beach',       subtitle: 'Open 3-mile beach',            difficulty: 3,  type: 'Beach · L/R',          bottom: 'Sand',          optimalSwell: 250, optimalSize: [2,6], optimalPeriod: [10,14], offshore: 45,  optimalTide: 'high',   lat: 37.8978, lng: -122.6477, driveMin: 18,
     shadowFactor: 0.6, sandMobility: 0.7 },
   { id: 'muir-beach',    region: 'marin',  regionLabel: 'Muir Beach',   name: 'Muir Beach',          subtitle: 'Cove beach · Mt Tam shelter',  difficulty: 4,  type: 'Cove · Beachbreak',    bottom: 'Sand',          optimalSwell: 250, optimalSize: [1,6], optimalPeriod: [10,14], offshore: 45,  optimalTide: 'mid',    lat: 37.8589, lng: -122.5795, driveMin: 18,
-    shadowFactor: 0.5, sandMobility: 0.85 },
+    shadowFactor: 0.5, sandMobility: 0.85,
+    // Reported by surfers on the ground 2026-05-13: model rated 5.5/10
+    // at the time they left, team rated it 6/10. The systematic miss
+    // is the cove-wrap effect — encoded as a localNote below until we
+    // build the typed LocalRule framework.
+    localNote: 'NW wind wraps around the headland and arrives in the cove as offshore. Short-period wind swell refracts in. Forecast may underestimate conditions on NW-wind afternoons.' },
   { id: 'rodeo',         region: 'marin',  regionLabel: 'Marin Headlands', name: 'Rodeo Beach',      subtitle: 'Fort Cronkhite',               difficulty: 4,  type: 'Cove · Beachbreak',    bottom: 'Sand',          optimalSwell: 270, optimalSize: [1,6], optimalPeriod: [10,14], offshore: 45,  optimalTide: 'low',    lat: 37.831,  lng: -122.540,  driveMin: 14,
     shadowFactor: 0.5, sandMobility: 0.85 },
   // Region 3 — San Francisco
