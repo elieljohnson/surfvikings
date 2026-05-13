@@ -78,4 +78,12 @@ export default defineConfig({
     port: 5173,
     host: true,
   },
+  build: {
+    // TEMPORARY: sourcemaps enabled for one deploy to diagnose a
+    // reproducible "Cannot create property '_int' on number '1'" error
+    // in production. Remove once the bug is located and fixed —
+    // sourcemaps shouldn't ship long-term (leaks source code structure
+    // + adds bundle weight). Companion comment in commit message.
+    sourcemap: true,
+  },
 });
