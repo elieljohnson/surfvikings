@@ -11,7 +11,7 @@
 import { buildConditions } from './fetchers';
 import { generateICalendar, type CalendarEvent } from './icalendar';
 import {
-  SPOTS, findBestWindows, hourLabel, degToCardinal,
+  SPOTS, findBestWindows, degToCardinal,
 } from '../lib/data';
 import { hoursToTimeline } from '../lib/api';
 
@@ -52,14 +52,20 @@ export async function handleCalendar(req: Request): Promise<Response> {
     return calendarResponse(generateICalendar([]));
   }
 
+  // Anchor for the timeline's hour 0. hoursToTimeline slices wire data
+  // starting at the first hour >= now, so timeline[0] corresponds to
+  // ~the current hour. We snap to the top of the hour for UID stability
+  // (within an hour, event UIDs don't change). Using wire[0].t directly
+  // would be wrong because Open-Meteo's past_days param prepends
+  // historical hours — wire[0] is hours/days BEFORE now, not the
+  // timeline's actual start.
+  const anchorMs = Math.floor(Date.now() / 3600_000) * 3600_000;
+
   const events: CalendarEvent[] = [];
   for (const spot of validSpots) {
     const wire = payload.spots[spot.id];
     if (!wire?.length) continue;
     const timeline = hoursToTimeline(spot, wire, 168);
-    // Anchor hour 0 of the timeline to the first hour's actual epoch so
-    // events keep stable timestamps across feed refreshes (UID stability).
-    const anchorMs = wire[0]?.t ?? Date.now();
     const windows = findBestWindows(timeline)
       .sort((a, b) => b.peak - a.peak)
       .slice(0, MAX_EVENTS_PER_SPOT);
@@ -69,6 +75,7 @@ export async function handleCalendar(req: Request): Promise<Response> {
       // Window inclusive of the `end` hour, so add one more hour for
       // calendar coverage (a 7am–11am peak should render as 4 hours).
       const endMs   = anchorMs + (w.end + 1) * 3600_000;
+      const peakMs  = anchorMs + w.peakHour * 3600_000;
       const peakHr  = timeline[w.peakHour];
       // Deep-link straight to the spot detail page — when the user taps
       // the calendar event they jump into live conditions, not the
@@ -79,7 +86,7 @@ export async function handleCalendar(req: Request): Promise<Response> {
         startMs,
         endMs,
         title: `🌊 ${spot.name} · Peak ${Math.round(w.peak)}`,
-        description: buildDescription(spot.name, peakHr, w, deepLink),
+        description: buildDescription(spot.name, peakHr, w, peakMs, deepLink),
         location: spot.regionLabel,
         url: deepLink,
       });
@@ -93,6 +100,7 @@ function buildDescription(
   spotName: string,
   peak: ReturnType<typeof hoursToTimeline>[number] | undefined,
   w: { peak: number; peakHour: number },
+  peakMs: number,
   deepLink: string,
 ): string {
   // Final line is the deep-link as plain text — most calendar apps
@@ -103,8 +111,33 @@ function buildDescription(
   const swell = `Swell: ${peak.swellHeight.toFixed(1)}ft @ ${Math.round(peak.swellPeriod)}s ${degToCardinal(peak.swellDirection)}`;
   const wind  = `Wind: ${Math.round(peak.windSpeed)}kt ${degToCardinal(peak.windDirection)}`;
   const tide  = `Tide: ${peak.tideHeight.toFixed(1)}ft ${peak.tideRising ? 'rising' : 'falling'}`;
-  const peakAt = `Peak at ${hourLabel(w.peakHour)}`;
+  // Format the peak time with a 3-letter day name to avoid the S/T/F
+  // ambiguity of single-initial day labels. Computed in Pacific time
+  // since our audience is all NorCal — international subscribers would
+  // need a different approach later.
+  const peakAt = `Peak at ${formatPeakTime(peakMs)}`;
   return [peakAt, swell, wind, tide, '', open].join('\n');
+}
+
+/** Format an absolute timestamp as e.g. "Wed 4pm" — Pacific time, since
+ *  Surf Vikings is NorCal-only. Calendar apps render description text
+ *  as plain notes (no timezone awareness), so we have to bake the
+ *  user's actual wall time into the string ourselves. */
+function formatPeakTime(epochMs: number): string {
+  // Intl.DateTimeFormat gives us reliable PT abbreviations + AM/PM.
+  const fmt = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/Los_Angeles',
+    weekday: 'short',
+    hour: 'numeric',
+    hour12: true,
+  });
+  // Example output: "Wed, 4 PM". Normalize to "Wed 4pm" — tighter,
+  // matches the rest of the description's typographic register.
+  const parts = fmt.formatToParts(new Date(epochMs));
+  const day = parts.find((p) => p.type === 'weekday')?.value ?? '';
+  const hour = parts.find((p) => p.type === 'hour')?.value ?? '';
+  const period = (parts.find((p) => p.type === 'dayPeriod')?.value ?? '').toLowerCase();
+  return `${day} ${hour}${period}`;
 }
 
 function calendarResponse(ics: string): Response {
