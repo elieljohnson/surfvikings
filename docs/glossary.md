@@ -53,11 +53,23 @@ Surf domain, oceanography, and code terms used in the codebase. Skim past anythi
 
 - **PWA (Progressive Web App)** — a website that installs to a phone home screen, runs offline-capable, looks like a native app. Surf Vikings is built as one.
 - **Service worker** — background script that caches assets and handles offline behavior. Set up by `vite-plugin-pwa`.
+- **`registerType: 'prompt'` vs `'autoUpdate'`** — vite-plugin-pwa modes. `autoUpdate` activates new SWs silently when all tabs close (lag). `prompt` shows an in-app toast immediately so users decide when to reload. We use `'prompt'` + `UpdateToast` component.
+- **`useRegisterSW`** — React hook from `virtual:pwa-register/react`. Returns `{ needRefresh, updateServiceWorker, offlineReady }` tuple. We use the `onRegisteredSW` callback to set up 10-min polling so the toast appears spontaneously without reload.
+- **SW chicken-and-egg** — when switching SW strategies, existing visitors on the OLD SW won't benefit from the new one until they reload at least once. There's no way to upgrade an installed SW from a newer SW; the browser owns that transition.
+- **`webcal://`** — pseudo-scheme (RFC 2566) that tells the OS "open this calendar app, not the browser." Treated as HTTP by spec; HTTPS-only feeds rely on the server's redirect. **Important:** `webcals://` (with the S) is NOT widely supported — macOS Calendar doesn't register a handler and opens a blank Safari page. Use plain `webcal://` and accept the "Insecure Connection" warning that pops once.
+- **iCalendar (RFC 5545) / .ics** — the open calendar interchange format. Plain text, CRLF line endings, lines folded at 75 octets. `VCALENDAR` wraps a series of `VEVENT` blocks. We emit one via `/api/calendar.ics`.
+- **VEVENT / VALARM** — single calendar event / pre-event notification trigger. `VALARM` with `TRIGGER:-PT60M` fires the OS notification 60 minutes before the event. Calendar apps render their own notification UI from our event data.
+- **UID stability (calendar feeds)** — each VEVENT needs a deterministic UID so calendar apps update existing events rather than create duplicates. We use `${spotId}-${startMs}@surfvikings.com` anchored on the current hour rounded down, so UIDs only shift across hour boundaries.
+- **ArcGIS Feature Service** — Esri's queryable REST endpoint for geospatial datasets. Pattern: `/FeatureServer/0/query?where=…&outFields=*&f=json`. Used by Santa Cruz County and Marin County for their public water-quality data. **`MostRecent` / `is_latest_inspection` flag** is a common convention: a Boolean field on each row identifying the latest sample per station, saving you from GROUP BY gymnastics.
+- **Cloudflare JS challenge** — bot-detection that runs a JS puzzle in the client before the real page loads. Browsers pass; serverless functions can't, which is why scraping Marin's web page returns 403 even with a Chrome User-Agent. Worked around by emailing the county for a real API path; got two within 24h.
 - **Stale-while-revalidate** — caching pattern where the UI immediately renders cached data even if past freshness, then revalidates in the background and updates when fresh data arrives. Used by `useConditions`.
 - **Hot Module Replacement (HMR / Fast Refresh)** — Vite feature that updates components in-place without losing state. Useful in dev; occasionally produces ghost error stacks during multi-step edits.
 - **`useResponsiveWidth`** — custom hook that wraps a `<div ref>` + `ResizeObserver` so SVG charts can size to their container instead of using a hard-coded width.
 - **`useDriveTimes`** — custom hook backed by an OSRM driving matrix; returns `(spot) => minutes` for the current home base.
 - **`useConditions`** — custom hook fetching `/api/conditions` with stale-while-revalidate. Returns `{ timelines, response, loading, error, stale }`.
+- **`useFavorites`** — custom hook backed by `useLocalStorage<string[]>('sv:favorites', DEFAULT_FAVORITES)`. Exposes `{ favorites, toggle, reset, isFavorite }`. Used by Dashboard, Forecast, and Settings; one source of truth for which spots the user tracks.
+- **`useLocalStorage`** — tiny custom hook for persisted state. Same shape as `useState` but writes through to localStorage; reads from it on mount.
+- **`sv:*` localStorage namespace** — convention for user prefs persisted per-browser. Current keys: `sv:favorites`, `sv:minScore`, `sv:user:home`, `sv:user:location`, `sv:user:name`. Killed: `sv:units` (metric kill), `sv:notifyEpic` (Epic alerts removed).
 
 ## Data sources
 
@@ -68,6 +80,8 @@ Surf domain, oceanography, and code terms used in the codebase. Skim past anythi
 - **OSRM** — Open Source Routing Machine. Public demo server gives free routing without keys.
 - **Nominatim** — OpenStreetMap's free geocoder.
 - **CUDEM** — Continuously Updated Digital Elevation Model. NOAA NCEI's bathymetry data product. Backlog item: sample these for real per-spot depth profiles.
+- **County EH (Environmental Health)** — water quality monitoring departments at the county level. We pull live data from five: Sonoma, San Francisco (SFPUC, technically a utility not a county EH but same role), San Mateo, Marin, and Santa Cruz. Each publishes weekly bacterial sampling results in a different format; aggregator in `src/server/waterQualityLive.ts` normalizes them.
+- **Socrata / SODA** — open-data platform many government agencies use. JSON-native, supports SQL-like queries. Marin EHS offered this as an alternative path; we ended up using their ArcGIS endpoint instead because it matched the Santa Cruz pattern we'd already built.
 
 ## Scoring / quality
 
@@ -84,6 +98,15 @@ Surf domain, oceanography, and code terms used in the codebase. Skim past anythi
   - Watch tier: Hs ≥ 15ft, period ≥ 15s, direction within ±35° of 305°
   - Firing tier: Hs ≥ 22ft, period ≥ 17s, direction within ±25° of 305°
 - **Buoy 46059** — far-offshore California buoy historically used by the contest committee for the 20ft+ Hs criterion. Not in our current mapping but worth knowing about.
+
+## Water quality terms
+
+- **Posted / Advisory** — health department has put up a warning sign because bacterial counts exceeded a threshold. Maps to our `caution` tier (amber dot). Surfers can still enter at their own risk; it's an advisory, not a closure.
+- **Closed** — beach is physically closed (sewage spill, contaminated lagoon breach). Our `closed` tier (red dot). Currently only Santa Cruz County's "Serious Risk" category emits this — no other source has a tier that maps to closure.
+- **Single-sample posting threshold** — bacterial count from one water sample above which the beach gets posted. SM uses 400 MPN/100mL for E. coli, 104 for Enterococcus. SC's tiers use multiple thresholds.
+- **Geomean threshold** — bacterial count averaged over 30 days; another posting criterion. Also varies by agency.
+- **`liveBeachName`** — string key on `Spot.waterQuality` that matches the source's beach name verbatim. The aggregator builds `Record<beachName, LiveBeachReading>` and the UI joins by this key.
+- **Option B precedence** — when a spot has both a `permanentAdvisory` (encoded year-round concern, e.g. Cowells' Neary Lagoon outfall) and a `liveBeachName` with a current reading, the live reading drives the colored tier. The permanent text becomes year-round context that surfaces in copy. Established May 12, 2026.
 
 ## Brand / project terms
 

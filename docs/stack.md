@@ -17,7 +17,7 @@ No CSS framework. Inline styles via the React `style` prop, design tokens centra
 | Tech | Category | What it does for us |
 |---|---|---|
 | **Vercel** | Hosting platform | Static site + serverless functions in one deploy |
-| **Vercel Functions** | Edge/serverless | `/api/conditions` is a single function that fans out to NDBC + Open-Meteo + NOAA Tides and merges the results |
+| **Vercel Functions** | Edge/serverless | `/api/conditions` fans out to NDBC + Open-Meteo + NOAA + water-quality sources. `/api/calendar.ics` reuses the same pipeline to emit an RFC 5545 iCalendar feed of forecasted best windows. |
 
 ## Live data sources (all free, all keyless)
 
@@ -31,6 +31,11 @@ No CSS framework. Inline styles via the React `style` prop, design tokens centra
 | **Open-Meteo Forecast** | Wind, air temp, sea surface temp at arbitrary lat/lng | `https://api.open-meteo.com/v1/forecast` |
 | **Nominatim (OpenStreetMap)** | Geocoding home-base text → coordinates | `https://nominatim.openstreetmap.org/search` |
 | **OSRM public demo** | Driving distance matrix from home-base to all spot coords | `https://router.project-osrm.org/table/v1/driving/...` |
+| **Sonoma County Env. Health** | Water quality, weekly | HTML scrape of the public results page |
+| **SFPUC Beach Monitoring** | Water quality, weekly | Undocumented JSON API at `infrastructure.sfwater.org/lims.asmx/getBeaches` |
+| **San Mateo County** | Water quality, weekly | Google MyMaps KML at `www.google.com/maps/d/u/0/kml?mid=...&forcekml=1` (forcekml=1 is critical — without it Google returns KMZ which would require server-side unzip) |
+| **Santa Cruz County Env. Health** | Water quality, weekly, 4-tier | ArcGIS Feature Service at `sccgis.santacruzcountyca.gov/server/rest/services/waterquality/MapServer/0` (filter `where=MostRecent=1`) |
+| **Marin County Env. Health** | Water quality, weekly Thursdays | ArcGIS Feature Service at `services6.arcgis.com/T8eS7sop5hLmgRRH/...` (filter `where=is_latest_inspection=1`) |
 
 The keyless constraint is intentional. No vendor lock-in, no billing, no API quota anxiety. Trade-off: OSRM and Nominatim public servers have fair-use terms; if Surf Vikings ever scales beyond personal use, those become the first migration target.
 
@@ -53,7 +58,8 @@ These don't power the app — they're sources we triangulated against during the
 | **localStorage `sv:user:home`** | Geocoded home base `{label, lat, lng}` |
 | **localStorage `sv:user:location`** | Free-text home base label (fallback when geocoding fails) |
 | **localStorage `sv:user:name`** | First name for greeting ("Late night, Eliel.") |
-| **localStorage `sv:favorites`** *(planned)* | User's curated spot list — currently still hardcoded in `data.ts` |
+| **localStorage `sv:favorites`** | User's curated spot list (live; defaults seed from `DEFAULT_FAVORITES` in `data.ts`) |
+| **localStorage `sv:minScore`** | Min-score threshold for filtering dashboard chips (default 25 for new visitors) |
 
 No backend database. Everything client-side except the `/api/conditions` proxy.
 

@@ -89,9 +89,34 @@ These are explicit principles that govern every UI decision:
 - **Drive times:** matrix keyed by home-base lat/lng (rounded to 4 decimals). Refetches only when home base changes — once OSRM gives us all 40 spots' drive times, we cache the whole grid in localStorage.
 - **Home base coords:** geocoded once via Nominatim, cached as `{label, lat, lng}` in localStorage.
 
+## Water quality
+
+Five live sources merged in `src/server/waterQualityLive.ts` via a single aggregator:
+
+- **Sonoma County Env. Health** (HTML scrape) — weekly during in-season, ~7 stations.
+- **SFPUC Beach Monitoring** (undocumented JSON API at `infrastructure.sfwater.org/lims.asmx/getBeaches`) — weekly year-round, 20+ stations.
+- **San Mateo County** (Google MyMaps KML with `?forcekml=1`) — weekly, 40 stations, no per-station sample date.
+- **Santa Cruz County Env. Health** (ArcGIS Feature Service) — weekly with 4-tier status (Acceptable / Caution / Health Advisory / Serious Risk). Only source that can emit our `closed` tier via Serious Risk.
+- **Marin County Env. Health** (ArcGIS Feature Service, endpoint provided by Marin IT after a polite email) — weekly Thursdays.
+
+Per-spot mapping in `src/lib/waterQuality.ts`. Status tier model unified across sources: `open` (no advisory) / `caution` (advisory posted, surfers can still enter) / `closed` (physical closure). Spots with no encoded concern and no live data wired hide the water-quality panel entirely (per-exception UX, Eliel's call: "only display the card when we have data wired").
+
+Option B precedence: when a spot has BOTH a permanent advisory (Cowells' Neary Lagoon outfall, etc.) AND a live reading, the live reading drives the colored tier. The permanent advisory text appears as year-round context when the live reading is clean.
+
+## Forecast calendar feed
+
+`/api/calendar.ics?spots=<id>,<id>,...` returns an RFC 5545 iCalendar feed of the next 7 days' Best Windows per spot. Users subscribe in Apple/Google/Outlook Calendar; their OS handles the notification UI (lock screen, Apple Watch, CarPlay audio). Each VEVENT has a VALARM at `TRIGGER:-PT60M` so a notification fires 1 hour before the window opens. The description text contains the conditions readout plus an autolinked deep-link URL back to the spot detail page. The URL itself IS the subscription — spot IDs in the query string, no server-side store, no accounts.
+
+`src/server/icalendar.ts` (pure generator, 10 unit tests) handles RFC 5545 specifics: UTC formatting, CRLF endings, §3.3.11 text escapes, §3.1 line folding at 75 octets. `src/server/calendar-handler.ts` composes the timeline → events pipeline. `App.tsx` reads `?spot=<id>` on mount to land users on the right spot detail when they tap a calendar event.
+
+## Service worker update flow
+
+`vite-plugin-pwa` set to `registerType: 'prompt'`. `src/components/UpdateToast.tsx` uses `useRegisterSW` from `virtual:pwa-register/react` to show an in-app "New version available · Refresh" toast when the SW detects a new build. 10-minute polling so the toast appears spontaneously rather than only on reload. Note the one-time chicken-and-egg: visitors with the OLD `autoUpdate` SW won't see the toast until they reload once after the new SW deploys — there's no way to "fix" an already-installed SW from a new SW.
+
 ## What's not in the app (intentional)
 
-- **No accounts.** Everything is local-only. Push notifications are an open issue with the gating decisions (auth + DB + cron) still unmade.
+- **No accounts.** Everything is local-only. Calendar subscription is the entire notification path; per-user push notifications are explicitly deferred (and probably permanently — iCal covers the actual need).
+- **No metric units.** Imperial-only by design. US-focused app for NorCal surfers; threading metric through every panel for near-zero benefit is the wrong trade.
 - **No discovery.** No "browse all spots" experience, no "spots you might like." The map view shows everything because it's a map, but there's no recommendation surface.
 - **No editorial ratings.** Skip Stormrider stars, Surfline ratings, crowd factor, local vibe. Those are useful in apps that serve many users finding new spots — useless when you already know where you surf.
 - **No social.** No comments, no photo uploads, no localism reporting. Hazards are a fixed list per spot.
@@ -101,3 +126,5 @@ These are explicit principles that govern every UI decision:
 - **Score formula is approximate.** Particularly the `watchOnly` Mavericks path (caps size at 8ft, which is laughable for a contest spot). Mavericks watch panel works around this by gating on raw size/period/direction.
 - **Bathymetry profiles are hand-curated.** Three Bolinas spots have shape data eyeballed from NOAA charts. The NOAA NCEI CUDEM pipeline (backlog item) would replace these with measured DEM samples.
 - **Sources disagree sometimes.** Triangulation is documented per-spot; we trust Surfline for tide preferences (Princeton Jetty's "LOW TIDE ONLY" structured field on Stormrider reads like a copy-paste error vs the Surfline mid-high reading).
+- **Scoring engine is symmetric in size + direction.** `sScore` penalizes being below `optimalSize` minimum the same as above maximum (different problems — "no waves" vs "waves too big"). `dirScore` is independent of energy magnitude (at 1.3ft, direction barely matters). Surfaced by Cowells reading 73/Fair where Surfline shows POOR for the same flat day. On the backlog as a focused scoring-engine refinement.
+- **`localNote` is text-only.** `Spot.localNote?: string` field surfaces forecast-caveat text on Spot Detail (e.g., Muir Beach's "NW wind wraps around the headland..."). When enough ground-truth observations accumulate, fold into a typed `LocalRule` framework — wind-wrap, short-period-tolerance, time-of-day modulation, etc. — with structured scoring deltas instead of just descriptive text.
