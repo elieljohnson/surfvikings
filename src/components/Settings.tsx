@@ -31,7 +31,6 @@ export function Settings() {
   // User prefs persist in localStorage — per-browser, per-visitor. No
   // server, no auth, no cross-device sync. Each visitor gets their own
   // copy; visitors can't change Eliel's app.
-  const [notifyEpic, setNotifyEpic] = useLocalStorage<boolean>('sv:notifyEpic', true);
   const [minScore, setMinScore] = useLocalStorage<number>('sv:minScore', DEFAULT_MIN_SCORE);
   const { favorites, toggle: toggleFavorite, reset: resetFavorites, isFavorite } = useFavorites();
 
@@ -107,13 +106,11 @@ export function Settings() {
         isFavorite={isFavorite}
       />
 
-      <Group title="Alerts">
-        <Toggle label="Epic window alerts" hint="Notify when a tracked spot hits 75+" on={notifyEpic} onChange={setNotifyEpic}/>
+      <Group title="Dashboard">
         <Slider label="Min score threshold" hint="Hide chips below this score on the dashboard" value={minScore} onChange={setMinScore} min={0} max={100}/>
-        {/* Mavericks watch toggle removed pending push-notifications infra
-            (backlog item: push notifications). Restore when notifications
-            actually have a delivery path. */}
       </Group>
+
+      <ForecastCalendarGroup favoriteIds={favorites}/>
 
       <Group title="Units">
         {/* Display-only — this is a US-focused personal app and we report
@@ -141,6 +138,124 @@ export function Settings() {
 
       <div style={{ height: 100 }}/>
     </Screen>
+  );
+}
+
+/** Forecast calendar subscription. The .ics URL itself IS the subscription
+ *  — spot IDs are encoded in the query string, no server-side state, no
+ *  account. webcal:// is Apple's scheme for "open in default calendar."
+ *  Google Calendar accepts an https URL via its `cid` param. Outlook
+ *  users get the Copy link path. */
+function ForecastCalendarGroup({ favoriteIds }: { favoriteIds: string[] }) {
+  const [expanded, setExpanded] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  // Use the production origin in the subscription links rather than the
+  // current host — webcal:// + localhost won't work, and preview-branch
+  // URLs are ephemeral. surfvikings.com is stable across both.
+  const base = 'https://surfvikings.com/api/calendar.ics';
+  const qs = favoriteIds.length ? `?spots=${favoriteIds.join(',')}` : '';
+  const httpsUrl = `${base}${qs}`;
+  const webcalUrl = `webcal://surfvikings.com/api/calendar.ics${qs}`;
+  const googleUrl = `https://calendar.google.com/calendar/r?cid=${encodeURIComponent(httpsUrl)}`;
+
+  const onCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(httpsUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      // Clipboard API can fail (insecure context, denied). Fall back to
+      // selecting the text so the user can copy manually.
+      const el = document.getElementById('sv-cal-url') as HTMLInputElement | null;
+      el?.select();
+    }
+  };
+
+  return (
+    <div style={{ padding: '18px 20px 0' }}>
+      <div style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 13, letterSpacing: '0.18em', color: TOKENS.textMute, textTransform: 'uppercase', marginBottom: 8 }}>
+        Forecast calendar
+      </div>
+      <div style={{ background: TOKENS.surface, border: `1px solid ${TOKENS.border}`, borderRadius: 10 }}>
+        <button
+          type="button"
+          onClick={() => setExpanded((o) => !o)}
+          style={{
+            width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: '12px 14px',
+            borderBottom: expanded ? `1px solid ${TOKENS.border}` : 'none',
+            background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left',
+            color: 'inherit', font: 'inherit', gap: 12,
+            WebkitTapHighlightColor: 'transparent',
+          }}
+        >
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <div style={{ fontSize: 14, color: TOKENS.text }}>Subscribe to your favorites&rsquo; best windows</div>
+            <div style={{ fontSize: 12, color: TOKENS.textMute, marginTop: 2, lineHeight: 1.4 }}>
+              {favoriteIds.length === 0
+                ? 'Add at least one favorite to enable.'
+                : `Up to 3 peaks per favorite over the next 7 days. Calendar app handles the alerts.`}
+            </div>
+          </div>
+          <span style={{
+            fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 11,
+            color: TOKENS.textMute,
+          }}>{expanded ? '▾' : '▸'}</span>
+        </button>
+
+        {expanded && favoriteIds.length > 0 && (
+          <div style={{ padding: '14px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              <SubscribeButton href={webcalUrl} label="Apple Calendar"/>
+              <SubscribeButton href={googleUrl} label="Google Calendar"/>
+              <button onClick={onCopy} style={subscribeButtonStyle(copied)}>
+                {copied ? 'Copied ✓' : 'Copy link'}
+              </button>
+            </div>
+            <input
+              id="sv-cal-url"
+              readOnly
+              value={httpsUrl}
+              onFocus={(e) => e.currentTarget.select()}
+              style={{
+                width: '100%', boxSizing: 'border-box',
+                background: TOKENS.surface2, border: `1px solid ${TOKENS.border}`,
+                borderRadius: 6, padding: '8px 10px',
+                fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 11,
+                color: TOKENS.textDim, outline: 'none',
+              }}
+            />
+            <div style={{ fontSize: 12, color: TOKENS.textMute, lineHeight: 1.5 }}>
+              Or, in any calendar app, choose &ldquo;Subscribe to calendar&rdquo; and paste the URL.
+              The feed refreshes every few hours; your calendar app handles notifications.
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function subscribeButtonStyle(active: boolean): React.CSSProperties {
+  return {
+    padding: '8px 12px', borderRadius: 6,
+    background: active ? TOKENS.pacific : TOKENS.surface2,
+    border: `1px solid ${active ? TOKENS.pacific : TOKENS.borderHi}`,
+    color: active ? '#FFFFFF' : TOKENS.text,
+    fontSize: 13, fontWeight: 500,
+    cursor: 'pointer', textDecoration: 'none',
+    display: 'inline-flex', alignItems: 'center', gap: 6,
+    WebkitTapHighlightColor: 'transparent',
+    transition: 'background 120ms ease',
+  };
+}
+
+function SubscribeButton({ href, label }: { href: string; label: string }) {
+  return (
+    <a href={href} target="_blank" rel="noopener noreferrer" style={subscribeButtonStyle(false)}>
+      {label} →
+    </a>
   );
 }
 
@@ -261,32 +376,6 @@ function Row({ label, value, hint, mono, color }: { label: string; value: React.
         fontFamily: mono ? 'JetBrains Mono, ui-monospace, monospace' : 'inherit',
         fontSize: 13, color: color || TOKENS.textDim,
       }}>{value}</div>
-    </div>
-  );
-}
-
-function Toggle({ label, hint, on, onChange }: { label: string; hint?: string; on: boolean; onChange: (v: boolean) => void }) {
-  return (
-    <div style={{
-      padding: '12px 14px', borderBottom: `1px solid ${TOKENS.border}`,
-      display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12,
-    }}>
-      <div style={{ flex: 1 }}>
-        <div style={{ fontSize: 14, color: TOKENS.text }}>{label}</div>
-        {hint && <div style={{ fontSize: 12, color: TOKENS.textMute, marginTop: 2 }}>{hint}</div>}
-      </div>
-      <div onClick={() => onChange(!on)} style={{
-        width: 38, height: 22, borderRadius: 11,
-        background: on ? TOKENS.pacific : TOKENS.surface3,
-        border: `1px solid ${on ? TOKENS.pacific : TOKENS.borderHi}`,
-        position: 'relative', cursor: 'pointer', transition: 'background 0.2s',
-      }}>
-        <div style={{
-          position: 'absolute', top: 1, left: on ? 17 : 1,
-          width: 18, height: 18, borderRadius: 9,
-          background: TOKENS.text, transition: 'left 0.2s',
-        }}/>
-      </div>
     </div>
   );
 }
