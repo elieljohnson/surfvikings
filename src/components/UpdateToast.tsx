@@ -1,4 +1,4 @@
-// Surfaces a small "new version available" banner when the PWA's service
+// Surfaces a small "New version available" banner when the PWA's service
 // worker detects a fresh build. Tap to activate the new SW and reload
 // the page. Pairs with vite.config.ts's `registerType: 'prompt'`.
 //
