@@ -2,7 +2,7 @@
 // worker detects a fresh build. Tap to activate the new SW and reload
 // the page. Pairs with vite.config.ts's `registerType: 'prompt'`.
 //
-// Why this exists: Vite-plugin-pwa's default 'autoUpdate' mode waits to
+// Why this exists: vite-plugin-pwa's default 'autoUpdate' mode waits to
 // activate a new SW until all tabs are closed and reopened. For a
 // single-tab user keeping the app open across days, that means the
 // deployed bundle silently lags reality until they happen to close the
