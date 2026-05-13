@@ -154,16 +154,18 @@ function ForecastCalendarGroup({ favoriteIds }: { favoriteIds: string[] }) {
   // current host — webcal:// + localhost won't work, and preview-branch
   // URLs are ephemeral. surfvikings.com is stable across both.
   //
-  // webcals:// (with the S) is critical here. The bare webcal:// scheme
-  // is historically defined as plain HTTP; Apple Calendar on macOS
-  // throws "Insecure Connection" and refuses to follow the HTTPS
-  // redirect our site forces. webcals:// tells the calendar app to
-  // subscribe over TLS explicitly. iOS Calendar and macOS Calendar
-  // both honor it; Google uses its own cid= flow so it's unaffected.
+  // On webcal:// vs webcals://: tried webcals:// (with the S) to skip
+  // Apple's "Insecure Connection" warning. macOS Calendar doesn't
+  // actually register a handler for that scheme — it falls through to
+  // Safari which opens a blank page. Plain webcal:// is the only one
+  // Calendar handles. Our Vercel HTTPS redirect carries the actual
+  // fetch over TLS even though the scheme is nominally HTTP, so the
+  // warning is cosmetic. Google Calendar takes the https URL directly
+  // via its cid= flow so it's unaffected either way.
   const base = 'https://surfvikings.com/api/calendar.ics';
   const qs = favoriteIds.length ? `?spots=${favoriteIds.join(',')}` : '';
   const httpsUrl = `${base}${qs}`;
-  const webcalUrl = `webcals://surfvikings.com/api/calendar.ics${qs}`;
+  const webcalUrl = `webcal://surfvikings.com/api/calendar.ics${qs}`;
   const googleUrl = `https://calendar.google.com/calendar/r?cid=${encodeURIComponent(httpsUrl)}`;
 
   const onCopy = async () => {
@@ -234,8 +236,12 @@ function ForecastCalendarGroup({ favoriteIds }: { favoriteIds: string[] }) {
               }}
             />
             <div style={{ fontSize: 12, color: TOKENS.textMute, lineHeight: 1.5 }}>
-              Or, in any calendar app, choose &ldquo;Subscribe to calendar&rdquo; and paste the URL.
-              The feed refreshes every few hours; your calendar app handles notifications.
+              If a button opens an empty page or shows an error, the most
+              reliable path is: Copy link → in your calendar app choose
+              &ldquo;New Calendar Subscription&rdquo; (Apple) or &ldquo;Add
+              from URL&rdquo; (Google) → paste. Apple Calendar may warn about
+              an &ldquo;Insecure Connection&rdquo; — safe to continue; the
+              actual fetch is over HTTPS. Feed refreshes every few hours.
             </div>
           </div>
         )}
