@@ -153,10 +153,17 @@ function ForecastCalendarGroup({ favoriteIds }: { favoriteIds: string[] }) {
   // Use the production origin in the subscription links rather than the
   // current host — webcal:// + localhost won't work, and preview-branch
   // URLs are ephemeral. surfvikings.com is stable across both.
+  //
+  // webcals:// (with the S) is critical here. The bare webcal:// scheme
+  // is historically defined as plain HTTP; Apple Calendar on macOS
+  // throws "Insecure Connection" and refuses to follow the HTTPS
+  // redirect our site forces. webcals:// tells the calendar app to
+  // subscribe over TLS explicitly. iOS Calendar and macOS Calendar
+  // both honor it; Google uses its own cid= flow so it's unaffected.
   const base = 'https://surfvikings.com/api/calendar.ics';
   const qs = favoriteIds.length ? `?spots=${favoriteIds.join(',')}` : '';
   const httpsUrl = `${base}${qs}`;
-  const webcalUrl = `webcal://surfvikings.com/api/calendar.ics${qs}`;
+  const webcalUrl = `webcals://surfvikings.com/api/calendar.ics${qs}`;
   const googleUrl = `https://calendar.google.com/calendar/r?cid=${encodeURIComponent(httpsUrl)}`;
 
   const onCopy = async () => {
