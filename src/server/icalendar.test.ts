@@ -74,6 +74,19 @@ describe('generateICalendar', () => {
     }
   });
 
+  it('emits a URL property when provided, raw (not TEXT-escaped)', () => {
+    const link = 'https://surfvikings.com/app?spot=bolinas-patch';
+    const ics = generateICalendar([{ ...evt, url: link }]);
+    expect(ics).toContain(`URL:${link}`);
+    // Should NOT escape the ? or = the way TEXT fields would
+    expect(ics).not.toContain('URL:https://surfvikings.com/app\\?spot');
+  });
+
+  it('omits the URL line when no URL is given', () => {
+    const ics = generateICalendar([evt]);
+    expect(ics).not.toMatch(/^URL:/m);
+  });
+
   it('returns a valid empty calendar when given no events', () => {
     const ics = generateICalendar([]);
     expect(ics).toMatch(/BEGIN:VCALENDAR/);

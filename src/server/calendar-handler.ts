@@ -70,13 +70,18 @@ export async function handleCalendar(req: Request): Promise<Response> {
       // calendar coverage (a 7am–11am peak should render as 4 hours).
       const endMs   = anchorMs + (w.end + 1) * 3600_000;
       const peakHr  = timeline[w.peakHour];
+      // Deep-link straight to the spot detail page — when the user taps
+      // the calendar event they jump into live conditions, not the
+      // dashboard. Read by App.tsx via ?spot= param on mount.
+      const deepLink = `https://surfvikings.com/app?spot=${spot.id}`;
       events.push({
         uid: `${spot.id}-${startMs}@surfvikings.com`,
         startMs,
         endMs,
         title: `🌊 ${spot.name} · Peak ${Math.round(w.peak)}`,
-        description: buildDescription(spot.name, peakHr, w),
+        description: buildDescription(spot.name, peakHr, w, deepLink),
         location: spot.regionLabel,
+        url: deepLink,
       });
     }
   }
@@ -88,13 +93,18 @@ function buildDescription(
   spotName: string,
   peak: ReturnType<typeof hoursToTimeline>[number] | undefined,
   w: { peak: number; peakHour: number },
+  deepLink: string,
 ): string {
-  if (!peak) return `${spotName} · Peak ${Math.round(w.peak)}`;
+  // Final line is the deep-link as plain text — most calendar apps
+  // autolink URLs in description bodies, providing a clickable fallback
+  // for any client that doesn't render the structured URL property.
+  const open = `Open in Surf Vikings → ${deepLink}`;
+  if (!peak) return `${spotName} · Peak ${Math.round(w.peak)}\n\n${open}`;
   const swell = `Swell: ${peak.swellHeight.toFixed(1)}ft @ ${Math.round(peak.swellPeriod)}s ${degToCardinal(peak.swellDirection)}`;
   const wind  = `Wind: ${Math.round(peak.windSpeed)}kt ${degToCardinal(peak.windDirection)}`;
   const tide  = `Tide: ${peak.tideHeight.toFixed(1)}ft ${peak.tideRising ? 'rising' : 'falling'}`;
   const peakAt = `Peak at ${hourLabel(w.peakHour)}`;
-  return [peakAt, swell, wind, tide].join('\n');
+  return [peakAt, swell, wind, tide, '', open].join('\n');
 }
 
 function calendarResponse(ics: string): Response {

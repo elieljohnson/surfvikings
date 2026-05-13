@@ -24,6 +24,10 @@ export interface CalendarEvent {
   description: string;
   /** Optional LOCATION — calendar apps surface this and may "open in maps". */
   location?: string;
+  /** Optional URL — RFC 5545 §3.8.4.6 URL property. Calendar apps render
+   *  this as a clickable link in the event details panel. We use it to
+   *  point back to the spot detail page in Surf Vikings. */
+  url?: string;
   /** Minutes before startMs to fire the OS notification. Default 60. */
   alarmMinutesBefore?: number;
 }
@@ -64,6 +68,9 @@ export function generateICalendar(events: CalendarEvent[]): string {
     lines.push(`SUMMARY:${escapeText(e.title)}`);
     lines.push(`DESCRIPTION:${escapeText(e.description)}`);
     if (e.location) lines.push(`LOCATION:${escapeText(e.location)}`);
+    // URL is URI-type per spec — emitted raw, NOT TEXT-escaped. Calendar
+    // apps render it as a clickable "URL" or "Link" row in event details.
+    if (e.url) lines.push(`URL:${e.url}`);
     lines.push('BEGIN:VALARM');
     lines.push('ACTION:DISPLAY');
     lines.push(`DESCRIPTION:${escapeText(e.title)}`);
