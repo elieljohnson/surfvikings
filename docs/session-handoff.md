@@ -38,9 +38,11 @@ Both the renderer and the output PNG are committed (commits `1b76814` and `da325
 
 ## Open threads / pick this up first next session
 
-1. **`gen-screenshots.mjs` doesn't capture the Forecast tab.** It runs Dashboard / Spot Detail / Map only. Independent of the cover work — this is a real gap if anyone wants a complete set of marketing screenshots in the future. Fix would be: navigate to Forecast (`TabBar` in `src/components/Primitives.tsx`) and capture `public/screenshots/forecast.png` + `.webp`. Requires a reachable dev server or production deploy (sandbox firewall blocks the latter — see hypotheses above).
+1. **Add Muir Beach to the spot model.** Currently `src/lib/data.ts` jumps from Stinson (Marin, 18 min) to Rodeo (14 min) with no Muir entry — likely a deliberate omission because the inner cove sits in a Bird Rock swell shadow and rarely produces a clean wave. User went there 2026-05-15 4-6 PM and it was a big day with closeouts; we had no forecast to compare against. Either add Muir (with appropriate `optimalSize`/`optimalSwell` reflecting that it only works on modest, more S-facing windows and closes out beyond that), or leave it out and add a code comment explaining why so the next agent doesn't add it without thinking. Nearest buoy is NDBC 46026 (San Francisco); tide station is Bolinas Lagoon or Point Bonita.
 
-Nothing else from this session is actionable.
+2. **Persist forecast snapshots so we can back-test.** Today the `/api/conditions` handler (`src/server/handler.ts:7`) caches for 15 minutes in-memory only — there is no record of what the model predicted earlier in the day. User asked "how did our forecast track vs reality at 4-6 PM" and we had nothing to look up. Cheapest fix: a once-or-twice-daily snapshot write to Vercel KV (or a small JSON in a separate repo) of the full `ConditionsResponse` for all spots. Then a `/app/history` view or a CLI can diff predicted vs observed. NOAA NDBC observations are public and queryable historically by buoy + timestamp, so the "actual" half of the comparison is free.
+
+3. **`gen-screenshots.mjs` doesn't capture the Forecast tab.** It runs Dashboard / Spot Detail / Map only. Independent of the other threads — this is a real gap if anyone wants a complete set of marketing screenshots in the future. Fix: navigate to Forecast (`TabBar` in `src/components/Primitives.tsx`) and capture `public/screenshots/forecast.png` + `.webp`. Requires a reachable dev server or production deploy (sandbox firewall blocks the latter — see hypotheses above).
 
 ## Useful state to keep in mind
 
