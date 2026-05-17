@@ -24,6 +24,15 @@ interface CacheEntry { at: number; res: ConditionsResponse }
 const GLOBAL_CACHE = new Map<string, CacheEntry>();
 // Stale beyond this age, but still rendered while we revalidate.
 const CACHE_TTL = 10 * 60 * 1000; // 10 min
+// Background refresh cadence — matches the server-side cache TTL so we
+// poll exactly as often as the upstream cache can yield new data. Keeps
+// water-quality (Marin / Sonoma / SFPUC / SM / SC), live tides, and buoy
+// observations current while a tab stays open.
+const REFRESH_INTERVAL = 15 * 60 * 1000; // 15 min
+// On visibility/focus return, refetch only if cache is older than this.
+// Short threshold so tab-switchers see fresh data; not so short that a
+// quick blur/focus burst spams the API.
+const FOCUS_REVALIDATE_THRESHOLD = 60 * 1000; // 1 min
 // Discard cached data older than this — forecasts past 24h are useless.
 const CACHE_MAX_AGE = 24 * 60 * 60 * 1000;
 // Bump this if ConditionsResponse shape changes — old entries get ignored.
@@ -79,19 +88,28 @@ export function useConditions(spotIds: string[]): State {
   }));
 
   useEffect(() => {
-    const fresh = GLOBAL_CACHE.get(key);
-    if (fresh && Date.now() - fresh.at < CACHE_TTL) {
-      setState({
-        timelines: timelinesFromResponse(spotIds, fresh.res),
-        response: fresh.res,
-        loading: false,
-        error: null,
-        stale: false,
-      });
-      return;
-    }
     let cancelled = false;
-    (async () => {
+    let inFlight = false;
+
+    async function revalidate(reason: 'mount' | 'interval' | 'focus') {
+      // Skip if the in-memory cache is still warm and we're not being
+      // forced. The 'mount' path also short-circuits here so we don't
+      // refetch when navigating between spots in the same session.
+      const cached = GLOBAL_CACHE.get(key);
+      const age = cached ? Date.now() - cached.at : Infinity;
+      if (reason === 'mount' && cached && age < CACHE_TTL) {
+        setState({
+          timelines: timelinesFromResponse(spotIds, cached.res),
+          response: cached.res,
+          loading: false,
+          error: null,
+          stale: false,
+        });
+        return;
+      }
+      if (reason === 'focus' && age < FOCUS_REVALIDATE_THRESHOLD) return;
+      if (inFlight) return;
+      inFlight = true;
       try {
         const res = await fetchConditions(spotIds);
         if (cancelled) return;
@@ -107,15 +125,39 @@ export function useConditions(spotIds: string[]): State {
         });
       } catch (err) {
         if (cancelled) return;
-        setState((s) => ({
-          ...s,
-          loading: false,
-          error: err instanceof Error ? err.message : String(err),
-        }));
+        // Background refreshes shouldn't clobber a successful prior render
+        // with an error state — keep showing the stale data and just flag it.
+        setState((s) => s.response
+          ? { ...s, stale: true, error: err instanceof Error ? err.message : String(err) }
+          : { ...s, loading: false, error: err instanceof Error ? err.message : String(err) }
+        );
+      } finally {
+        inFlight = false;
       }
-    })();
+    }
+
+    revalidate('mount');
+
+    // Periodic background refresh — keeps long-lived tabs current with
+    // upstream cadence (Marin Thursdays, Sonoma weekly, NOAA hourly, etc.).
+    const intervalId = window.setInterval(() => revalidate('interval'), REFRESH_INTERVAL);
+
+    // Tab regains focus → opportunistic refresh if cache is more than
+    // FOCUS_REVALIDATE_THRESHOLD old. Catches the common "checked at dawn,
+    // opened again at lunch" pattern without waiting for the next interval.
+    const onVisibility = () => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
+        revalidate('focus');
+      }
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+    window.addEventListener('focus', onVisibility);
+
     return () => {
       cancelled = true;
+      window.clearInterval(intervalId);
+      document.removeEventListener('visibilitychange', onVisibility);
+      window.removeEventListener('focus', onVisibility);
     };
   }, [key]);
 
