@@ -156,7 +156,7 @@ export function SpotDetail({ spotId, onBack }: SpotDetailProps) {
         </div>
       )}
 
-      <ScoreBreakdown spot={activeSpot} current={current}/>
+      <ScoreBreakdown spot={activeSpot} current={current} timeline={timeline}/>
 
       <div style={{ padding: '4px 20px 14px' }}>
         <ChartRow
@@ -200,7 +200,121 @@ export function SpotDetail({ spotId, onBack }: SpotDetailProps) {
   );
 }
 
-function ScoreBreakdown({ spot, current }: { spot: Spot; current: ForecastHour }) {
+/** Plain-English explanation of why a score row came out the way it did.
+ *  Pure function of the row's inputs — no React, no async. Returns 2-3
+ *  short sentences ready to render. Kept here (not in lib/) because the
+ *  copy is tightly coupled to the UI's level of detail. */
+function explainRow(
+  label: string, score: number, max: number,
+  spot: Spot, current: ForecastHour, timeline: ForecastHour[],
+): string[] {
+  const pct = Math.round((score / max) * 100);
+  if (label === 'Direction') {
+    // Smallest signed angle between current and optimal, on a 360° circle.
+    const raw = current.swellDirection - spot.optimalSwell;
+    const delta = ((raw + 540) % 360) - 180;
+    const offBy = Math.round(Math.abs(delta));
+    const side = delta > 0 ? 'east' : 'west';
+    return [
+      `${offBy}° off optimal (${spot.optimalSwell}°). Cosine² falloff puts this at ${pct}% of max.`,
+      offBy <= 15
+        ? 'Lined up with the break — energy hits the bottom contour at the right angle.'
+        : offBy <= 45
+        ? `Swell is rotated ${side} of ideal — still working, just refracting harder onto the bar.`
+        : `Too far ${side} of the break's window — most energy walks past instead of focusing.`,
+    ];
+  }
+  if (label === 'Period') {
+    const p = current.swellPeriod;
+    const [pMin, pMax] = spot.optimalPeriod;
+    // Wave energy scales with T² at fixed height. Rough rule of thumb — a 12s
+    // wave carries ~4× the energy of a 6s wave at the same face height.
+    const energyVs12 = Math.round((p * p) / (12 * 12) * 100);
+    const kind = p < 8 ? 'local wind swell' : p < 12 ? 'short-period groundswell' : 'long-period groundswell';
+    const windowMsg = p >= pMin && p <= pMax
+      ? `Inside this spot's ${pMin}-${pMax}s window.`
+      : p < pMin
+      ? `${(pMin - p).toFixed(1)}s short of the ${pMin}-${pMax}s window — penalty is 3 pts per second under.`
+      : `${(p - pMax).toFixed(1)}s over the ${pMin}-${pMax}s window — long-period swells lose 2 pts per second over.`;
+    return [
+      `${p.toFixed(0)}s = ${kind}. Carries about ${energyVs12}% the energy of a 12s wave at the same face height.`,
+      windowMsg,
+    ];
+  }
+  if (label === 'Size') {
+    const shadow = spot.shadowFactor ?? 1.0;
+    const reaches = current.swellHeight;
+    const openOcean = shadow < 1 ? reaches / shadow : reaches;
+    const [sMin, sMax] = spot.optimalSize;
+    const windowMsg = reaches >= sMin && reaches <= sMax
+      ? `Inside your ${sMin}-${sMax}ft window — ${
+          reaches < (sMin + sMax) / 2 ? 'closer to the low end' : 'closer to the top'
+        }.`
+      : reaches < sMin
+      ? `${(sMin - reaches).toFixed(1)}ft below the ${sMin}-${sMax}ft window.`
+      : `${(reaches - sMax).toFixed(1)}ft above the ${sMin}-${sMax}ft window.`;
+    return shadow < 1
+      ? [
+          `Open-ocean buoy reads ${openOcean.toFixed(1)}ft. shadowFactor ${shadow.toFixed(2)} for this break → ${reaches.toFixed(1)}ft actually reaches it.`,
+          windowMsg,
+        ]
+      : [
+          `${reaches.toFixed(1)}ft at the break (no coastal sheltering applied).`,
+          windowMsg,
+        ];
+  }
+  if (label === 'Wind dir') {
+    // Signed delta between wind direction and the offshore bearing.
+    const raw = current.windDirection - spot.offshore;
+    const delta = ((raw + 540) % 360) - 180;
+    const offBy = Math.abs(delta);
+    const kind = offBy <= 45 ? 'offshore'
+      : offBy <= 90 ? 'side-shore'
+      : offBy <= 135 ? 'side-onshore'
+      : 'onshore';
+    // Find when wind drops below 5kt in the next 12h, if it does.
+    const easeIdx = timeline.slice(1, 13).findIndex((h) => h.windSpeed <= 5);
+    const easeMsg = easeIdx >= 0
+      ? `Forecast eases to ${Math.round(timeline[easeIdx + 1].windSpeed)}kt by ${hourLabel(easeIdx + 1)} — penalty drops, direction stays the same.`
+      : null;
+    return [
+      `Wind ${Math.round(offBy)}° off offshore (${degToCardinal(spot.offshore)}) — effectively ${kind}.`,
+      kind === 'offshore'
+        ? 'Clean faces, holds shape longer.'
+        : kind === 'side-shore'
+        ? 'Texture on the face, not destroyed.'
+        : 'Surface chop — waves lose definition before they break.',
+      easeMsg,
+    ].filter((s): s is string => !!s);
+  }
+  if (label === 'Tide') {
+    // Walk the next 12 hours to find the next high/low pivot.
+    const next = (() => {
+      for (let i = 1; i < Math.min(timeline.length - 1, 13); i++) {
+        const prev = timeline[i - 1].tideHeight;
+        const cur = timeline[i].tideHeight;
+        const nxt = timeline[i + 1].tideHeight;
+        if (cur >= prev && cur >= nxt) return { kind: 'high', hours: i, height: cur };
+        if (cur <= prev && cur <= nxt) return { kind: 'low', hours: i, height: cur };
+      }
+      return null;
+    })();
+    const trend = timeline[1] && timeline[1].tideHeight > current.tideHeight ? 'Rising' : 'Falling';
+    const nextMsg = next
+      ? `${trend}. Next ${next.kind} ${next.height.toFixed(1)}ft in about ${next.hours}h.`
+      : `${trend}.`;
+    return [
+      `${current.tideHeight.toFixed(1)}ft now — this break favors ${spot.optimalTide} tide.`,
+      nextMsg,
+    ];
+  }
+  return [];
+}
+
+function ScoreBreakdown({ spot, current, timeline }: { spot: Spot; current: ForecastHour; timeline: ForecastHour[] }) {
+  // Tap a row → expand it. Tap again → collapse. Only one open at a time
+  // (simpler than tracking a Set; easier to scan visually).
+  const [expanded, setExpanded] = useState<string | null>(null);
   // Direction-score functions are imported from data.ts so this panel and
   // computeScore can never drift apart. Period/size/tide are inlined here
   // because their per-spot range params would make a shared helper awkward.
@@ -244,30 +358,58 @@ function ScoreBreakdown({ spot, current }: { spot: Spot; current: ForecastHour }
           // mean the same thing across surfaces. Was a 3-band local mapping that
           // skipped fair/mediocre/meh and snapped 5/15 wind dir to red.
           const barColor = qualityColor(pct);
+          const isOpen = expanded === r.label;
+          const explanation = isOpen ? explainRow(r.label, r.score, r.max, spot, current, timeline) : null;
           return (
             <div key={r.label} style={{
-              display: 'flex', alignItems: 'center', gap: 12,
-              padding: '12px 14px', background: TOKENS.surface2,
+              background: TOKENS.surface2,
               border: `1px solid ${TOKENS.border}`, borderLeft: `2px solid ${barColor}`,
-              borderRadius: 8,
+              borderRadius: 8, overflow: 'hidden',
             }}>
-              <div style={{ width: 62, fontSize: 13, color: TOKENS.text, fontWeight: 500, letterSpacing: '-0.01em' }}>{r.label}</div>
-              <div style={{ flex: 1, position: 'relative', height: 6, background: TOKENS.surface3, borderRadius: 3, overflow: 'hidden' }}>
+              <button
+                type="button"
+                onClick={() => setExpanded(isOpen ? null : r.label)}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 12, width: '100%',
+                  padding: '12px 14px', background: 'transparent', border: 0,
+                  color: 'inherit', textAlign: 'left', cursor: 'pointer',
+                  font: 'inherit',
+                }}
+              >
+                <div style={{ width: 62, fontSize: 13, color: TOKENS.text, fontWeight: 500, letterSpacing: '-0.01em' }}>{r.label}</div>
+                <div style={{ flex: 1, position: 'relative', height: 6, background: TOKENS.surface3, borderRadius: 3, overflow: 'hidden' }}>
+                  <div style={{
+                    position: 'absolute', inset: 0, width: `${pct * 100}%`,
+                    background: barColor,
+                    boxShadow: pct > 0.7 ? `0 0 8px ${barColor}66` : 'none',
+                    borderRadius: 3,
+                  }}/>
+                </div>
+                <div style={{ width: 54, fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 13, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
+                  <span style={{ color: barColor, fontWeight: 500 }}>{Math.round(r.score)}</span>
+                  <span style={{ color: TOKENS.textMute }}>/{r.max}</span>
+                </div>
+                <div style={{ width: 104, fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 13, textAlign: 'right', display: 'flex', flexDirection: 'column', gap: 2, lineHeight: 1.2 }}>
+                  <span style={{ color: TOKENS.text }}>{r.now}</span>
+                  <span style={{ color: TOKENS.textMute }}>{r.opt}</span>
+                </div>
+                <span style={{
+                  width: 14, color: TOKENS.textMute, fontSize: 14,
+                  transform: isOpen ? 'rotate(90deg)' : 'rotate(0deg)',
+                  transition: 'transform 140ms ease',
+                  display: 'inline-block', textAlign: 'center',
+                }}>›</span>
+              </button>
+              {isOpen && explanation && (
                 <div style={{
-                  position: 'absolute', inset: 0, width: `${pct * 100}%`,
-                  background: barColor,
-                  boxShadow: pct > 0.7 ? `0 0 8px ${barColor}66` : 'none',
-                  borderRadius: 3,
-                }}/>
-              </div>
-              <div style={{ width: 54, fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 13, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
-                <span style={{ color: barColor, fontWeight: 500 }}>{Math.round(r.score)}</span>
-                <span style={{ color: TOKENS.textMute }}>/{r.max}</span>
-              </div>
-              <div style={{ width: 104, fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 13, textAlign: 'right', display: 'flex', flexDirection: 'column', gap: 2, lineHeight: 1.2 }}>
-                <span style={{ color: TOKENS.text }}>{r.now}</span>
-                <span style={{ color: TOKENS.textMute }}>{r.opt}</span>
-              </div>
+                  padding: '0 14px 12px',
+                  display: 'flex', flexDirection: 'column', gap: 6,
+                  fontSize: 13, lineHeight: 1.45, color: TOKENS.textDim,
+                  borderTop: `1px solid ${TOKENS.border}`, paddingTop: 10, marginTop: 2,
+                }}>
+                  {explanation.map((line, i) => <div key={i}>{line}</div>)}
+                </div>
+              )}
             </div>
           );
         })}
