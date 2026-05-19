@@ -132,6 +132,77 @@ export function DirectionArrow({ deg, size = 14, color }: { deg: number; size?: 
   );
 }
 
+/** Render the moon's current phase as an SVG icon. Pure geometry — no D3,
+ *  no library. Adapted from Mike Bostock's "Phases of the Moon" approach:
+ *  a dark disk + a lit-side overlay path whose terminator is an ellipse
+ *  with `rx = r · |cos(2π × phase)|`. Sweep flags pick which of the two
+ *  possible arcs to draw based on (a) which hemisphere is lit (waxing vs
+ *  waning) and (b) whether the moon is crescent or gibbous.
+ *
+ *  phase convention (matches SunCalc.getMoonIllumination().phase):
+ *    0    = new
+ *    0.25 = first quarter (waxing)
+ *    0.5  = full
+ *    0.75 = last quarter (waning)
+ *    1    = new again
+ */
+export function MoonPhaseIcon({
+  phase, size = 24,
+  litColor = '#E8E8E8', darkColor = '#262626',
+}: {
+  phase: number;
+  size?: number;
+  litColor?: string;
+  darkColor?: string;
+}) {
+  const r = size / 2;
+  // Cheap edge cases — no need to compute arcs at the extremes.
+  if (phase < 0.005 || phase > 0.995) {
+    return (
+      <svg width={size} height={size} viewBox={`-${r} -${r} ${size} ${size}`} aria-hidden="true">
+        <circle cx={0} cy={0} r={r} fill={darkColor}/>
+      </svg>
+    );
+  }
+  if (Math.abs(phase - 0.5) < 0.005) {
+    return (
+      <svg width={size} height={size} viewBox={`-${r} -${r} ${size} ${size}`} aria-hidden="true">
+        <circle cx={0} cy={0} r={r} fill={litColor}/>
+      </svg>
+    );
+  }
+
+  const cosA = Math.cos(phase * Math.PI * 2);
+  const rx = Math.abs(cosA) * r;
+  // Waxing (phase < 0.5) → lit hemisphere on the RIGHT.
+  // Waning (phase ≥ 0.5) → lit hemisphere on the LEFT.
+  const waxing = phase < 0.5;
+  // Outer half-arc sweep: 1 traces the right semicircle (top→bottom going
+  // through +x); 0 traces the left semicircle.
+  const outerSweep = waxing ? 1 : 0;
+  // Terminator sweep: at crescent (cosA > 0) the terminator bulges INTO
+  // the lit side from center; at gibbous (cosA < 0) it bulges INTO the
+  // dark side. The right combination ends up as `outerSweep` itself
+  // when gibbous, flipped when crescent.
+  const innerSweep = cosA < 0 ? outerSweep : 1 - outerSweep;
+
+  // Path traces the lit area's boundary: top → outer arc → bottom →
+  // terminator arc → back to top.
+  const d = [
+    `M 0 ${-r}`,
+    `A ${r} ${r} 0 0 ${outerSweep} 0 ${r}`,
+    `A ${rx} ${r} 0 0 ${innerSweep} 0 ${-r}`,
+    'Z',
+  ].join(' ');
+
+  return (
+    <svg width={size} height={size} viewBox={`-${r} -${r} ${size} ${size}`} aria-hidden="true">
+      <circle cx={0} cy={0} r={r} fill={darkColor}/>
+      <path d={d} fill={litColor}/>
+    </svg>
+  );
+}
+
 let _sparkUid = 0;
 export function ScoreSpark({
   timeline, width = 140, height = 32, highlight = 0,

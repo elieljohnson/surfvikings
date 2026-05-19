@@ -9,7 +9,7 @@ import { BUOY_MAP_BY_SPOT } from '../lib/buoyMapping';
 import { getWaterQuality, stateFor, type WaterQualityState } from '../lib/waterQuality';
 import { sunriseSunset, moonPhase, formatTime } from '../lib/celestial';
 import { useConditions } from '../hooks/useConditions';
-import { Screen, ScoreBadge, ScoreTimeline, Stat, DifficultyPips, ForecastChart, BackButton, useResponsiveWidth, VectorsPanel } from './Primitives';
+import { Screen, ScoreBadge, ScoreTimeline, Stat, DifficultyPips, ForecastChart, BackButton, useResponsiveWidth, VectorsPanel, MoonPhaseIcon } from './Primitives';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { useDriveTimes } from '../hooks/useDriveTimes';
 import type { HomeBase } from '../lib/routing';
@@ -617,7 +617,7 @@ function SunMoonPanel({ spot }: { spot: Spot }) {
         <Stat label="Sunrise" value={formatTime(sunrise)} hint="" color={TOKENS.text}/>
         <Stat label="Sunset"  value={formatTime(sunset)}  hint={dayLengthStr} color={TOKENS.text}/>
         <Stat label="Moon"    value={`${Math.round(moon.illumination * 100)}%`} hint={moon.label.toLowerCase()} color={TOKENS.text}/>
-        <Stat label="Phase"   value={moon.label.split(' ')[0]} hint={moon.label.split(' ').slice(1).join(' ') || '—'} color={TOKENS.textDim}/>
+        <Stat label="Phase"   value={<MoonPhaseIcon phase={moon.phase} size={24}/>} color={TOKENS.text}/>
       </div>
     </div>
   );

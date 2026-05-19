@@ -18,8 +18,10 @@ export function sunriseSunset(
   return { sunrise: times.sunrise, sunset: times.sunset };
 }
 
-/** Moon illumination (0–1) + English phase label, for the given moment. */
-export function moonPhase(date: Date): { illumination: number; label: string } {
+/** Moon illumination (0–1) + raw cycle phase (0–1, 0=new → 0.5=full → 1=new
+ *  again) + English phase label, for the given moment. `phase` lets renderers
+ *  pick which hemisphere is lit (waxing vs waning). */
+export function moonPhase(date: Date): { illumination: number; phase: number; label: string } {
   const m = SunCalc.getMoonIllumination(date);
   // SunCalc reports `phase` as 0..1 (0 = new, 0.25 = first qtr, 0.5 = full,
   // 0.75 = last qtr). Map to the eight standard names.
@@ -35,7 +37,7 @@ export function moonPhase(date: Date): { illumination: number; label: string } {
     [0.97, 'Waning crescent'],
   ];
   const match = labels.find(([cutoff]) => phase < cutoff);
-  return { illumination: m.fraction, label: match ? match[1] : 'New' };
+  return { illumination: m.fraction, phase, label: match ? match[1] : 'New' };
 }
 
 /** Convenience: is `t` (epoch ms) currently within daylight at this spot? */
