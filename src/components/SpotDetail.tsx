@@ -612,7 +612,10 @@ function SunMoonPanel({ spot }: { spot: Spot }) {
       <div style={{
         background: TOKENS.surface, border: `1px solid ${TOKENS.border}`,
         borderRadius: 10, padding: 14,
-        display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8,
+        // Sunrise/Sunset/Moon stretch (1fr); Phase column collapses to
+        // just the icon's width so the icon sits tight against the Moon
+        // data rather than floating in its own empty quarter of the row.
+        display: 'grid', gridTemplateColumns: '1fr 1fr 1fr auto', gap: 8,
       }}>
         <Stat label="Sunrise" value={formatTime(sunrise)} hint="" color={TOKENS.text}/>
         <Stat label="Sunset"  value={formatTime(sunset)}  hint={dayLengthStr} color={TOKENS.text}/>
