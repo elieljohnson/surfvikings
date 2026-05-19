@@ -32,7 +32,7 @@ export function Games() {
       }}>
         <h1 style={{ margin: 0, fontSize: 36, fontWeight: 800, letterSpacing: '-0.03em' }}>Games</h1>
         <p style={{ marginTop: 12, fontSize: 17, color: '#64748B', maxWidth: 520 }}>
-          Browser-based Surf Vikings arcade games. No install, no login, just open and play.
+          These are games my kids and I are building together. They want to learn HTML and JavaScript, and a tutorial doesn&rsquo;t beat shipping a real thing your friends can actually play.
         </p>
 
         <div style={{
