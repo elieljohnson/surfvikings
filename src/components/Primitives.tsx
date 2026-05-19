@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useLayoutEffect, useRef, useState } from 'react';
 import { TOKENS, scoreColor } from '../lib/tokens';
 import {
   ForecastHour, Spot, MetricKey, metricQuality, hourLabel,
@@ -315,7 +315,7 @@ export function ForecastChart({
         />
       </svg>
       {activeHour && (
-        <ScrubTooltip activeIndex={active!} barW={barW}>
+        <ScrubTooltip activeIndex={active!} barW={barW} chartWidth={renderW}>
           <div style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 11, color: TOKENS.textMute, letterSpacing: '0.08em' }}>
             {hourLabel(active!).toUpperCase()}
           </div>
@@ -414,7 +414,7 @@ export function ScoreTimeline({
         />
       </svg>
       {activeHour && (
-        <ScrubTooltip activeIndex={active!} barW={barW}>
+        <ScrubTooltip activeIndex={active!} barW={barW} chartWidth={renderW}>
           <div style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 11, color: TOKENS.textMute, letterSpacing: '0.08em' }}>
             {hourLabel(active!).toUpperCase()}
           </div>
@@ -432,15 +432,24 @@ export function ScoreTimeline({
 
 /** Internal: absolutely-positioned tooltip that floats above an active
  *  chart bar. Pointer-events: none so taps on it pass through to the
- *  outside-tap dismiss handler. Translated by -50% horizontally for
- *  center alignment over the bar. */
+ *  outside-tap dismiss handler. Measures its own width on layout and
+ *  clamps horizontal position so the tooltip never extends past the
+ *  chart's left/right edges — that off-edge overflow grows document
+ *  width and triggers iOS Safari's swipe-back gesture. */
 function ScrubTooltip({
-  activeIndex, barW, children,
-}: { activeIndex: number; barW: number; children: React.ReactNode }) {
+  activeIndex, barW, chartWidth, children,
+}: { activeIndex: number; barW: number; chartWidth: number; children: React.ReactNode }) {
+  const ref = useRef<HTMLDivElement | null>(null);
+  const [half, setHalf] = useState(60);
+  useLayoutEffect(() => {
+    if (ref.current) setHalf(ref.current.offsetWidth / 2);
+  }, [children]);
+  const center = activeIndex * barW + barW / 2;
+  const clamped = Math.max(half, Math.min(center, chartWidth - half));
   return (
-    <div style={{
+    <div ref={ref} style={{
       position: 'absolute',
-      left: activeIndex * barW + barW / 2,
+      left: clamped,
       top: 0,
       transform: 'translate(-50%, calc(-100% - 6px))',
       background: TOKENS.surface3,
@@ -698,7 +707,7 @@ export function Screen({ children }: { children: React.ReactNode }) {
       width: '100%', height: '100%',
       background: TOKENS.bg, color: TOKENS.text,
       fontFamily: '-apple-system, BlinkMacSystemFont, SF Pro Text, Inter, system-ui, sans-serif',
-      overflow: 'auto', position: 'relative', fontSize: 14,
+      overflow: 'auto', overflowX: 'hidden', overscrollBehaviorX: 'contain', position: 'relative', fontSize: 14,
     }}>
       {children}
     </div>
