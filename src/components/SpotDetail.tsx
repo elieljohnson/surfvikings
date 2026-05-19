@@ -617,7 +617,13 @@ function SunMoonPanel({ spot }: { spot: Spot }) {
         <Stat label="Sunrise" value={formatTime(sunrise)} hint="" color={TOKENS.text}/>
         <Stat label="Sunset"  value={formatTime(sunset)}  hint={dayLengthStr} color={TOKENS.text}/>
         <Stat label="Moon"    value={`${Math.round(moon.illumination * 100)}%`} hint={moon.label.toLowerCase()} color={TOKENS.text}/>
-        <Stat label="Phase"   value={<MoonPhaseIcon phase={moon.phase} size={24}/>} color={TOKENS.text}/>
+        {/* Phase cell renders as just the moon icon — no label, no caption.
+            The Moon stat to its left already carries the textual phase data;
+            the icon is the at-a-glance visual. Centered vertically inside
+            the grid cell to balance against the label+value stacks. */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start' }}>
+          <MoonPhaseIcon phase={moon.phase} size={48}/>
+        </div>
       </div>
     </div>
   );
