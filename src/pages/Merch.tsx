@@ -78,7 +78,7 @@ function Hero({ products }: { products: MerchProduct[] }) {
           margin: '24px 0 0', fontSize: 'clamp(16px, 1.4vw, 19px)',
           color: 'rgba(255,255,255,0.85)', maxWidth: 680, lineHeight: 1.55,
         }}>
-          Born in the cold waters of Northern California, Surf Vikings represents the spirit of adventure and resilience. Tees, hoodies, hats, rash guards, water bottles, stickers. Printed on demand, made fresh in the US, no inventory waste.
+          Born in the cold waters of Northern California, Surf Vikings represents the spirit of adventure and resilience. Tees, hoodies, hats, rash guards, water bottles, stickers. Printed on demand, made fresh in the US, no inventory waste. Built end-to-end as part of the Surf Vikings project with the kids, shipping a real store teaches business better than a lemonade stand.
         </p>
 
         {/* Product collage — horizontally scrolling strip on mobile, grid on desktop */}
