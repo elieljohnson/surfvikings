@@ -5,6 +5,7 @@ import {
   degToCardinal, swellDirectionQuality, windDirectionQuality,
 } from '../lib/data';
 import { qualityColor } from '../lib/tokens';
+import { useChartScrub } from '../hooks/useChartScrub';
 
 // Tracks the rendered width of a wrapper div so SVG charts can fill their
 // container instead of using a hard-coded width. Returns [ref, width].
@@ -260,9 +261,16 @@ export function ForecastChart({
   const range = max - min || 1;
   const barW = renderW / timeline.length;
   const lastIdx = Math.max(0, timeline.length - 1);
+  const scrub = useChartScrub<SVGSVGElement>({ itemCount: timeline.length });
+  const { active, isDragging, surfaceRef, overlayRef, overlayProps } = scrub;
+  const activeHour = active != null ? timeline[active] : null;
+
   return (
-    <div ref={wrapRef} style={{ width: width ? undefined : '100%', minWidth: 0, overflow: 'hidden' }}>
-      <svg width={renderW} height={height + (showAxis ? 22 : 0)} style={{ display: 'block' }}>
+    <div ref={wrapRef} style={{
+      width: width ? undefined : '100%', minWidth: 0,
+      position: 'relative',
+    }}>
+      <svg ref={surfaceRef} width={renderW} height={height + (showAxis ? 22 : 0)} style={{ display: 'block', overflow: 'visible' }}>
         {timeline.map((t, i) => {
           const v = t[metric] as number;
           const h = ((v - min) / range) * height;
@@ -270,24 +278,72 @@ export function ForecastChart({
           const y = height - h;
           const q = spot ? metricQuality(spot, t, metric) : 0.6;
           const fill = spot ? qualityColor(q) : TOKENS.pacific;
-          const op = i === 0 ? 1 : 0.55 + (1 - i / timeline.length) * 0.35;
+          const baseOp = i === 0 ? 1 : 0.55 + (1 - i / timeline.length) * 0.35;
+          const dim = active != null && i !== active ? 0.45 : 1;
           return (
-            <rect key={i} x={x + 0.5} y={y} width={barW - 1} height={h} fill={fill} opacity={op}/>
+            <rect key={i} x={x + 0.5} y={y} width={barW - 1} height={h}
+              fill={fill} opacity={baseOp * dim}
+              style={{ pointerEvents: 'none' }}/>
           );
         })}
+        {isDragging && active != null && (
+          <line
+            x1={active * barW + barW / 2}
+            x2={active * barW + barW / 2}
+            y1={0} y2={height}
+            stroke={TOKENS.text} strokeWidth={1}
+            strokeDasharray="2 3" opacity={0.45}
+            style={{ pointerEvents: 'none' }}
+          />
+        )}
         {showAxis && AXIS_TICKS.map(({ h, anchor }) => {
           const tickH = Math.min(h, lastIdx);
           return (
             <text key={h} x={tickH * barW + barW / 2} y={height + 18}
               textAnchor={anchor}
-              fontFamily="JetBrains Mono, ui-monospace, monospace" fontSize="12" fill={TOKENS.textMute}>
+              fontFamily="JetBrains Mono, ui-monospace, monospace" fontSize="12" fill={TOKENS.textMute}
+              style={{ pointerEvents: 'none' }}>
               {hourLabel(tickH)}
             </text>
           );
         })}
+        <rect
+          ref={overlayRef}
+          x={0} y={0} width={renderW} height={height}
+          fill="transparent"
+          {...overlayProps}
+        />
       </svg>
+      {activeHour && (
+        <ScrubTooltip activeIndex={active!} barW={barW}>
+          <div style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 11, color: TOKENS.textMute, letterSpacing: '0.08em' }}>
+            {hourLabel(active!).toUpperCase()}
+          </div>
+          <div style={{ marginTop: 2, fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 13, color: TOKENS.text, fontWeight: 500 }}>
+            {metricTooltipBody(metric, activeHour)}
+          </div>
+        </ScrubTooltip>
+      )}
     </div>
   );
+}
+
+/** Format the active hour's metric values for the scrub tooltip. Each
+ *  metric gets a domain-appropriate readout (swell shows ft + period +
+ *  cardinal; wind shows kts + cardinal; tide shows ft + rising/falling). */
+function metricTooltipBody(metric: MetricKey, t: ForecastHour): string {
+  switch (metric) {
+    case 'swellHeight':
+      return `${t.swellHeight.toFixed(1)}ft · ${Math.round(t.swellPeriod)}s ${degToCardinal(t.swellDirection)}`;
+    case 'swellPeriod':
+      return `${Math.round(t.swellPeriod)}s · ${t.swellHeight.toFixed(1)}ft ${degToCardinal(t.swellDirection)}`;
+    case 'windSpeed':
+      return `${Math.round(t.windSpeed)}kt ${degToCardinal(t.windDirection)}`;
+    case 'tideHeight':
+      return `${t.tideHeight.toFixed(1)}ft · ${t.tideRising ? 'rising' : 'falling'}`;
+    default:
+      return String((t as unknown as Record<string, number>)[metric] ?? '');
+  }
 }
 
 export function ScoreTimeline({
@@ -297,33 +353,106 @@ export function ScoreTimeline({
   const renderW = width ?? measuredW;
   const barW = renderW / timeline.length;
   const lastIdx = Math.max(1, timeline.length - 1);
+  const scrub = useChartScrub<SVGSVGElement>({ itemCount: timeline.length });
+  const { active, isDragging, surfaceRef, overlayRef, overlayProps } = scrub;
+  const activeHour = active != null ? timeline[active] : null;
+
   return (
-    <div ref={wrapRef} style={{ width: width ? undefined : '100%', minWidth: 0, overflow: 'hidden' }}>
-      <svg width={renderW} height={height + 22} style={{ display: 'block' }}>
+    <div ref={wrapRef} style={{
+      width: width ? undefined : '100%', minWidth: 0,
+      position: 'relative', // host for the absolutely-positioned tooltip
+    }}>
+      <svg ref={surfaceRef} width={renderW} height={height + 22} style={{ display: 'block', overflow: 'visible' }}>
         {/* Per-hour bars colored by scoreColor — same palette as the metric
-         * bar charts below, so green/yellow/red mean the same thing. */}
+         * bar charts below, so green/yellow/red mean the same thing.
+         * Bars get dimmed when a scrub is active and they're not the
+         * selected/hovered one — visually locks the eye on the picked hour. */}
         {timeline.map((t, i) => {
           const h = (t.score / 100) * height;
           const x = i * barW;
           const y = height - h;
           const fill = scoreColor(t.score, false);
           // Slight fade into the future to draw the eye to "now."
-          const op = i === 0 ? 1 : 0.55 + (1 - i / timeline.length) * 0.4;
+          const baseOp = i === 0 ? 1 : 0.55 + (1 - i / timeline.length) * 0.4;
+          const dim = active != null && i !== active ? 0.45 : 1;
           return (
-            <rect key={i} x={x + 0.5} y={y} width={Math.max(1, barW - 1)} height={h} fill={fill} opacity={op}/>
+            <rect key={i} x={x + 0.5} y={y} width={Math.max(1, barW - 1)} height={h}
+              fill={fill} opacity={baseOp * dim}
+              style={{ pointerEvents: 'none' }}/>
           );
         })}
+        {/* Scrub guideline — only during active drag. Dashed vertical line
+         * at the active bar's center reads as a "scrub cursor" affordance. */}
+        {isDragging && active != null && (
+          <line
+            x1={active * barW + barW / 2}
+            x2={active * barW + barW / 2}
+            y1={0} y2={height}
+            stroke={TOKENS.text} strokeWidth={1}
+            strokeDasharray="2 3" opacity={0.45}
+            style={{ pointerEvents: 'none' }}
+          />
+        )}
         {AXIS_TICKS.map(({ h, anchor }) => {
           const tickH = Math.min(h, lastIdx);
           return (
             <text key={h} x={tickH * barW + barW / 2} y={height + 18}
               textAnchor={anchor}
-              fontFamily="JetBrains Mono, ui-monospace, monospace" fontSize="12" fill={TOKENS.textMute}>
+              fontFamily="JetBrains Mono, ui-monospace, monospace" fontSize="12" fill={TOKENS.textMute}
+              style={{ pointerEvents: 'none' }}>
               {hourLabel(tickH)}
             </text>
           );
         })}
+        {/* Unified pointer overlay across the full bar area. Every visual
+         * element above has pointer-events: none so events all route here. */}
+        <rect
+          ref={overlayRef}
+          x={0} y={0} width={renderW} height={height}
+          fill="transparent"
+          {...overlayProps}
+        />
       </svg>
+      {activeHour && (
+        <ScrubTooltip activeIndex={active!} barW={barW}>
+          <div style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 11, color: TOKENS.textMute, letterSpacing: '0.08em' }}>
+            {hourLabel(active!).toUpperCase()}
+          </div>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginTop: 2 }}>
+            <span style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 18, fontWeight: 600, color: scoreColor(activeHour.score) }}>
+              {Math.round(activeHour.score)}
+            </span>
+            <span style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 11, color: TOKENS.textDim }}>/100</span>
+          </div>
+        </ScrubTooltip>
+      )}
+    </div>
+  );
+}
+
+/** Internal: absolutely-positioned tooltip that floats above an active
+ *  chart bar. Pointer-events: none so taps on it pass through to the
+ *  outside-tap dismiss handler. Translated by -50% horizontally for
+ *  center alignment over the bar. */
+function ScrubTooltip({
+  activeIndex, barW, children,
+}: { activeIndex: number; barW: number; children: React.ReactNode }) {
+  return (
+    <div style={{
+      position: 'absolute',
+      left: activeIndex * barW + barW / 2,
+      top: 0,
+      transform: 'translate(-50%, calc(-100% - 6px))',
+      background: TOKENS.surface3,
+      border: `1px solid ${TOKENS.borderHi}`,
+      borderRadius: 6,
+      padding: '6px 8px',
+      pointerEvents: 'none',
+      whiteSpace: 'nowrap',
+      boxShadow: '0 4px 12px rgba(0,0,0,0.35)',
+      zIndex: 10,
+    }}>
+      {children}
     </div>
   );
 }
