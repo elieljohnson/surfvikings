@@ -302,8 +302,8 @@ export function ForecastChart({
             x1={active * barW + barW / 2}
             x2={active * barW + barW / 2}
             y1={0} y2={height}
-            stroke={TOKENS.text} strokeWidth={1}
-            strokeDasharray="2 3" opacity={0.45}
+            stroke={TOKENS.text} strokeWidth={2}
+            strokeDasharray="3 3" opacity={0.7}
             style={{ pointerEvents: 'none' }}
           />
         )}
@@ -404,8 +404,8 @@ export function ScoreTimeline({
             x1={active * barW + barW / 2}
             x2={active * barW + barW / 2}
             y1={0} y2={height}
-            stroke={TOKENS.text} strokeWidth={1}
-            strokeDasharray="2 3" opacity={0.45}
+            stroke={TOKENS.text} strokeWidth={2}
+            strokeDasharray="3 3" opacity={0.7}
             style={{ pointerEvents: 'none' }}
           />
         )}
