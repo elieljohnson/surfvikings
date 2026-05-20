@@ -248,9 +248,14 @@ export function ScoreSpark({
 
 export function ForecastChart({
   timeline, metric, spot, height = 56, width, showAxis = true,
+  externalActiveHour,
 }: {
   timeline: ForecastHour[]; metric: MetricKey; spot?: Spot;
   height?: number; width?: number; showAxis?: boolean;
+  /** When provided (Forecast page's master-scrub pattern), the chart is
+   *  driven by a sibling rather than its own pointer overlay. Skips the
+   *  internal scrub UI and its tooltip — caller renders its own readout. */
+  externalActiveHour?: number | null;
 }) {
   // If no explicit width: measure the container so the chart fills it.
   const [wrapRef, measuredW] = useResponsiveWidth(320);
@@ -261,8 +266,14 @@ export function ForecastChart({
   const range = max - min || 1;
   const barW = renderW / timeline.length;
   const lastIdx = Math.max(0, timeline.length - 1);
+  const isControlled = externalActiveHour !== undefined;
   const scrub = useChartScrub<SVGSVGElement>({ itemCount: timeline.length });
-  const { active, isDragging, surfaceRef, overlayRef, overlayProps } = scrub;
+  const { active: internalActive, isDragging: internalDragging, surfaceRef, overlayRef, overlayProps } = scrub;
+  // External-active takes precedence — if a parent says "this hour is selected,"
+  // we display that and ignore any orphaned internal state. Internal scrub
+  // only matters in uncontrolled mode (SpotDetail ChartRow).
+  const active = isControlled ? externalActiveHour : internalActive;
+  const isDragging = isControlled ? active != null : internalDragging;
   const activeHour = active != null ? timeline[active] : null;
 
   return (
@@ -307,14 +318,19 @@ export function ForecastChart({
             </text>
           );
         })}
-        <rect
-          ref={overlayRef}
-          x={0} y={0} width={renderW} height={height}
-          fill="transparent"
-          {...overlayProps}
-        />
+        {/* Pointer overlay + tooltip only render in uncontrolled mode. When
+         *  driven externally (Forecast page), the parent's scrub is the sole
+         *  input — chart stays passive, no overlay competing for touch. */}
+        {!isControlled && (
+          <rect
+            ref={overlayRef}
+            x={0} y={0} width={renderW} height={height}
+            fill="transparent"
+            {...overlayProps}
+          />
+        )}
       </svg>
-      {activeHour && (
+      {!isControlled && activeHour && (
         <ScrubTooltip activeIndex={active!} barW={barW} chartWidth={renderW}>
           <div style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 11, color: TOKENS.textMute, letterSpacing: '0.08em' }}>
             {hourLabel(active!).toUpperCase()}

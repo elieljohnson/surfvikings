@@ -26,6 +26,15 @@ export function Forecast(_props: ForecastProps) {
   const currentId = spot?.id ?? '';
   const timeline = (spot ? timelines[spot.id] : undefined) ?? [];
 
+  // Master scrub: the heatmap is the sole interactive surface for picking
+  // a point in time on this page. Its active cell becomes a shared cursor
+  // that propagates down to the MiniMetric bar charts below — one gesture,
+  // four readouts. Lifting the hook here means the hook's `active` is
+  // available to siblings; HourlyHeatmap becomes presentational.
+  const dayCount = Math.min(7, Math.ceil(timeline.length / 24));
+  const scrub = useGridScrub({ cols: 24, rows: dayCount });
+  const activeHour = scrub.active ? scrub.active.row * 24 + scrub.active.col : null;
+
   // Empty state — no favorites means the whole forecast view has
   // nothing to render. Send them to Settings to pick at least one.
   if (!spot) {
@@ -72,7 +81,7 @@ export function Forecast(_props: ForecastProps) {
         <div style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 13, letterSpacing: '0.18em', color: TOKENS.textMute, textTransform: 'uppercase', marginBottom: 10 }}>
           Hourly quality · {spot.name}
         </div>
-        <HourlyHeatmap timeline={timeline}/>
+        <HourlyHeatmap timeline={timeline} scrub={scrub} dayCount={dayCount}/>
       </div>
 
       <div style={{ padding: '0 20px 16px' }}>
@@ -85,10 +94,10 @@ export function Forecast(_props: ForecastProps) {
           </div>
         </div>
         <div style={{ background: TOKENS.surface, border: `1px solid ${TOKENS.border}`, borderRadius: 10, padding: 14 }}>
-          <MiniMetric label="Swell" metric="swellHeight" unit="ft" spot={spot} timeline={timeline}/>
-          <MiniMetric label="Period" metric="swellPeriod" unit="s" spot={spot} timeline={timeline}/>
-          <MiniMetric label="Wind" metric="windSpeed" unit="kts" spot={spot} timeline={timeline}/>
-          <MiniMetric label="Tide" metric="tideHeight" unit="ft" spot={spot} timeline={timeline} last/>
+          <MiniMetric label="Swell" metric="swellHeight" unit="ft" spot={spot} timeline={timeline} activeHour={activeHour}/>
+          <MiniMetric label="Period" metric="swellPeriod" unit="s" spot={spot} timeline={timeline} activeHour={activeHour}/>
+          <MiniMetric label="Wind" metric="windSpeed" unit="kts" spot={spot} timeline={timeline} activeHour={activeHour}/>
+          <MiniMetric label="Tide" metric="tideHeight" unit="ft" spot={spot} timeline={timeline} activeHour={activeHour} last/>
         </div>
       </div>
 
@@ -99,19 +108,24 @@ export function Forecast(_props: ForecastProps) {
   );
 }
 
-function HourlyHeatmap({ timeline }: { timeline: ForecastHour[] }) {
+function HourlyHeatmap({
+  timeline, scrub, dayCount,
+}: {
+  timeline: ForecastHour[];
+  scrub: ReturnType<typeof useGridScrub>;
+  dayCount: number;
+}) {
   // Row labels derive from real local time so they're correct any day of
   // the week, not hardcoded. Renders up to 7 days (168 hours) of forecast.
+  // The scrub hook lives in the parent so its `active` value can drive
+  // sibling MiniMetric charts in the master-scrub pattern.
   const DAYS = ['SUN','MON','TUE','WED','THU','FRI','SAT'];
   const today = new Date().getDay();
-  const dayCount = Math.min(7, Math.ceil(timeline.length / 24));
   const rows = Array.from({ length: dayCount }, (_, di) => ({
     label: DAYS[(today + di) % 7],
     data: timeline.slice(di * 24, (di + 1) * 24),
   }));
-  const { active, surfaceRef, overlayRef, overlayProps } = useGridScrub({
-    cols: 24, rows: dayCount,
-  });
+  const { active, surfaceRef, overlayRef, overlayProps } = scrub;
   // Resolve the active cell to its hour-of-week + score for the tooltip.
   const activeHour = active ? timeline[active.row * 24 + active.col] : null;
   return (
@@ -135,9 +149,12 @@ function HourlyHeatmap({ timeline }: { timeline: ForecastHour[] }) {
             <div style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 12, color: TOKENS.textDim, letterSpacing: '0.1em', display: 'flex', alignItems: 'center' }}>{row.label}</div>
             {row.data.map((t, i) => {
               const color = scoreColor(t.score);
-              const opacity = 0.25 + (t.score / 100) * 0.75;
+              const baseOpacity = 0.25 + (t.score / 100) * 0.75;
               const isNow = ri === 0 && i === 0;
-              const isActive = active && active.row === ri && active.col === i;
+              const isActive = !!active && active.row === ri && active.col === i;
+              // When a cell is selected, all non-active cells dim to keep
+              // the eye anchored on the scrub target. Active stays full.
+              const opacity = active && !isActive ? baseOpacity * 0.4 : baseOpacity;
               return (
                 <div key={i} style={{
                   height: 18, background: color, opacity,
@@ -170,7 +187,6 @@ function HourlyHeatmap({ timeline }: { timeline: ForecastHour[] }) {
           <GridScrubTooltip
             row={active.row}
             col={active.col}
-            rowCount={dayCount}
             dayLabel={rows[active.row].label}
             overlayRef={overlayRef}
           >
@@ -195,17 +211,21 @@ function hourLabelShort(hour: number): string {
   return hour < 12 ? `${hour}a` : `${hour - 12}p`;
 }
 
-/** Internal: absolutely-positioned tooltip that floats just above (or below)
- *  the active grid cell. Pointer-events: none so taps pass through to
- *  outside-tap dismiss. Measures its own width and clamps horizontal
- *  position so it can't extend past the overlay edges — same iOS swipe-back
- *  guard as ScrubTooltip in Primitives. Flips above/below depending on
- *  which half of the heatmap the active cell is in, so a thumb at the
- *  bottom of the grid doesn't get its tooltip covered by itself. */
+/** Internal: absolutely-positioned tooltip for the heatmap scrub. Always
+ *  floats well above the active cell with a finger-clearance offset, so a
+ *  thumb on the heatmap can't cover its own readout. Earlier flip-below
+ *  logic for the top half of the grid put the tooltip directly under the
+ *  finger — fixed by going always-above with a generous offset that lets
+ *  the tooltip overflow upward into the heatmap card's padding (which is
+ *  fine; nothing above it clips vertically).
+ *
+ *  Pointer-events: none so taps pass through to outside-tap dismiss.
+ *  Width-clamped to the overlay bounds — same iOS swipe-back guard as
+ *  ScrubTooltip in Primitives. */
 function GridScrubTooltip({
-  row, col, rowCount, dayLabel, overlayRef, children,
+  row, col, dayLabel, overlayRef, children,
 }: {
-  row: number; col: number; rowCount: number; dayLabel: string;
+  row: number; col: number; dayLabel: string;
   overlayRef: React.MutableRefObject<HTMLDivElement | null>;
   children: React.ReactNode;
 }) {
@@ -217,27 +237,25 @@ function GridScrubTooltip({
     if (overlayRef.current) setOverlayWidth(overlayRef.current.offsetWidth);
   }, [children, col, row]);
 
-  // Cell column 0 sits at the overlay's left edge. Column N+0.5 is the
-  // center of column N. left = overlay's own left offset + clamped pixel
-  // position so the tooltip never overflows the cell area.
+  // Horizontal: center over the active column, clamped to overlay edges.
   const OVERLAY_LEFT = 37; // 36px label gutter + 1px grid gap
   const center = overlayWidth > 0 ? ((col + 0.5) / 24) * overlayWidth : 0;
   const clamped = Math.max(half, Math.min(center, Math.max(half, overlayWidth - half)));
 
-  // Flip above/below based on row position. Cell heights are 18 + 2px gap = 20.
+  // Vertical: always above. Cell pitch is 20px (18 height + 2 gap). 48px of
+  // clearance keeps the tooltip above a typical fingertip's contact patch.
+  // The tooltip overflows the heatmap card upward when active is in the
+  // top row — that's expected, the parent card doesn't clip.
   const CELL_PITCH = 20;
-  const isBottomHalf = row >= rowCount / 2;
-  const top = isBottomHalf
-    ? row * CELL_PITCH - 6                                // tooltip's bottom edge sits 6px above the cell's top
-    : (row + 1) * CELL_PITCH + 4;                         // tooltip's top edge sits 4px below the cell's bottom
-  const translateY = isBottomHalf ? 'translateY(-100%)' : 'none';
+  const FINGER_CLEARANCE = 48;
+  const top = row * CELL_PITCH - FINGER_CLEARANCE;
 
   return (
     <div ref={ref} style={{
       position: 'absolute',
       left: OVERLAY_LEFT + clamped,
       top,
-      transform: `translateX(-50%) ${translateY}`,
+      transform: 'translateX(-50%)',
       background: TOKENS.surface3,
       border: `1px solid ${TOKENS.borderHi}`,
       borderRadius: 6,
@@ -255,13 +273,23 @@ function GridScrubTooltip({
 }
 
 function MiniMetric({
-  label, metric, unit, spot, timeline, last,
-}: { label: string; metric: MetricKey; unit: string; spot: Spot; timeline: ForecastHour[]; last?: boolean }) {
+  label, metric, unit, spot, timeline, last, activeHour,
+}: {
+  label: string; metric: MetricKey; unit: string; spot: Spot;
+  timeline: ForecastHour[]; last?: boolean;
+  /** When the master scrub on the heatmap above pins an hour, all MiniMetric
+   *  rows read from that hour instead of timeline[0] ("now"). Passing null
+   *  reverts the row to its "now" readout. */
+  activeHour: number | null;
+}) {
   const values = timeline.map((t) => t[metric] as number);
-  const current = values[0];
+  // Selected hour drives both the readout value and the chart highlight.
+  // Falls back to hour 0 ("now") when nothing is scrubbed.
+  const displayIdx = activeHour ?? 0;
+  const display = values[displayIdx];
   const max = Math.max(...values), min = Math.min(...values);
-  const nowQ = metricQuality(spot, timeline[0], metric);
-  const nowColor = qualityColor(nowQ);
+  const displayQ = metricQuality(spot, timeline[displayIdx], metric);
+  const displayColor = qualityColor(displayQ);
   return (
     <div style={{
       display: 'flex', alignItems: 'center', gap: 12,
@@ -270,15 +298,22 @@ function MiniMetric({
     }}>
       <div style={{ width: 56 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-          <span style={{ width: 6, height: 6, borderRadius: '50%', background: nowColor, flexShrink: 0 }}/>
+          <span style={{ width: 6, height: 6, borderRadius: '50%', background: displayColor, flexShrink: 0 }}/>
           <div style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 13, letterSpacing: '0.1em', color: TOKENS.textMute, textTransform: 'uppercase' }}>{label}</div>
         </div>
         <div style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 14, color: TOKENS.text, fontWeight: 500, marginTop: 2 }}>
-          {current.toFixed(1)}<span style={{ fontSize: 12, color: TOKENS.textDim, marginLeft: 2 }}>{unit}</span>
+          {display.toFixed(1)}<span style={{ fontSize: 12, color: TOKENS.textDim, marginLeft: 2 }}>{unit}</span>
         </div>
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <ForecastChart timeline={timeline} metric={metric} spot={spot} height={28} showAxis={false}/>
+        <ForecastChart
+          timeline={timeline}
+          metric={metric}
+          spot={spot}
+          height={28}
+          showAxis={false}
+          externalActiveHour={activeHour}
+        />
       </div>
       <div style={{ width: 50, textAlign: 'right', fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 13, color: TOKENS.textMute }}>
         {min.toFixed(1)}–{max.toFixed(1)}
