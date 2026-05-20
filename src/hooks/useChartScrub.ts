@@ -159,7 +159,17 @@ export function useChartScrub<T extends Element>({
       onPointerUp,
       onPointerLeave,
       onPointerCancel,
-      style: { touchAction: 'none', cursor: 'pointer' },
+      style: {
+        touchAction: 'none',
+        cursor: 'pointer',
+        // Suppress iOS Safari's text-selection + callout popup ("Copy /
+        // Look Up") on long-press during a scrub. touch-action: none only
+        // handles scroll gestures; selection requires this WebKit set.
+        userSelect: 'none',
+        WebkitUserSelect: 'none',
+        WebkitTouchCallout: 'none',
+        WebkitTapHighlightColor: 'transparent',
+      },
     },
   };
 }

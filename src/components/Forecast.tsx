@@ -143,7 +143,16 @@ function HourlyHeatmap({
       {/* Surface = the rows region. The scrub overlay sits on top of the
        *  cell columns (positioned right of the 36px label) and captures
        *  pointer events for the whole 2D grid in one go. */}
-      <div ref={surfaceRef} style={{ position: 'relative' }}>
+      <div ref={surfaceRef} style={{
+        position: 'relative',
+        // Belt-and-suspenders selection suppression. The overlay already
+        // sets this, but the day-label gutter and the column-header row
+        // sit outside the overlay and could otherwise still be selected
+        // by a long-press, dragging the iOS callout into view.
+        userSelect: 'none',
+        WebkitUserSelect: 'none',
+        WebkitTouchCallout: 'none',
+      }}>
         {rows.map((row, ri) => (
           <div key={row.label} style={{ display: 'grid', gridTemplateColumns: '36px repeat(24, 1fr)', gap: 1, marginBottom: 2 }}>
             <div style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 12, color: TOKENS.textDim, letterSpacing: '0.1em', display: 'flex', alignItems: 'center' }}>{row.label}</div>

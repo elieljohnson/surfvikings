@@ -160,7 +160,18 @@ export function useGridScrub({ cols, rows }: UseGridScrubArgs): UseGridScrubRetu
       onPointerUp,
       onPointerLeave,
       onPointerCancel,
-      style: { touchAction: 'none', cursor: 'pointer' },
+      style: {
+        touchAction: 'none',
+        cursor: 'pointer',
+        // Suppress iOS Safari's text-selection + callout popup ("Copy /
+        // Look Up") that otherwise fires on long-press during a scrub.
+        // touch-action: none only handles scroll gestures; selection
+        // requires this separate set of WebKit-specific properties.
+        userSelect: 'none',
+        WebkitUserSelect: 'none',
+        WebkitTouchCallout: 'none',
+        WebkitTapHighlightColor: 'transparent',
+      },
     },
   };
 }
