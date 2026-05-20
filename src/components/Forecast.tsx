@@ -7,6 +7,7 @@ import {
 import { useConditions } from '../hooks/useConditions';
 import { useFavorites } from '../hooks/useFavorites';
 import { Screen, Stat, ForecastChart, VectorsPanel } from './Primitives';
+import { useGridScrub } from '../hooks/useGridScrub';
 
 interface ForecastProps {
   onOpenSpot?: (id: string) => void;
@@ -108,6 +109,11 @@ function HourlyHeatmap({ timeline }: { timeline: ForecastHour[] }) {
     label: DAYS[(today + di) % 7],
     data: timeline.slice(di * 24, (di + 1) * 24),
   }));
+  const { active, surfaceRef, overlayRef, overlayProps } = useGridScrub({
+    cols: 24, rows: dayCount,
+  });
+  // Resolve the active cell to its hour-of-week + score for the tooltip.
+  const activeHour = active ? timeline[active.row * 24 + active.col] : null;
   return (
     <div style={{ background: TOKENS.surface, border: `1px solid ${TOKENS.border}`, borderRadius: 10, padding: 12 }}>
       <div style={{ display: 'grid', gridTemplateColumns: '36px repeat(24, 1fr)', gap: 1, marginBottom: 4 }}>
@@ -120,28 +126,130 @@ function HourlyHeatmap({ timeline }: { timeline: ForecastHour[] }) {
           }}>{h === 0 ? '12a' : h === 12 ? '12p' : h < 12 ? `${h}a` : `${h - 12}p`}</div>
         ))}
       </div>
-      {rows.map((row, ri) => (
-        <div key={row.label} style={{ display: 'grid', gridTemplateColumns: '36px repeat(24, 1fr)', gap: 1, marginBottom: 2 }}>
-          <div style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 12, color: TOKENS.textDim, letterSpacing: '0.1em', display: 'flex', alignItems: 'center' }}>{row.label}</div>
-          {row.data.map((t, i) => {
-            const color = scoreColor(t.score);
-            const opacity = 0.25 + (t.score / 100) * 0.75;
-            const isNow = ri === 0 && i === 0;
-            return (
-              <div key={i} title={`${hourLabel(ri * 24 + i)}: ${Math.round(t.score)}`} style={{
-                height: 18, background: color, opacity,
-                border: isNow ? `1px solid ${TOKENS.text}` : 'none',
-                borderRadius: 1,
-              }}/>
-            );
-          })}
-        </div>
-      ))}
+      {/* Surface = the rows region. The scrub overlay sits on top of the
+       *  cell columns (positioned right of the 36px label) and captures
+       *  pointer events for the whole 2D grid in one go. */}
+      <div ref={surfaceRef} style={{ position: 'relative' }}>
+        {rows.map((row, ri) => (
+          <div key={row.label} style={{ display: 'grid', gridTemplateColumns: '36px repeat(24, 1fr)', gap: 1, marginBottom: 2 }}>
+            <div style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 12, color: TOKENS.textDim, letterSpacing: '0.1em', display: 'flex', alignItems: 'center' }}>{row.label}</div>
+            {row.data.map((t, i) => {
+              const color = scoreColor(t.score);
+              const opacity = 0.25 + (t.score / 100) * 0.75;
+              const isNow = ri === 0 && i === 0;
+              const isActive = active && active.row === ri && active.col === i;
+              return (
+                <div key={i} style={{
+                  height: 18, background: color, opacity,
+                  border: isActive
+                    ? `1px solid ${TOKENS.text}`
+                    : isNow ? `1px solid ${TOKENS.text}` : 'none',
+                  borderRadius: 1,
+                }}/>
+              );
+            })}
+          </div>
+        ))}
+        {/* Transparent overlay over the cell columns only — left edge sits
+         *  just past the 36px label gutter so taps on labels still feel
+         *  inert. Uses calc() because the label column is fixed-px and the
+         *  cell columns are fr-units that resize with the container. */}
+        <div
+          ref={overlayRef}
+          {...overlayProps}
+          style={{
+            ...overlayProps.style,
+            position: 'absolute',
+            top: 0,
+            left: 'calc(36px + 1px)', // 36px label + 1px grid gap
+            right: 0,
+            bottom: 0,
+          }}
+        />
+        {activeHour && active && (
+          <GridScrubTooltip
+            row={active.row}
+            col={active.col}
+            rowCount={dayCount}
+            dayLabel={rows[active.row].label}
+            overlayRef={overlayRef}
+          >
+            {hourLabelShort(active.col)} · <span style={{ color: scoreColor(activeHour.score), fontWeight: 500 }}>{Math.round(activeHour.score)}</span>
+          </GridScrubTooltip>
+        )}
+      </div>
       <div style={{ display: 'flex', gap: 8, marginTop: 10, alignItems: 'center', fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 12, color: TOKENS.textMute, letterSpacing: '0.1em' }}>
         <span>FLAT</span>
         <div style={{ flex: 1, height: 6, background: `linear-gradient(90deg, ${TOKENS.flat}, ${TOKENS.poor}, ${TOKENS.fair}, ${TOKENS.good}, ${TOKENS.epic})`, borderRadius: 1 }}/>
         <span>EPIC</span>
       </div>
+    </div>
+  );
+}
+
+/** Short hour label for the scrub tooltip — "3p" not "Wed 3:00 PM".
+ *  The day comes from the row label so it's already in view. */
+function hourLabelShort(hour: number): string {
+  if (hour === 0) return '12a';
+  if (hour === 12) return '12p';
+  return hour < 12 ? `${hour}a` : `${hour - 12}p`;
+}
+
+/** Internal: absolutely-positioned tooltip that floats just above (or below)
+ *  the active grid cell. Pointer-events: none so taps pass through to
+ *  outside-tap dismiss. Measures its own width and clamps horizontal
+ *  position so it can't extend past the overlay edges — same iOS swipe-back
+ *  guard as ScrubTooltip in Primitives. Flips above/below depending on
+ *  which half of the heatmap the active cell is in, so a thumb at the
+ *  bottom of the grid doesn't get its tooltip covered by itself. */
+function GridScrubTooltip({
+  row, col, rowCount, dayLabel, overlayRef, children,
+}: {
+  row: number; col: number; rowCount: number; dayLabel: string;
+  overlayRef: React.MutableRefObject<HTMLDivElement | null>;
+  children: React.ReactNode;
+}) {
+  const ref = React.useRef<HTMLDivElement | null>(null);
+  const [half, setHalf] = React.useState(60);
+  const [overlayWidth, setOverlayWidth] = React.useState(0);
+  React.useLayoutEffect(() => {
+    if (ref.current) setHalf(ref.current.offsetWidth / 2);
+    if (overlayRef.current) setOverlayWidth(overlayRef.current.offsetWidth);
+  }, [children, col, row]);
+
+  // Cell column 0 sits at the overlay's left edge. Column N+0.5 is the
+  // center of column N. left = overlay's own left offset + clamped pixel
+  // position so the tooltip never overflows the cell area.
+  const OVERLAY_LEFT = 37; // 36px label gutter + 1px grid gap
+  const center = overlayWidth > 0 ? ((col + 0.5) / 24) * overlayWidth : 0;
+  const clamped = Math.max(half, Math.min(center, Math.max(half, overlayWidth - half)));
+
+  // Flip above/below based on row position. Cell heights are 18 + 2px gap = 20.
+  const CELL_PITCH = 20;
+  const isBottomHalf = row >= rowCount / 2;
+  const top = isBottomHalf
+    ? row * CELL_PITCH - 6                                // tooltip's bottom edge sits 6px above the cell's top
+    : (row + 1) * CELL_PITCH + 4;                         // tooltip's top edge sits 4px below the cell's bottom
+  const translateY = isBottomHalf ? 'translateY(-100%)' : 'none';
+
+  return (
+    <div ref={ref} style={{
+      position: 'absolute',
+      left: OVERLAY_LEFT + clamped,
+      top,
+      transform: `translateX(-50%) ${translateY}`,
+      background: TOKENS.surface3,
+      border: `1px solid ${TOKENS.borderHi}`,
+      borderRadius: 6,
+      padding: '6px 8px',
+      pointerEvents: 'none',
+      whiteSpace: 'nowrap',
+      fontFamily: 'JetBrains Mono, ui-monospace, monospace',
+      fontSize: 13, color: TOKENS.text,
+      boxShadow: '0 4px 12px rgba(0,0,0,0.35)',
+      zIndex: 10,
+    }}>
+      <span style={{ color: TOKENS.textMute, letterSpacing: '0.08em' }}>{dayLabel}</span>{' '}{children}
     </div>
   );
 }
