@@ -7,7 +7,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { SPOTS, ForecastHour, buildTimeline } from '../lib/data';
 import {
-  ConditionsResponse, fetchConditions, timelinesFromResponse,
+  ConditionsResponse, fetchConditions, timelinesFromResponse, FORECAST_HOURS,
 } from '../lib/api';
 
 interface State {
@@ -69,7 +69,10 @@ export function useConditions(spotIds: string[]): State {
     const out: Record<string, ForecastHour[]> = {};
     for (const id of spotIds) {
       const s = SPOTS.find((x) => x.id === id);
-      if (s) out[id] = buildTimeline(s);
+      // Pass FORECAST_HOURS explicitly — buildTimeline's own default is 48h
+      // (vestigial), and a 48h mock would render only 2 rows in HourlyHeatmap,
+      // then reflow to 7 once the live response lands. Match the live length.
+      if (s) out[id] = buildTimeline(s, FORECAST_HOURS);
     }
     return out;
   }, [key]);

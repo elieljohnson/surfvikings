@@ -6,6 +6,12 @@ import {
 } from './data';
 import { BUOY_MAP_BY_SPOT } from './buoyMapping';
 
+/** Forecast horizon used everywhere the timeline is built — live response,
+ *  in-memory mock fallback, and storage cache. Keep these in sync or the
+ *  HourlyHeatmap will visibly reflow when the cache-miss mock (shorter)
+ *  is replaced by the live response (longer). */
+export const FORECAST_HOURS = 168;
+
 /** Minimal shape of a buoy observation the timeline builder needs. Subset
  *  of ConditionsResponse['buoys'][string] — kept narrow so tests can pass
  *  fixtures without filling in every field. */
@@ -112,7 +118,7 @@ export async function fetchConditions(spotIds: string[], signal?: AbortSignal): 
 export function hoursToTimeline(
   spot: Spot,
   wire: MergedHourWire[],
-  hoursWanted = 168,
+  hoursWanted = FORECAST_HOURS,
   buoy?: BuoyForOverride,
 ): ForecastHour[] {
   if (!wire.length) return buildTimeline(spot, hoursWanted);
@@ -217,7 +223,7 @@ export function timelinesFromResponse(
     // spectral peak — see hoursToTimeline for the rationale.
     const buoyId = BUOY_MAP_BY_SPOT[id]?.primaryBuoy;
     const buoy = buoyId ? res?.buoys?.[buoyId] : undefined;
-    out[id] = wire.length ? hoursToTimeline(spot, wire, 168, buoy) : buildTimeline(spot, 168);
+    out[id] = wire.length ? hoursToTimeline(spot, wire, FORECAST_HOURS, buoy) : buildTimeline(spot, FORECAST_HOURS);
   }
   return out;
 }
