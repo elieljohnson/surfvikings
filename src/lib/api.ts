@@ -4,6 +4,35 @@
 import {
   SPOTS, Spot, ForecastHour, computeScore, buildTimeline,
 } from './data';
+import { BUOY_MAP_BY_SPOT } from './buoyMapping';
+
+/** Minimal shape of a buoy observation the timeline builder needs. Subset
+ *  of ConditionsResponse['buoys'][string] — kept narrow so tests can pass
+ *  fixtures without filling in every field. */
+interface BuoyForOverride {
+  status: 'online' | 'offline' | 'stale';
+  swellTrains?: Array<{ height: number; period: number; direction?: number }>;
+}
+
+/** Pick the dominant swell train by energy-flux proxy (H²·T). Standard
+ *  surf-forecast convention — matches what NDBC and LOTUS use to call
+ *  "primary swell" out of a multi-modal spectrum. H²T is proportional to
+ *  the full wave-power formula P = ρg²H²T / (64π) so the ranking is
+ *  identical without dragging the constants around.
+ *  Returns `undefined` for empty/missing input so callers can fall back. */
+export function pickDominantPeak<T extends { height: number; period: number; direction?: number }>(
+  trains: T[] | undefined,
+): T | undefined {
+  if (!trains || trains.length === 0) return undefined;
+  let best = trains[0];
+  let bestScore = best.height * best.height * best.period;
+  for (let i = 1; i < trains.length; i++) {
+    const t = trains[i];
+    const s = t.height * t.height * t.period;
+    if (s > bestScore) { best = t; bestScore = s; }
+  }
+  return bestScore > 0 ? best : undefined;
+}
 
 export interface MergedHourWire {
   t: number;
@@ -80,7 +109,12 @@ export async function fetchConditions(spotIds: string[], signal?: AbortSignal): 
 // Convert an API payload for one spot into the ForecastHour[] the UI expects,
 // running each hour through the PRD scoring engine. `startIdx` aligns hour 0
 // to "now" (first hour >= Date.now()).
-export function hoursToTimeline(spot: Spot, wire: MergedHourWire[], hoursWanted = 168): ForecastHour[] {
+export function hoursToTimeline(
+  spot: Spot,
+  wire: MergedHourWire[],
+  hoursWanted = 168,
+  buoy?: BuoyForOverride,
+): ForecastHour[] {
   if (!wire.length) return buildTimeline(spot, hoursWanted);
   const now = Date.now();
   let startIdx = wire.findIndex((h) => h.t >= now);
@@ -97,12 +131,25 @@ export function hoursToTimeline(spot: Spot, wire: MergedHourWire[], hoursWanted 
   // ~0.45-0.55 because Duxbury Reef filters incoming swell. Multiply once
   // here so both scoring and display use the realistic at-the-break height.
   const shadow = spot.shadowFactor ?? 1.0;
+  // Hour-0 override: Open-Meteo's `swell_wave_period` collapses multi-modal
+  // seas into a single number that can land closer to the windswell than the
+  // groundswell (Bolinas 2026-05-19: buoy showed 14.7s @ 3.8ft groundswell
+  // but Open-Meteo reported 7s). When the spot has a mapped buoy and the
+  // observation is live (not stale), prefer the dominant spectral peak for
+  // hour 0's period + direction inputs. Height stays from Open-Meteo because
+  // shadowFactor already handles at-the-break conversion; the buoy's raw
+  // spectral height is open-ocean and would double-discount.
+  const peak = buoy?.status === 'online' ? pickDominantPeak(buoy.swellTrains) : undefined;
   return slice.map((h, i) => {
     const swellHeight = h.swellHeight * shadow;
+    const overridePeriod = i === 0 && peak ? peak.period : h.swellPeriod;
+    const overrideDirection = i === 0 && peak && typeof peak.direction === 'number'
+      ? peak.direction
+      : h.swellDirection;
     const score = computeScore(spot, {
       swellHeight,
-      swellPeriod: h.swellPeriod,
-      swellDirection: h.swellDirection,
+      swellPeriod: overridePeriod,
+      swellDirection: overrideDirection,
       windWaveHeight: h.windWaveHeight,
       windSpeed: h.windSpeed,
       windDirection: h.windDirection,
@@ -112,8 +159,8 @@ export function hoursToTimeline(spot: Spot, wire: MergedHourWire[], hoursWanted 
     return {
       hour: i,
       swellHeight,
-      swellPeriod: h.swellPeriod,
-      swellDirection: h.swellDirection,
+      swellPeriod: overridePeriod,
+      swellDirection: overrideDirection,
       windWaveHeight: h.windWaveHeight,
       windWavePeriod: h.windWavePeriod,
       windWaveDirection: h.windWaveDirection,
@@ -165,7 +212,12 @@ export function timelinesFromResponse(
     const spot = SPOTS.find((s) => s.id === id);
     if (!spot) continue;
     const wire = res?.spots?.[id] ?? [];
-    out[id] = wire.length ? hoursToTimeline(spot, wire, 168) : buildTimeline(spot, 168);
+    // Look up the spot's mapped buoy (already-fetched observation in the same
+    // response). Used to override hour-0 swell period/direction with the live
+    // spectral peak — see hoursToTimeline for the rationale.
+    const buoyId = BUOY_MAP_BY_SPOT[id]?.primaryBuoy;
+    const buoy = buoyId ? res?.buoys?.[buoyId] : undefined;
+    out[id] = wire.length ? hoursToTimeline(spot, wire, 168, buoy) : buildTimeline(spot, 168);
   }
   return out;
 }
