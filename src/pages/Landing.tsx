@@ -190,14 +190,17 @@ function FeatureSection({
 
   return (
     <section id="how-it-works" style={{
-      padding: isNarrow ? '40px 20px' : '100px 24px',
+      padding: isNarrow ? '32px 20px' : '56px 24px',
       background: '#FFFFFF',
       borderTop: '1px solid #F1F5F9',
     }}>
       <div style={{
         maxWidth: 1200, margin: '0 auto',
         display: 'flex', flexWrap: 'wrap',
-        gap: isNarrow ? 20 : 64, alignItems: 'center',
+        // Top-align so the eyebrow/headline anchor to the phone's top edge,
+        // not the vertical center of the whole flex row (which left a ton
+        // of dead air above the text on tall mockups).
+        gap: isNarrow ? 20 : 64, alignItems: 'flex-start',
         justifyContent: 'center',
       }}>
         <div style={{
