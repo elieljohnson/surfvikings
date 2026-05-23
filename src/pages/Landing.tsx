@@ -31,7 +31,7 @@ export function Landing() {
       <FeatureSection
         eyebrow="Reads the buoy, not just the model"
         headline="Live spectrum, not a summary."
-        body="Most forecast apps read Open-Meteo's swell_wave_period — one number that collapses multi-modal seas into a mean. On a NW groundswell day in Bolinas that mean reads 7s when the actual dominant swell is 14.7s. Surf Vikings reads the NDBC spectral file directly, decomposes it into peaks, and ranks by energy flux (H²·T). Your current-hour score is observation, not summary — Bolinas Patch moved from 32 to 49 on the same conditions the day we wired this up."
+        body="Most apps trust one summary number from the weather model. On a Bolinas NW groundswell day that summary reads 7 seconds — while the real dominant swell is 14.7. Surf Vikings reads the live NDBC buoy and picks the swell that's actually doing the work. Bolinas Patch jumped from 32 to 49 on the same conditions."
         imageSlug="spot-detail-spectral"
         imageAlt="Spot detail showing multi-train spectral decomposition from buoy 46026"
         reversed={false}
