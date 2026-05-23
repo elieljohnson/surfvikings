@@ -31,7 +31,7 @@ export function Landing() {
       <FeatureSection
         eyebrow="Reads the buoy, not just the model"
         headline="Live spectrum, not a summary."
-        body="Most apps trust one summary number from the weather model. On a Bolinas NW groundswell day that summary reads 7 seconds — while the real dominant swell is 14.7. Surf Vikings reads the live NDBC buoy and picks the swell that's actually doing the work. Bolinas Patch jumped from 32 to 49 on the same conditions."
+        body="Forecast models sometimes miss what's actually in the water — a clean groundswell hiding under chop, for example. Surf Vikings checks the live buoy and uses what's really breaking. That single fix lifted The Patch at Bolinas from a 32 to a 49 on the same conditions."
         imageSlug="spot-detail-spectral"
         imageAlt="Spot detail showing multi-train spectral decomposition from buoy 46026"
         reversed={false}
