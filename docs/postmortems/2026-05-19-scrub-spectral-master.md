@@ -182,7 +182,7 @@ By value:
 ## Numbers at end of session
 
 - 220 commits total (+17 from session 5's 203)
-- 96 tests across 10 files (+8 from session 5's 88)
+- 95 tests across 10 files (+8 from session 5's 88)
 - 52 source files (+1 — useGridScrub.ts)
 - 8,630 source LOC (essentially unchanged — refactoring lifted state, new
   code roughly equals removed code)

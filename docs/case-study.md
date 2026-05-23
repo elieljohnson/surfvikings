@@ -19,7 +19,7 @@
 | **Codebase** | ~8,630 lines TypeScript/TSX across 52 source files |
 | **Stack** | Vite + React 18 + TS · react-router-dom v7 · vite-plugin-pwa · Vercel Edge Functions · Vitest · Playwright + Sharp · DreamHost email |
 | **Data sources** | 100% free public data — NDBC spectral + standard met buoys, Open-Meteo marine, NOAA CO-OPS tides, NOAA NWS coastal-waters forecast text, plus **5 live county water-quality feeds** (Sonoma, SFPUC, San Mateo, Santa Cruz, Marin) |
-| **Tests** | 96 Vitest tests across 10 files covering scoring, parsers, buoy spectral peak selection, time math, calendar generation |
+| **Tests** | 95 Vitest tests across 10 files covering scoring, parsers, buoy spectral peak selection, time math, calendar generation |
 | **Status** | Live on custom domain with Let's Encrypt TLS, **220 commits**, installable PWA, weekly-refreshing water-quality + 7-day forecast |
 
 ---
@@ -281,7 +281,7 @@ Imperial/Metric was killed instead of finished. Mavericks watch was removed inst
 └──────────────────────────────────────────────────────────┘
 
 ┌─ Testing & Tooling ─────────────────────────────────────┐
-│  Vitest (96 tests, runs in CI on every push)             │
+│  Vitest (95 tests, runs in CI on every push)             │
 │  TypeScript strict mode (tsc --noEmit before deploy)     │
 │  Playwright (chromium) + Sharp for image pipeline        │
 │  Node scripts/ for content generation                    │
@@ -304,7 +304,7 @@ Imperial/Metric was killed instead of finished. Mavericks watch was removed inst
 │  Open-Meteo Forecast — wind, cloud, precip, air temp     │
 │  NOAA CO-OPS — hourly tide predictions per spot          │
 │  NOAA NWS Coastal Waters Forecast text — PZZ zones       │
-│  Per-spot scoring engine (pure TS, 96 tests)             │
+│  Per-spot scoring engine (pure TS, 95 tests)             │
 └──────────────────────────────────────────────────────────┘
 
 ┌─ Water Quality Layer (5 county sources) ────────────────┐
@@ -410,7 +410,7 @@ Imperial/Metric was killed instead of finished. Mavericks watch was removed inst
 
 ## 9. Presentation-Ready Executive Summary
 
-> **Surf Vikings** is a hyper-local NorCal surf forecasting PWA I designed, engineered, and shipped solo across 220 commits. It scores **64 NorCal breaks** hour-by-hour over a 7-day horizon by encoding per-spot bathymetry, swell shadow, wind exposure, and tide dependency, then merging in **live water-quality data from 5 county health departments** — a layer no other surf app surfaces. A late-arc accuracy pass moved the scoring engine off Open-Meteo's collapsed dominant-period field and onto the live buoy spectral peak (H²·T ranking from NDBC `.data_spec`), closing a multi-modal-sea gap where a 14.7s groundswell hiding under windswell was reading as a 7s windswell. The product moved beyond pure NOAA aggregation into a **closed-loop feedback system**: real surfers on the water report ground-truth ratings, and structured per-spot caveats (`localNote` field) capture what the static model can't see. A polite email to Marin County's IT department unlocked an ArcGIS Feature Service that replaced a manual screenshot fixture overnight — civic API partnership as a competitive moat. The calendar feed at `/api/calendar.ics` delivers per-spot forecast notifications via every OS's native calendar app, sidestepping push-notification infrastructure entirely. The Forecast tab uses a Surfline-style **master-scrub pattern** — one finger drag across a 7-day heatmap drives synchronized cursors across four metric strip charts, all rendered in ~1.3px per bar but readable because the heatmap is the only interactive surface. Built on free public data (NOAA NDBC spectral buoys, Open-Meteo Marine, NOAA CO-OPS, NWS Coastal Waters Forecast, plus the 5 county water-quality endpoints), with ~8,630 lines of TypeScript across 52 source files, 96 Vitest tests, and 4 third-party JS dependencies. Zero-downtime migrated from legacy DreamHost shared hosting to Vercel with email continuity preserved. Installable PWA with in-app update toast, served from SFO edge. $0 hosting, $0 data, 100% local intelligence.
+> **Surf Vikings** is a hyper-local NorCal surf forecasting PWA I designed, engineered, and shipped solo across 220 commits. It scores **64 NorCal breaks** hour-by-hour over a 7-day horizon by encoding per-spot bathymetry, swell shadow, wind exposure, and tide dependency, then merging in **live water-quality data from 5 county health departments** — a layer no other surf app surfaces. A late-arc accuracy pass moved the scoring engine off Open-Meteo's collapsed dominant-period field and onto the live buoy spectral peak (H²·T ranking from NDBC `.data_spec`), closing a multi-modal-sea gap where a 14.7s groundswell hiding under windswell was reading as a 7s windswell. The product moved beyond pure NOAA aggregation into a **closed-loop feedback system**: real surfers on the water report ground-truth ratings, and structured per-spot caveats (`localNote` field) capture what the static model can't see. A polite email to Marin County's IT department unlocked an ArcGIS Feature Service that replaced a manual screenshot fixture overnight — civic API partnership as a competitive moat. The calendar feed at `/api/calendar.ics` delivers per-spot forecast notifications via every OS's native calendar app, sidestepping push-notification infrastructure entirely. The Forecast tab uses a Surfline-style **master-scrub pattern** — one finger drag across a 7-day heatmap drives synchronized cursors across four metric strip charts, all rendered in ~1.3px per bar but readable because the heatmap is the only interactive surface. Built on free public data (NOAA NDBC spectral buoys, Open-Meteo Marine, NOAA CO-OPS, NWS Coastal Waters Forecast, plus the 5 county water-quality endpoints), with ~8,630 lines of TypeScript across 52 source files, 95 Vitest tests, and 4 third-party JS dependencies. Zero-downtime migrated from legacy DreamHost shared hosting to Vercel with email continuity preserved. Installable PWA with in-app update toast, served from SFO edge. $0 hosting, $0 data, 100% local intelligence.
 
 ---
 

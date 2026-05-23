@@ -66,13 +66,16 @@ async function settle(ms = 800) {
 console.log('→ Dashboard');
 await page.goto(`${BASE}/app`, { waitUntil: 'networkidle' });
 // Wait for real data to render — Top Pick card shows "Top Pick · N min drive"
-await page.getByText(/Top Pick ·/i).first().waitFor({ timeout: 20000 });
+await page.getByText(/Top Pick/i).first().waitFor({ timeout: 30000 });
 await settle();
 await capture('dashboard');
 
 // 2. Spot Detail — click the Top Pick card to open whichever spot is #1 today
 console.log('→ Spot Detail');
-await page.getByText(/Top Pick ·/i).first().click();
+// Click the card by its label; the whole card is clickable. Falls back to a
+// label-text click if no clickable ancestor matches.
+const topPickEl = page.getByText(/Top Pick/i).first();
+await topPickEl.locator('xpath=ancestor::*[self::button or self::a][1] | ancestor::*[@role="button"][1]').first().click().catch(() => topPickEl.click());
 await page.getByText(/why this score/i).first().waitFor({ timeout: 20000 });
 await settle();
 await capture('spot-detail');
@@ -80,12 +83,56 @@ await capture('spot-detail');
 // 3. Region Map — go back to dashboard, switch to Map tab
 console.log('→ Region Map');
 await page.goto(`${BASE}/app`, { waitUntil: 'networkidle' });
-await page.getByText(/Top Pick ·/i).first().waitFor({ timeout: 20000 });
+await page.getByText(/Top Pick/i).first().waitFor({ timeout: 30000 });
 // Tab labels are inside a button with an icon sibling — click the text
-await page.getByText('Map', { exact: true }).click();
+// Bottom-nav labels are now BREAKS / TODAY / FORECAST / SETTINGS — pre-2026-05
+// these were Map/Today/Forecast/Settings. Fall back gracefully if either word
+// is present so this script survives label rotations.
+const breaksOrMap = page.locator('button:has-text("BREAKS"), button:has-text("Map")').first();
+await breaksOrMap.click();
 await page.getByText(/Salt Point/i).first().waitFor({ timeout: 10000 });
 await settle();
 await capture('map');
+
+// 4. Spot Detail Spectral — scrolled view showing the multi-train decomposition
+// from the NDBC spectral file. The hour-0 swell period scoring reads off the
+// dominant H²·T peak from this panel. Marketing surface for the accuracy story.
+console.log('→ Spot Detail Spectral');
+await page.goto(`${BASE}/app/?spot=bolinas-patch`, { waitUntil: 'networkidle' });
+await page.getByText(/spectral · buoy/i).first().waitFor({ timeout: 20000 });
+await settle();
+// Scroll the inner Screen container (the app's content area scrolls, not the
+// page). Find the scrollable Screen and scroll it to the spectral panel.
+await page.evaluate(() => {
+  const screens = Array.from(document.querySelectorAll('div')).filter((d) => {
+    const s = window.getComputedStyle(d);
+    return s.overflowY === 'auto' && d.scrollHeight > d.clientHeight;
+  });
+  const screen = screens[0];
+  if (!screen) return;
+  // Find SPECTRAL header text and scroll it to the top of the visible area
+  const heading = Array.from(screen.querySelectorAll('*')).find((el) =>
+    /spectral · buoy/i.test(el.textContent || '')
+  );
+  if (heading) {
+    const rect = heading.getBoundingClientRect();
+    const screenRect = screen.getBoundingClientRect();
+    screen.scrollTo({ top: screen.scrollTop + rect.top - screenRect.top - 60, behavior: 'instant' });
+  }
+});
+await settle(400);
+await capture('spot-detail-spectral');
+
+// 5. Forecast — the Outlook tab with the master-scrub heatmap + four MiniMetric
+// strip charts. Marketing surface for the synchronized-scrub interaction story.
+console.log('→ Forecast');
+await page.goto(`${BASE}/app/`, { waitUntil: 'networkidle' });
+await page.getByText(/Top Pick/i).first().waitFor({ timeout: 30000 });
+const forecastTab = page.locator('button:has-text("FORECAST"), button:has-text("Forecast")').first();
+await forecastTab.click();
+await page.getByText(/hourly quality/i).first().waitFor({ timeout: 10000 });
+await settle();
+await capture('forecast');
 
 await browser.close();
 console.log(`✓ Screenshots saved to ${OUT}`);

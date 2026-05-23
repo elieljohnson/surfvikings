@@ -29,11 +29,27 @@ export function Landing() {
         reversed
       />
       <FeatureSection
+        eyebrow="Reads the buoy, not just the model"
+        headline="Live spectrum, not a summary."
+        body="Most forecast apps read Open-Meteo's swell_wave_period — one number that collapses multi-modal seas into a mean. On a NW groundswell day in Bolinas that mean reads 7s when the actual dominant swell is 14.7s. Surf Vikings reads the NDBC spectral file directly, decomposes it into peaks, and ranks by energy flux (H²·T). Your current-hour score is observation, not summary — Bolinas Patch moved from 32 to 49 on the same conditions the day we wired this up."
+        imageSlug="spot-detail-spectral"
+        imageAlt="Spot detail showing multi-train spectral decomposition from buoy 46026"
+        reversed={false}
+      />
+      <FeatureSection
         eyebrow="64 spots · 150 miles"
         headline="Every break from Salt Point to Santa Cruz."
         body="Scan the whole coast at a glance. Colored pins show current quality score per spot, grouped by region. Filter by difficulty to hide spots outside your range. Offline-cached, so the whole map still works in the Bolinas dead zone."
         imageSlug="map"
         imageAlt="Region map showing all 64 spots with colored score pins"
+        reversed
+      />
+      <FeatureSection
+        eyebrow="Synchronized scrub"
+        headline="One finger, the whole week."
+        body="Scrub a 7-day quality heatmap with your thumb and watch swell, period, wind, and tide update in lockstep across four strip charts below it. One gesture, four metrics, the score at every hour. No menus, no drill-downs, no pinching."
+        imageSlug="forecast"
+        imageAlt="Forecast tab showing 7-day quality heatmap and synchronized metric strip charts"
         reversed={false}
       />
       <DataProof />
@@ -286,9 +302,9 @@ function DataProof() {
   const stats: { n: string; label: string }[] = [
     { n: '64', label: 'NorCal surf spots' },
     { n: '7', label: 'NOAA buoys' },
-    { n: '6', label: 'Tide stations' },
-    { n: '56', label: 'Water quality spots' },
-    { n: '7d', label: 'Forecast window' },
+    { n: '47', label: 'Spectral bins' },
+    { n: '5', label: 'Water quality counties' },
+    { n: '7d', label: 'Forecast horizon' },
   ];
   return (
     <section style={{
@@ -328,13 +344,13 @@ function DataProof() {
 function FeatureGrid() {
   const features: { title: string; body: string; icon: string }[] = [
     { icon: '🌊', title: 'Bolinas sub-breaks',     body: 'Patch, Jetty, and Groin scored independently. Same swell, three answers.' },
-    { icon: '⚡', title: 'Mavericks Watch',        body: 'Spectator-mode alerts when the reef is lighting up.' },
+    { icon: '📅', title: 'Calendar feed',          body: 'Subscribe to your spots in Apple, Google, or Outlook Calendar. Pre-event alerts on your watch, lock screen, even CarPlay.' },
+    { icon: '🔍', title: 'Tap to explain',         body: 'Why does Direction score 11/30? Period 8/20? Tap any row in Why-This-Score. Plain English. The math is right there.' },
     { icon: '🆓', title: 'Free forever',           body: 'No paywall, no premium tier. All data is public.' },
     { icon: '🔒', title: 'Privacy-first',          body: 'No accounts, no tracking, no ads. Your spots stay on your device.' },
     { icon: '📱', title: 'No app store',           body: 'Install straight from the browser. Works on iOS, Android, desktop.' },
     { icon: '🔌', title: 'Works offline',          body: 'Tide and forecast cached for the dead zones.' },
     { icon: '💧', title: 'Water quality',          body: 'Weekly bacteria results from 5 county health departments. Know before you paddle out.' },
-    { icon: '📊', title: 'Open methodology',       body: 'Scoring model is documented and inspectable.' },
   ];
   return (
     <section style={{
