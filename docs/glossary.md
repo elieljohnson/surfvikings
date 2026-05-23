@@ -108,6 +108,46 @@ Surf domain, oceanography, and code terms used in the codebase. Skim past anythi
 - **`liveBeachName`** — string key on `Spot.waterQuality` that matches the source's beach name verbatim. The aggregator builds `Record<beachName, LiveBeachReading>` and the UI joins by this key.
 - **Option B precedence** — when a spot has both a `permanentAdvisory` (encoded year-round concern, e.g. Cowells' Neary Lagoon outfall) and a `liveBeachName` with a current reading, the live reading drives the colored tier. The permanent text becomes year-round context that surfaces in copy. Established May 12, 2026.
 
+## Interaction patterns (drag-to-scrub)
+
+- **Drag-to-scrub** — interaction pattern adapted from Helios's pattern doc. Tap a bar in a chart to pin a tooltip; drag to scrub continuously, snapping bar-by-bar. Mouse hover provides a transient preview without pinning. Outside-tap dismisses.
+- **`useChartScrub`** — the 1D scrub hook in `src/hooks/`. Used by `ScoreTimeline` and `ForecastChart` on Spot Detail. Returns `{ active, isDragging, surfaceRef, overlayRef, overlayProps }` and bundles all the pointer handlers with the right `touch-action`/`user-select` styles.
+- **`useGridScrub`** — the 2D sibling hook for the heatmap on Forecast. Same principles, two-axis index math, returns `active: { row, col } | null`. Drives the master-scrub pattern.
+- **Pointer Events** — unified mouse + touch + pen API (`pointerdown`/`pointermove`/`pointerup`/`pointercancel`). Why we use it instead of Touch Events: one code path handles every input device.
+- **`setPointerCapture(pointerId)`** — DOM call on `pointerdown` that re-routes all subsequent events for that pointer to the captured element regardless of where it physically is. Makes drags survive finger drift off the visible chart.
+- **4px deadzone** — the small radius around the initial tap point inside which we don't promote a tap into a drag. Distinguishes a "tap to pin" from a "drag to scrub." Standard threshold across most touch-aware UIs.
+- **`lastIndexRef` gating** — the `useRef` trick that tracks the most recently active bar/cell so we only call `setState` (and trigger vibration) when the underlying index actually changes. Without this, every pointer-move event re-renders.
+- **`e.isPrimary`** — Pointer Events flag distinguishing the first contact from secondary multi-touch points. We use it to ignore second-finger touches during a scrub.
+- **`touch-action: none`** — CSS that suppresses native scroll/zoom gestures on an element so our pointer handlers see the events instead. Without it, a horizontal drag on a chart fights the page's vertical scroll on iOS.
+
+## iOS-specific hardening
+
+- **Swipe-back gesture** — iOS Safari's edge-pull gesture that goes back in history. Triggered by any horizontal overflow during a touch gesture. Our scrub tooltip used to extend past the chart's right edge near the last bar, grew document width, and iOS read that as a swipe-back, dragging the whole page off-canvas. Fixed by clamping the tooltip horizontally + `overscroll-behavior-x: contain` on the root scroll container.
+- **`-webkit-touch-callout: none`** — iOS-specific CSS that suppresses the long-press callout menu ("Copy / Look Up / Share"). Independent of selection — `touch-action: none` doesn't affect it. Required on scrub surfaces.
+- **`-webkit-user-select: none`** + **`user-select: none`** — the standard + WebKit-prefixed pair that suppresses text selection. Both needed: WebKit honors the prefixed version, other engines honor the standard.
+- **`-webkit-tap-highlight-color: transparent`** — iOS-specific CSS that suppresses the gray flash on tap. Sets the "this looks like a web page" vs "this looks like a native app" feel.
+- **Finger clearance** — the vertical offset between the active element under a finger and the tooltip showing information about it. ~48px is the safe minimum on most phones — anything less and the fingertip covers the tooltip. The GridScrubTooltip on the Forecast heatmap always positions above the active cell with this offset.
+
+## Master-scrub / linked scrubbing
+
+- **Master-scrub pattern** — one interactive surface drives multiple passive readout surfaces via a shared cursor. Standard for time-series dashboards (Surfline, Datadog, Grafana, Apple Health). On Forecast: the heatmap is the only thing that captures pointer events; the four MiniMetric bar charts and their value displays all read off the same active hour.
+- **`externalActiveHour`** — opt-in prop on `ForecastChart` that lets a parent control the chart's highlighted bar instead of using the chart's own internal pointer overlay. When set, the chart skips its overlay entirely (no double pointer-capture), dims non-active bars, and draws the scrub guideline at the externally-supplied index. Uncontrolled mode (no prop) is the original behavior, still used on Spot Detail's ChartRow.
+- **The cursor is the chart** — design framing for why we don't make dense bar charts scrollable. A ~1.3px-wide bar is unreadable on its own but readable as a cursor target driven by a sibling surface.
+
+## Spectral / multi-modal sea terms
+
+- **Spectral peak** — a local maximum in the buoy's energy-by-frequency spectrum (`.data_spec`). A single sea state often has multiple peaks: a long-period groundswell + a short-period windswell + sometimes a mid-period train. Our parser (`decomposeSwellTrains` in `server/fetchers.ts`) identifies and returns the top peaks ordered by period.
+- **Dominant peak** — the peak with the most energy. We rank by **H²·T** because it's proportional to the full wave-power formula `P = ρg²H²T / (64π)` and orders identically without the constants. `pickDominantPeak(trains)` in `lib/api.ts`.
+- **H²·T** (height-squared times period) — energy-flux proxy. A 12s wave at 3ft carries roughly 4× the energy of a 6s wave at 3ft, and the ranking matches `H² × T` exactly.
+- **kW/m** (kilowatts per meter of wave crest) — standard wave power unit; the integrated energy flux across all spectral bins. The Spectral panel displays this as a single number summary of "how much water is moving."
+- **Dominant-period field** — what Open-Meteo and most wave models report as `swell_wave_period`. Meant to summarize the operationally important period in a multi-modal sea; can mis-fire when the modes have comparable energy. Replaced by `pickDominantPeak` for hour-0 scoring in May 2026.
+- **Refraction** — wave energy bending as it crosses varying depth. A long-period swell entering from the west can bend significantly by the time it reaches a sheltered break, arriving from a different angle than it had in the open ocean. We do not model this yet; it's the systemic gap that explains why Surfline's LOTUS reports a different swell direction at Bolinas than our incident-direction reading.
+- **Incident direction** — the swell's bearing in the open ocean, before refraction. What our scoring engine currently uses.
+- **Refracted direction** — the swell's bearing at the break after coastal bathymetry has done its work. What LOTUS reports.
+- **`BuoyForOverride`** — minimal type in `lib/api.ts` describing the subset of a buoy observation `hoursToTimeline` needs (status + swellTrains). Kept narrow so tests can pass fixtures without filling in every field.
+- **`pickDominantPeak`** — pure helper in `lib/api.ts` that returns the spectral train with the highest H²·T. Returns `undefined` for empty input so callers fall back gracefully.
+- **`FORECAST_HOURS = 168`** — exported constant in `lib/api.ts`. Used everywhere a timeline length is set so the mock fallback in `useConditions`, the live response builder, and the wire-padding all agree. Extracted in May 2026 after a HourlyHeatmap reflow bug where the mock was 48h and the live was 168h.
+
 ## Brand / project terms
 
 - **Eliel** — the user. The app is built for him specifically.

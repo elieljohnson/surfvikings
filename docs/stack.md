@@ -53,7 +53,7 @@ These don't power the app — they're sources we triangulated against during the
 
 | Where | What |
 |---|---|
-| **localStorage `sv:conditions:v1:{spots}`** | Stale-while-revalidate forecast cache (~98KB for 7 spots; 24h max-age) |
+| **localStorage `sv:conditions:v3:{spots}`** | Stale-while-revalidate forecast cache (~98KB for 7 spots; 24h max-age) |
 | **localStorage `sv:driveMatrix`** | Spot ID → drive-minutes from home base, keyed by home coords |
 | **localStorage `sv:user:home`** | Geocoded home base `{label, lat, lng}` |
 | **localStorage `sv:user:location`** | Free-text home base label (fallback when geocoding fails) |

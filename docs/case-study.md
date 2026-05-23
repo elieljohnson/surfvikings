@@ -16,11 +16,11 @@
 | **Domain** | [surfvikings.com](https://surfvikings.com) (marketing) · [surfvikings.com/app](https://surfvikings.com/app/) (PWA) |
 | **Role** | Sole designer, engineer, product lead |
 | **Surface area** | Marketing site (Landing, Merch, About, Games) + PWA (Dashboard, Spot Detail, Forecast, Region Map, Settings) + public API (`/api/conditions`, `/api/calendar.ics`) |
-| **Codebase** | ~8,600 lines TypeScript/TSX across 51 source files |
+| **Codebase** | ~8,630 lines TypeScript/TSX across 52 source files |
 | **Stack** | Vite + React 18 + TS · react-router-dom v7 · vite-plugin-pwa · Vercel Edge Functions · Vitest · Playwright + Sharp · DreamHost email |
 | **Data sources** | 100% free public data — NDBC spectral + standard met buoys, Open-Meteo marine, NOAA CO-OPS tides, NOAA NWS coastal-waters forecast text, plus **5 live county water-quality feeds** (Sonoma, SFPUC, San Mateo, Santa Cruz, Marin) |
-| **Tests** | 88 Vitest tests covering scoring, parsers, time math, calendar generation |
-| **Status** | Live on custom domain with Let's Encrypt TLS, **203 commits**, installable PWA, weekly-refreshing water-quality + 7-day forecast |
+| **Tests** | 96 Vitest tests across 10 files covering scoring, parsers, buoy spectral peak selection, time math, calendar generation |
+| **Status** | Live on custom domain with Let's Encrypt TLS, **220 commits**, installable PWA, weekly-refreshing water-quality + 7-day forecast |
 
 ---
 
@@ -38,7 +38,7 @@ Every break has its own bathymetry, swell shadow, tide dependency, and wind expo
 
 ## 3. Arcs of Work
 
-The project moved through eleven arcs across five sessions, each illustrating a different engineering, design, or product principle.
+The project moved through fifteen arcs across six sessions, each illustrating a different engineering, design, or product principle.
 
 ### Arc 1 — Forecast engine & PRD
 
@@ -166,6 +166,60 @@ The Settings page used to display six interactive controls; **none of them** did
 
 **The PWA update toast** addressed a real problem: every commit ended with "hard reload to bypass the service worker." `vite-plugin-pwa` was set to `registerType: 'autoUpdate'`, which downloads new SWs silently but waits to activate until all tabs close. Users keeping the app pinned never saw updates. Switched to `'prompt'`, built a `<UpdateToast/>` component using `useRegisterSW` from `virtual:pwa-register/react`. 10-minute polling so the toast appears spontaneously when a deploy lands, not just on reload. Validated end-to-end after a chicken-and-egg lesson: the OLD SW serves the OLD bundle (with no toast component), so the new behavior takes effect one deploy after it lands.
 
+### Arc 12 — Drag-to-scrub on the bar charts
+
+Ported the Helios drag-to-scrub pattern to the score timeline and metric bar charts on Spot Detail. Tap a bar to pin a tooltip, drag to scrub continuously, snap bar-by-bar with optional haptics on Android.
+
+The interaction is built on **Pointer Events, not Touch Events**, so mouse + finger + stylus route through the same handlers. `setPointerCapture(pointerId)` on `pointerdown` is the trick that makes a drag keep working when your finger drifts off the chart — all subsequent pointer events for that pointer come to the chart regardless of where the finger actually is. A 4px deadzone distinguishes tap from drag; a `lastIndexRef` gates `setState` so we only re-render when the bar under the finger changes. `e.isPrimary` filters out second-finger multi-touch, and `pointercancel` cleans up after OS interrupts (incoming notification, palm rejection).
+
+`touch-action: none` on the overlay rect keeps vertical finger movement from scrolling the page during a horizontal scrub. The first ship had two iOS-specific bugs: the tooltip with `transform: translate(-50%)` extended past the chart's right edge near the last bar, growing document width, and iOS Safari read the horizontal overflow as a swipe-back gesture that dragged the whole page off-canvas. Fix: the tooltip measures its own width in `useLayoutEffect` and clamps `left` to `[half, chartWidth - half]`. `overflow-x: hidden` and `overscroll-behavior-x: contain` on the `Screen` container as defense-in-depth.
+
+**Engineering principle: capture survives drift.** A scrub that works only while your finger stays inside the visual element is a half-feature on a small screen. `setPointerCapture` plus a generous deadzone is what makes "tap" and "drag" feel like two intentions instead of two failure modes of the same intention.
+
+### Arc 13 — Live spectral peak override for hour-0 scoring (the accuracy work)
+
+The most consequential single change in the project's life. The Bolinas Patch's scoring was reading `7s` for swell period on a day where the buoy spectral panel right below it clearly showed **14.7s @ 3.8ft labeled GROUNDSWELL** with 5 kW/m of total wave energy, and the NWS marine forecaster (also on the same page) said "NW 6 ft at 10 seconds." The score was 32/100 in production. Surfline showed the same break as readable on a SW groundswell. Something was wrong, and the wrong thing was in the model layer.
+
+**Diagnosis.** Open-Meteo's `swell_wave_period` field is a single number meant to summarize the operationally important period. On multi-modal seas — common in NorCal, where a long-period groundswell often sits under a fresh local windswell — the summary lands somewhere between the modes and can read closer to the windswell than the groundswell. Our scoring engine was consuming that summary as gospel. Meanwhile, the buoy's `.data_spec` was right there in the same API response, already decomposed into peaks (we built that decomposition for the Spectral panel).
+
+**Fix.** `pickDominantPeak(trains)` returns the peak with the highest `H²·T` — the standard surf-forecast energy-flux proxy, proportional to the full wave-power formula `P = ρg²H²T / (64π)`. `hoursToTimeline` accepts an optional `BuoyForOverride`; when the buoy status is `'online'` (not `'stale'`, where the observation is older than 3h), hour 0 swaps in the peak's period and direction. Height stays from Open-Meteo because `shadowFactor` already handles the at-the-break conversion; the spectral height is open-ocean and would double-discount.
+
+Bolinas Patch jumped from 32 → 49 in production on the same conditions. The other Bolinas spots moved similarly. Other regions inherited the treatment for free wherever the mapped buoy has fresh spectral data.
+
+**Engineering principle: when two of your own surfaces disagree, the bug is usually that one isn't reading what the other is.** The spectral panel and the score were both showing the user true things — they just weren't reading from the same source. Plumbing change, no new data, real accuracy.
+
+The forecast hours (1-167) still consume Open-Meteo's collapsed field. Closing that gap is a separate move: secondary-swell decomposition from the same Open-Meteo response (the API exposes `secondary_swell_*` fields we don't use) plus the same `pickDominantPeak` logic on the model side. The current-hour fix is the one a surfer about to drive an hour cares about; the multi-day forecast can drift slightly without consequence.
+
+### Arc 14 — iOS hardening (three lessons in one preview)
+
+Three things broke on iPhone that worked fine in desktop Safari, and each one is a lesson worth keeping.
+
+**1. Swipe-back from chart overflow.** Tooltip horizontal overflow grew the document width; iOS read horizontal overflow during a touch gesture as a swipe-back gesture and dragged the entire page off-canvas. The fix is two parts: clamp the tooltip to chart bounds (root cause), plus `overflow-x: hidden` and `overscroll-behavior-x: contain` on the root scroll container (defense). The defense alone isn't enough — overflow during the gesture is what triggers the interpretation, not just the final state.
+
+**2. Selection callout on long-press.** `touch-action: none` (which we'd set on the scrub overlay) handles scroll gestures but doesn't suppress iOS's text-selection callout — the "Copy / Look Up" popup with blue selection brackets. After we shipped the drag-to-scrub heatmap, any long-press during a scrub fired the callout. WebKit needs a different set of properties to suppress selection: `user-select: none` / `-webkit-user-select: none` / `-webkit-touch-callout: none` / `-webkit-tap-highlight-color: transparent`. All four, set on the scrub surface.
+
+**3. Finger clearance on the tooltip.** The first heatmap-scrub build flipped the tooltip above/below based on which half of the grid the active cell was in. On the top half (TUE, WED, THU), the tooltip floated *below* the cell — which is exactly where the user's finger sits on a phone. The tooltip became unreadable. Fix: always above, with 48px of clearance. Lets the tooltip overflow the heatmap card's upper padding, which is fine because nothing above clips vertically.
+
+**Engineering principle: WebKit on iOS is its own platform.** Mac Safari and iPhone Safari run the same engine but enforce different policies on touch gestures, selection, and overflow. Anything interaction-heavy needs real-device testing before it ships, not "well, it works in desktop Safari."
+
+### Arc 15 — Expand-in-place score breakdown + master-scrub on Forecast
+
+Two UX moves that work together. The score breakdown rows on Spot Detail are now tap-to-expand: each row reveals 2-3 lines of plain-English math explaining why it scored what it did. No new visualizations — the compass and tide chart already on the same screen do the visual half. Text only, formula-driven, deterministic from the row's inputs:
+
+- **Direction:** "48° off optimal · cosine² falloff puts this at 43% of max · Rotated west of ideal — still working, just refracting harder onto the bar"
+- **Period:** "10s = short-period groundswell · Carries about 69% the energy of a 12s wave at the same face height · 4s short of the 14-18s window — penalty is 3 pts per second under"
+- **Size:** "Open-ocean buoy reads 4.0ft · shadowFactor 0.55 for this break → 2.2ft actually reaches it · Inside your 2-6ft window — closer to the low end"
+- **Wind dir:** "Wind 113° off offshore — effectively side-onshore · Surface chop — waves lose definition before they break · Forecast eases to 5kt by 6 PM, penalty drops"
+- **Tide:** "3.7ft now — this break favors high tide · Rising · Next high 4.5ft in ~47m"
+
+The math is exposed because the user wants to learn what the score is reading, not just trust it.
+
+**Master-scrub on Forecast.** The hourly-quality heatmap on the Outlook tab became 2D scrubbable (`useGridScrub`, sibling hook to `useChartScrub`, same Pointer Events principles extended to two axes). Then it became the only interactive surface on the page: scrubbing a heatmap cell drives all four dense MiniMetric bar charts below it as passive readouts. Each MiniMetric's "now" value swaps to the scrubbed hour, the bar at that hour highlights, a solid 2px guideline draws across all four charts at the active column, and the heatmap dims non-active cells to keep the eye anchored. One gesture, four metrics, plus the score itself in the heatmap tooltip — readable on a phone without rotating it.
+
+The bar charts compress 168 hours into ~220px = ~1.3px per bar, which would be unreadable on its own. The master-scrub pattern says the chart density doesn't matter because the chart's purpose changed — it's a readout cursor, not a standalone visualization. Surfline does this for the same reason. It's the right pattern for dense time-series on small screens.
+
+**Engineering principle: the cursor is the chart.** Dense time-series on a small screen doesn't need to be navigable in every panel; it needs to be readable once a point is picked. Linked scrubbing across the lowest-density surface (here, a 7×24 heatmap with 18px cells you can see) and the highest-density ones (four 1.3px-bar charts you can't really see on their own) is what makes the whole page useful instead of just busy.
+
 ---
 
 ## 4. Cross-Cutting Engineering & Product Principles
@@ -209,7 +263,7 @@ A model that improves from ground-truth feedback beats a model that's perfect at
 Imperial/Metric was killed instead of finished. Mavericks watch was removed instead of stubbed. Epic window alerts became a real calendar feed. Honest disclosure beats over-claim.
 
 ### 4.13 Iterate in commits, not in branches
-203 commits, mostly linear, with preview branches only for features that needed external review (favorites editor, calendar feed, SC shadow sweep). Small focused commits beat long-lived feature branches for a solo project shipping to production.
+220 commits, mostly linear, with preview branches only for features that needed external review (favorites editor, calendar feed, SC shadow sweep, drag-to-scrub, master-scrub on Forecast). Small focused commits beat long-lived feature branches for a solo project shipping to production.
 
 ---
 
@@ -227,7 +281,7 @@ Imperial/Metric was killed instead of finished. Mavericks watch was removed inst
 └──────────────────────────────────────────────────────────┘
 
 ┌─ Testing & Tooling ─────────────────────────────────────┐
-│  Vitest (88 tests, runs in CI on every push)             │
+│  Vitest (96 tests, runs in CI on every push)             │
 │  TypeScript strict mode (tsc --noEmit before deploy)     │
 │  Playwright (chromium) + Sharp for image pipeline        │
 │  Node scripts/ for content generation                    │
@@ -250,7 +304,7 @@ Imperial/Metric was killed instead of finished. Mavericks watch was removed inst
 │  Open-Meteo Forecast — wind, cloud, precip, air temp     │
 │  NOAA CO-OPS — hourly tide predictions per spot          │
 │  NOAA NWS Coastal Waters Forecast text — PZZ zones       │
-│  Per-spot scoring engine (pure TS, 88 tests)             │
+│  Per-spot scoring engine (pure TS, 96 tests)             │
 └──────────────────────────────────────────────────────────┘
 
 ┌─ Water Quality Layer (5 county sources) ────────────────┐
@@ -312,7 +366,7 @@ Imperial/Metric was killed instead of finished. Mavericks watch was removed inst
 | | |
 |---|---|
 | **Commits** | **203** on `main` |
-| **Lines of code** | **~8,600 TS/TSX** across 51 source files |
+| **Lines of code** | **~8,630 TS/TSX** across 52 source files |
 | **Tests** | **88** Vitest cases — scoring, parsers, time math, calendar generation, RFC 5545 escaping |
 | **Surf spots modeled** | **64** across 7 regions (Sonoma → Santa Cruz) |
 | **Forecast horizon** | **7 days, hourly** |
@@ -356,7 +410,7 @@ Imperial/Metric was killed instead of finished. Mavericks watch was removed inst
 
 ## 9. Presentation-Ready Executive Summary
 
-> **Surf Vikings** is a hyper-local NorCal surf forecasting PWA I designed, engineered, and shipped solo across 203 commits. It scores **64 NorCal breaks** hour-by-hour over a 7-day horizon by encoding per-spot bathymetry, swell shadow, wind exposure, and tide dependency, then merging in **live water-quality data from 5 county health departments** — a layer no other surf app surfaces. The product moved beyond pure NOAA aggregation into a **closed-loop feedback system**: real surfers on the water report ground-truth ratings, and structured per-spot caveats (`localNote` field) capture what the static model can't see. A polite email to Marin County's IT department unlocked an ArcGIS Feature Service that replaced a manual screenshot fixture overnight — civic API partnership as a competitive moat. The calendar feed at `/api/calendar.ics` delivers per-spot forecast notifications via every OS's native calendar app, sidestepping push-notification infrastructure entirely. Built on free public data (NOAA NDBC spectral buoys, Open-Meteo Marine, NOAA CO-OPS, NWS Coastal Waters Forecast, plus the 5 county water-quality endpoints), with ~8,600 lines of TypeScript across 51 source files, 88 Vitest tests, and 4 third-party JS dependencies. Zero-downtime migrated from legacy DreamHost shared hosting to Vercel with email continuity preserved. Installable PWA with in-app update toast, served from SFO edge. $0 hosting, $0 data, 100% local intelligence.
+> **Surf Vikings** is a hyper-local NorCal surf forecasting PWA I designed, engineered, and shipped solo across 220 commits. It scores **64 NorCal breaks** hour-by-hour over a 7-day horizon by encoding per-spot bathymetry, swell shadow, wind exposure, and tide dependency, then merging in **live water-quality data from 5 county health departments** — a layer no other surf app surfaces. A late-arc accuracy pass moved the scoring engine off Open-Meteo's collapsed dominant-period field and onto the live buoy spectral peak (H²·T ranking from NDBC `.data_spec`), closing a multi-modal-sea gap where a 14.7s groundswell hiding under windswell was reading as a 7s windswell. The product moved beyond pure NOAA aggregation into a **closed-loop feedback system**: real surfers on the water report ground-truth ratings, and structured per-spot caveats (`localNote` field) capture what the static model can't see. A polite email to Marin County's IT department unlocked an ArcGIS Feature Service that replaced a manual screenshot fixture overnight — civic API partnership as a competitive moat. The calendar feed at `/api/calendar.ics` delivers per-spot forecast notifications via every OS's native calendar app, sidestepping push-notification infrastructure entirely. The Forecast tab uses a Surfline-style **master-scrub pattern** — one finger drag across a 7-day heatmap drives synchronized cursors across four metric strip charts, all rendered in ~1.3px per bar but readable because the heatmap is the only interactive surface. Built on free public data (NOAA NDBC spectral buoys, Open-Meteo Marine, NOAA CO-OPS, NWS Coastal Waters Forecast, plus the 5 county water-quality endpoints), with ~8,630 lines of TypeScript across 52 source files, 96 Vitest tests, and 4 third-party JS dependencies. Zero-downtime migrated from legacy DreamHost shared hosting to Vercel with email continuity preserved. Installable PWA with in-app update toast, served from SFO edge. $0 hosting, $0 data, 100% local intelligence.
 
 ---
 

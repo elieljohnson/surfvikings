@@ -17,6 +17,7 @@ const OUT = resolve(__dirname, '../docs/screenshots');
 const BASE = 'http://localhost:5173';
 
 const VIEWS = [
+  // Marketing site
   { name: 'landing-hero',        path: '/',      device: 'desktop', scroll: 0     },
   { name: 'landing-feature',     path: '/',      device: 'desktop', scroll: 900   },
   { name: 'landing-mobile-hero', path: '/',      device: 'mobile',  scroll: 0     },
@@ -26,8 +27,22 @@ const VIEWS = [
   { name: 'merch-grid',          path: '/merch', device: 'desktop', scroll: 800   },
   { name: 'merch-mobile-hero',   path: '/merch', device: 'mobile',  scroll: 0     },
   { name: 'merch-mobile-grid',   path: '/merch', device: 'mobile',  scroll: 700   },
+  // App: Dashboard
   { name: 'dashboard',           path: '/app/',  device: 'mobile',  scroll: 0     },
   { name: 'dashboard-full',      path: '/app/',  device: 'mobile',  scroll: 400   },
+  // App: Spot Detail (Bolinas Patch deep-linked) — shows the new expand-in-place
+  // score breakdown, the spectral panel with H²·T-ranked peaks, the compass + vectors,
+  // bathymetry, water quality, and the moon-phase icon.
+  { name: 'spot-detail',         path: '/app/?spot=bolinas-patch', device: 'mobile', scroll: 0   },
+  { name: 'spot-detail-mid',     path: '/app/?spot=bolinas-patch', device: 'mobile', scroll: 600 },
+  { name: 'spot-detail-spectral',path: '/app/?spot=bolinas-patch', device: 'mobile', scroll: 1400 },
+  // App: Forecast (Outlook tab — master-scrub heatmap + MiniMetric strip charts).
+  // Navigates via the bottom nav after the dashboard loads so the favorite
+  // chip strip + selected spot are real, not deep-linked.
+  { name: 'forecast',            path: '/app/',  device: 'mobile', scroll: 0,
+    tabClick: 'FORECAST' },
+  { name: 'forecast-scrolled',   path: '/app/',  device: 'mobile', scroll: 400,
+    tabClick: 'FORECAST' },
 ];
 
 const SIZES = {
@@ -57,8 +72,26 @@ for (const view of VIEWS) {
   await page.goto(url, { waitUntil: 'networkidle' });
   // Give images / fonts a beat to settle.
   await page.waitForTimeout(600);
+  // Tab navigation for app views: click a bottom-nav item by its label text.
+  // App tabs are buttons containing TODAY / BREAKS / FORECAST / SETTINGS — not
+  // routes, so we drive them through the same UI a user would.
+  if (view.tabClick) {
+    const tab = page.locator(`button:has-text("${view.tabClick}")`).first();
+    await tab.click();
+    await page.waitForTimeout(500);
+  }
   if (view.scroll > 0) {
-    await page.evaluate((y) => window.scrollTo({ top: y, behavior: 'instant' }), view.scroll);
+    // App content scrolls inside the Screen container (overflow: auto), not the
+    // page itself — find the right scroll target. Falls back to window scroll
+    // for marketing pages where the body scrolls.
+    await page.evaluate((y) => {
+      const screenEl = document.querySelector('[class*="Screen"], div[style*="overflow"]');
+      if (screenEl && screenEl.scrollHeight > screenEl.clientHeight) {
+        screenEl.scrollTo({ top: y, behavior: 'instant' });
+      } else {
+        window.scrollTo({ top: y, behavior: 'instant' });
+      }
+    }, view.scroll);
     await page.waitForTimeout(300);
   }
 

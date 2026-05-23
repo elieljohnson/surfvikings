@@ -48,6 +48,18 @@ Discovery in the May 11 pass: `shadowFactor` had been defined per-spot since the
 
 Mavericks uses a different formula (`watchOnly` flag) because it's a spectator advisory, not a "should I surf this?" signal.
 
+### Hour-0 buoy spectral peak override
+
+For the *current hour*, the scoring engine prefers the live buoy's dominant spectral peak over Open-Meteo's collapsed `swell_wave_period` field. Open-Meteo summarizes multi-modal seas with a single number that can land closer to the windswell than the groundswell; the buoy's `.data_spec` decomposition is observation, not summary.
+
+Data flow: `/api/conditions` returns both the Open-Meteo wire (per spot) and the buoy observation (per buoy) side-by-side. `timelinesFromResponse` (in `src/lib/api.ts`) looks up the spot's mapped buoy via `BUOY_MAP_BY_SPOT` and passes the observation to `hoursToTimeline`. When the buoy is `'online'` (not `'stale'` — older than 3h), `pickDominantPeak(trains)` returns the peak with the highest **H²·T**, and hour 0's `swellPeriod` and `swellDirection` get swapped to the peak's values before `computeScore` runs. Height stays from Open-Meteo because `shadowFactor` already handles the at-the-break conversion; buoy spectral height is open-ocean and would double-discount.
+
+Hours 1-167 still consume Open-Meteo's field. Closing that gap (forecast-side multi-swell decomposition using Open-Meteo's `secondary_swell_*` fields) is on the backlog.
+
+### `FORECAST_HOURS` constant
+
+`export const FORECAST_HOURS = 168` in `src/lib/api.ts` is the single source of truth for timeline length. Used by `hoursToTimeline`, `timelinesFromResponse`, and the mock fallback in `useConditions`. Without this, the mock fallback (which only runs when there's no cached response — first-ever visit or expired cache) was using `buildTimeline`'s 48h default while the live response was 168h. Result: `HourlyHeatmap` rendered 2 rows on first paint, then reflowed to 7 rows when the network resolved. Symmetric lengths means the worst case is colors changing in place when live data lands, not the row count.
+
 ## App structure
 
 ```
@@ -73,6 +85,20 @@ src/
     └── Primitives.tsx     ← shared chart primitives (ScoreTimeline, ForecastChart, ScoreSpark, CompassRose, VectorsPanel, Stat)
 ```
 
+Two pointer-event scrub hooks live in `src/hooks/`:
+- `useChartScrub` — 1D scrub for bar charts. Used by `ScoreTimeline` and `ForecastChart`'s uncontrolled mode on SpotDetail.
+- `useGridScrub` — 2D sibling for the heatmap. Drives the master-scrub pattern on Forecast.
+
+Both hooks share the same Pointer Events foundation: `setPointerCapture` on `pointerdown` (so drags survive finger drift off the surface), 4px deadzone to distinguish tap from drag, `lastIndexRef`/`lastCellRef` gating so we only `setState` when the active index actually changes, `e.isPrimary` filtering to ignore second-finger multi-touch, and `pointercancel` cleanup for OS interrupts. The `overlayProps.style` bundles `touch-action: none` plus the WebKit-specific suppression suite (`user-select`, `-webkit-touch-callout`, `-webkit-tap-highlight-color`) that keeps iOS Safari from triggering text selection or the "Copy / Look Up" callout during a long-press scrub.
+
+### Master-scrub on Forecast
+
+The Outlook tab uses a linked-scrubbing pattern: one interactive surface (the 7×24 hourly heatmap) drives multiple passive readout surfaces (four MiniMetric bar charts) via a shared cursor.
+
+Implementation lives in `src/components/Forecast.tsx`. `useGridScrub` is called at the `Forecast` component level (not inside `HourlyHeatmap`) so the active cell is available to sibling components. `activeHour = active.row * 24 + active.col` propagates down. `MiniMetric` reads `timeline[activeHour ?? 0]` for its "now" value display, and `ForecastChart` accepts an `externalActiveHour` prop — when set, the chart skips its own pointer overlay entirely (no double pointer-capture), dims non-active bars to 45% opacity, and draws a solid 2px guideline at the active column. The heatmap dims its non-active cells to 40% of their original opacity to keep the eye anchored on the scrub target.
+
+Tooltip positioning on the heatmap uses **48px of finger clearance** above the active cell — anything less and a thumb covers its own readout. The tooltip is allowed to overflow the heatmap card upward; nothing above clips vertically.
+
 ## Cross-screen design rules
 
 These are explicit principles that govern every UI decision:
@@ -85,7 +111,7 @@ These are explicit principles that govern every UI decision:
 
 ## Caching strategy
 
-- **Conditions:** localStorage-backed stale-while-revalidate. Cache key includes the version (`sv:conditions:v1:`) and sorted spot IDs. 24h max-age. Reloads render the user's last real forecast on first paint, then revalidate in the background.
+- **Conditions:** localStorage-backed stale-while-revalidate. Cache key includes the version (`sv:conditions:v3:`) and sorted spot IDs. 24h max-age. Reloads render the user's last real forecast on first paint, then revalidate in the background.
 - **Drive times:** matrix keyed by home-base lat/lng (rounded to 4 decimals). Refetches only when home base changes — once OSRM gives us all 40 spots' drive times, we cache the whole grid in localStorage.
 - **Home base coords:** geocoded once via Nominatim, cached as `{label, lat, lng}` in localStorage.
 
