@@ -1,0 +1,7 @@
+# Surf Vikings
+# The /labs section is an unlisted preview — keep it out of search indexes.
+# When Labs goes public, delete the Disallow line below.
+
+User-agent: *
+Allow: /
+Disallow: /labs
