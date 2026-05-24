@@ -213,3 +213,60 @@ export function useWaveField(): WaveFieldState {
 
   return state;
 }
+
+// ─────────────────────────────────────────────────────────────────────────
+// REGIONAL data — the NE-Pacific swell-origin grid (Swell Origin Map)
+// ─────────────────────────────────────────────────────────────────────────
+
+/** A coarse grid across the Northeast Pacific. Sixteen points, fetched in
+ *  ONE batched request — the alternative is sixteen round trips, the N+1
+ *  trap. Open-Meteo takes comma-separated coordinate lists. */
+const ORIGIN_LATS = [35, 38, 41, 44];
+const ORIGIN_LONS = [-134, -130, -126, -123];
+export const ORIGIN_GRID = ORIGIN_LATS.flatMap((lat) => ORIGIN_LONS.map((lon) => ({ lat, lon })));
+
+export interface OriginPoint { lat: number; lon: number; ft: number; dir: number; per: number }
+
+interface OriginState { points: OriginPoint[] | null; loading: boolean; error: string | null }
+
+/** Current-hour dominant swell at each NE-Pacific grid point. One request. */
+export function useSwellOriginField(): OriginState {
+  const [state, setState] = useState<OriginState>({ points: null, loading: true, error: null });
+  const once = useRef(false);
+
+  useEffect(() => {
+    if (once.current) return;
+    once.current = true;
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const lat = ORIGIN_GRID.map((g) => g.lat).join(',');
+        const lon = ORIGIN_GRID.map((g) => g.lon).join(',');
+        const url = `https://marine-api.open-meteo.com/v1/marine?latitude=${lat}&longitude=${lon}`
+          + `&current=swell_wave_height,swell_wave_direction,swell_wave_period`
+          + `&timezone=GMT&length_unit=imperial`;
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(`Open-Meteo Marine ${res.status}`);
+        const json = await res.json();
+        const arr: any[] = Array.isArray(json) ? json : [json];
+        const points: OriginPoint[] = arr.map((d, i) => ({
+          lat: ORIGIN_GRID[i].lat,
+          lon: ORIGIN_GRID[i].lon,
+          ft: d.current?.swell_wave_height ?? 0,
+          dir: d.current?.swell_wave_direction ?? 0,
+          per: d.current?.swell_wave_period ?? 8,
+        })).filter((p) => p.ft > 0.1);
+        if (cancelled) return;
+        setState({ points, loading: false, error: null });
+      } catch (err) {
+        if (cancelled) return;
+        setState({ points: null, loading: false, error: err instanceof Error ? err.message : String(err) });
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, []);
+
+  return state;
+}

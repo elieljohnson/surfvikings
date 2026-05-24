@@ -71,3 +71,17 @@ const TIDE_STOPS = ['#10202E', '#1C3F5C', '#2E6E9E', '#4F9FD4'];
 export function seqTide(t: number): string {
   return ramp(TIDE_STOPS, t);
 }
+
+/** Period ramp — short windsea (seafoam) → long groundswell (violet). This
+ *  is the one ramp carried over verbatim from the second batch of build
+ *  specs: it is deuteranopia-safe, and period is its own variable, distinct
+ *  from quality (green) and energy (cyan). Used by the Swell Bloom, Ridgeline
+ *  and Swell Origin Map so period reads the same across the gallery. */
+const PERIOD_STOPS = ['#9AF0D9', '#43D6DA', '#2F8AD6', '#3B54C9', '#6A2FB5'];
+export function seqPeriod(t: number): string {
+  return ramp(PERIOD_STOPS, t);
+}
+/** Map a wave period in seconds (≈4–19s useful range) to its color. */
+export function periodColor(seconds: number): string {
+  return seqPeriod((seconds - 4) / (19 - 4));
+}

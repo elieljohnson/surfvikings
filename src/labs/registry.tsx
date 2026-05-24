@@ -82,6 +82,46 @@ export const EXPERIMENTS: Experiment[] = [
       + 'strokes still encode real height, wind and temperature. Rigor in a softer voice.',
     Component: lazy(() => import('./views/WatercolorMap')),
   },
+  {
+    slug: 'stoke-field',
+    num: '07',
+    title: 'Stoke Field',
+    register: 'Tufte — the case-study spine',
+    finding: 'Wave quality is several variables agreeing at once — and the good windows are rarer than they look.',
+    blurb: 'One spot, the surfable hours of the week as a field of composite scores. The '
+      + 'headline states the best window; hovering any hour decomposes the score into its parts.',
+    Component: lazy(() => import('./views/StokeField')),
+  },
+  {
+    slug: 'swell-bloom',
+    num: '08',
+    title: 'Swell Bloom',
+    register: 'Polar — the beautiful one',
+    finding: 'The ocean is never one wave — a groundswell and a windsea arrive from different directions at once.',
+    blurb: 'A living wave-spectrum dial. Each lobe is a wave train: angle is direction, length '
+      + 'is height, color is period. Press play and the field morphs across the forecast.',
+    Component: lazy(() => import('./views/SwellBloom')),
+  },
+  {
+    slug: 'ridgeline',
+    num: '09',
+    title: 'Ridgeline Forecast',
+    register: 'Joyplot — the counterweight',
+    finding: 'Seven days of swell, stacked into one quiet image — the big days announce themselves.',
+    blurb: 'A joyplot of the week: each day a ridge of wave height, drawn so a big day rises '
+      + 'into the day above it. Dense data that reads calm.',
+    Component: lazy(() => import('./views/Ridgeline')),
+  },
+  {
+    slug: 'swell-origin',
+    num: '10',
+    title: 'Swell Origin Map',
+    register: 'Regional — the brand image',
+    finding: 'The swell that hits the coast was made somewhere else, days ago, far out to sea.',
+    blurb: 'A regional view of the Northeast Pacific: a grid of arrows showing where today’s '
+      + 'energy is marching from, colored by period, over a stylized coastline.',
+    Component: lazy(() => import('./views/SwellOriginMap')),
+  },
 ];
 
 export function experimentBySlug(slug: string): Experiment | undefined {

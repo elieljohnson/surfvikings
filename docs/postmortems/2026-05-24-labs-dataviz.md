@@ -119,3 +119,35 @@ finding, not silently fixing someone else's test. Worth a focused look.
 4. **Trajectory measured-data version** — would need a server-side NDBC
    archive proxy to get true buoy history instead of forecast.
 5. **Pre-existing `celestial.test.ts` failure** (above).
+
+## Addendum — four more views (same day)
+
+A second batch of build specs arrived — Stoke Field, Swell Bloom, Ridgeline,
+Swell Origin Map — written for Next.js. Folded into the same `/labs` gallery
+(experiments 07–10, ten total), adapted rather than pasted.
+
+Decisions:
+
+- **Stack ported, not as-specced.** The specs assume Next.js App Router;
+  Surf Vikings is Vite. Mechanical: dropped the `"use client"` directives
+  and `@/` aliases.
+- **No d3 — hand-rolled.** The specs said `npm install d3`; the other six
+  Labs views are d3-free hand-rolled SVG. Adding d3 for four of ten views
+  would break the consistency that folding-in is for. Added a Catmull-Rom
+  `smoothPath` helper to vizKit; reused the existing `ramp()` for color.
+- **Stoke Field consumes `computeScore`, not its own `quality()`.** The
+  spec shipped a hand-tuned `quality()` with `idealSwell/optFt/sigma` — a
+  third definition of "good." The legible-additive-score idea it reaches
+  for already exists as `computeScore` + `scoreBreakdown`. Stoke Field is
+  now the single-spot, best-window-headline companion to the Window Grid's
+  cross-spot view.
+- **Restyled to the Labs theme.** The specs' Fraunces / IBM Plex Mono /
+  seafoam→violet language was dropped for the existing `LABS` tokens — one
+  period ramp (`seqPeriod`) was kept, since it is deuteranopia-safe and
+  period is its own variable next to quality (green) and energy (cyan).
+- **Stoke Field overlaps the Window Grid** — both are quality heatmaps.
+  Kept both: cross-spot comparison vs. single-spot decision view are
+  different jobs. Worth a later call on whether to cut one.
+
+All four typecheck clean and are wired into the registry, so the gallery
+and routing pick them up with no further changes.

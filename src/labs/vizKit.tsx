@@ -174,3 +174,24 @@ export function dayTick(anchorMs: number, dayOffset: number): string {
   const d = new Date(anchorMs + dayOffset * 86400_000);
   return ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d.getDay()];
 }
+
+/** A smooth SVG path through a set of points (Catmull-Rom → cubic Bézier).
+ *  Hand-rolled so the Labs views stay d3-free and consistent with the rest
+ *  of the gallery. The curve passes *through* every point, unlike a B-spline
+ *  — honest for a data line where the points are real measurements. */
+export function smoothPath(pts: Array<[number, number]>): string {
+  if (pts.length < 2) return pts.length ? `M ${pts[0][0]} ${pts[0][1]}` : '';
+  let d = `M ${pts[0][0].toFixed(1)} ${pts[0][1].toFixed(1)}`;
+  for (let i = 0; i < pts.length - 1; i++) {
+    const p0 = pts[i - 1] ?? pts[i];
+    const p1 = pts[i];
+    const p2 = pts[i + 1];
+    const p3 = pts[i + 2] ?? p2;
+    const c1x = p1[0] + (p2[0] - p0[0]) / 6;
+    const c1y = p1[1] + (p2[1] - p0[1]) / 6;
+    const c2x = p2[0] - (p3[0] - p1[0]) / 6;
+    const c2y = p2[1] - (p3[1] - p1[1]) / 6;
+    d += ` C ${c1x.toFixed(1)} ${c1y.toFixed(1)} ${c2x.toFixed(1)} ${c2y.toFixed(1)} ${p2[0].toFixed(1)} ${p2[1].toFixed(1)}`;
+  }
+  return d;
+}
