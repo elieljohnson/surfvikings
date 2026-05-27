@@ -128,7 +128,7 @@ export function SpotDetail({ spotId, onBack }: SpotDetailProps) {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
                 <div style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 13, letterSpacing: '0.2em', color: scoreColor(windows[0].peak), textTransform: 'uppercase' }}>
-                  ◉ Optimal Window
+                  Optimal Window
                 </div>
                 <div style={{ fontSize: 15, fontWeight: 500, marginTop: 4 }}>
                   {hourLabel(windows[0].start)} → {hourLabel(windows[0].end + 1)}
