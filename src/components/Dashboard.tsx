@@ -386,15 +386,15 @@ function TopPickCard({
         <ScoreBadge score={current.score} rating={rating.label} size="lg"/>
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', padding: '12px 0', borderTop: `1px solid ${TOKENS.border}`, borderBottom: `1px solid ${TOKENS.border}` }}>
-        <Stat label="Swell" value={current.swellHeight.toFixed(1)} unit="ft" hint={`${Math.round(current.swellPeriod)}s`} color={qualityColor(swellQ)}/>
-        <Stat label="Dir"   value={degToCardinal(current.swellDirection)} hint={`${Math.round(current.swellDirection)}°`} color={qualityColor(dirQ)}/>
-        <Stat label="Wind"  value={Math.round(current.windSpeed)} unit="kts" hint={degToCardinal(current.windDirection)} color={qualityColor(windQ)}/>
-        <Stat label="Tide"  value={current.tideHeight.toFixed(1)} unit="ft" hint={current.tideRising ? 'rising ↑' : 'falling ↓'} color={qualityColor(tideQ)}/>
+        <Stat dot={false} label="Swell" value={current.swellHeight.toFixed(1)} unit="ft" hint={`${Math.round(current.swellPeriod)}s`} color={qualityColor(swellQ)}/>
+        <Stat dot={false} label="Dir"   value={degToCardinal(current.swellDirection)} hint={`${Math.round(current.swellDirection)}°`} color={qualityColor(dirQ)}/>
+        <Stat dot={false} label="Wind"  value={Math.round(current.windSpeed)} unit="kts" hint={degToCardinal(current.windDirection)} color={qualityColor(windQ)}/>
+        <Stat dot={false} label="Tide"  value={current.tideHeight.toFixed(1)} unit="ft" hint={current.tideRising ? 'rising ↑' : 'falling ↓'} color={qualityColor(tideQ)}/>
       </div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 14 }}>
         <div>
           <div style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 13, letterSpacing: '0.2em', color: TOKENS.phosphor, textTransform: 'uppercase', marginBottom: 3 }}>
-            ◉ GO NOW · Best window
+            GO NOW · Best window
           </div>
           <div style={{ fontSize: 14, fontWeight: 500 }}>
             {best ? `${hourLabel(best.start)} → ${hourLabel(best.end + 1)}` : 'Building overnight'}
@@ -414,8 +414,7 @@ function TopPickCard({
         fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 12, color: TOKENS.textMute, letterSpacing: '0.1em',
       }}>
         <span>BUOY {buoyId}{updatedAgoMin !== null ? ` · ${updatedAgoMin}m AGO` : ''}</span>
-        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-          <span style={{ width: 6, height: 6, borderRadius: '50%', background: dataBadgeColor }}/>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: dataBadgeColor }}>
           {dataBadge} · TIDE {tideId}
         </span>
       </div>
