@@ -617,16 +617,12 @@ function WaterQualityPanel({ state }: { state: WaterQualityState }) {
         background: bg, border: `1px solid ${borderColor}`,
         borderRadius: 8, padding: '12px 14px',
       }}>
-        {/* Status row: colored dot + status word + (when a live county
-         * reading is matched) "Tested 5/4 · 7d ago". State CSV approach
-         * was abandoned because it's historical-only (May 2026 dig); now
-         * driven by per-county scrapers in src/server/waterQualityLive.ts. */}
+        {/* Status row: colored status word + (when a live county reading
+         * is matched) "Tested 5/4 · 7d ago". Status word already carries
+         * dotColor — the previous explicit dot was redundant. State CSV
+         * approach was abandoned because it's historical-only (May 2026
+         * dig); now driven by per-county scrapers in waterQualityLive.ts. */}
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 6 }}>
-          <span style={{
-            display: 'inline-block', width: 8, height: 8, borderRadius: '50%',
-            background: dotColor, flexShrink: 0, marginRight: 4,
-            transform: 'translateY(-1px)',
-          }}/>
           <span style={{ fontSize: 16, fontWeight: 500, color: dotColor }}>
             {statusLabel}
           </span>
