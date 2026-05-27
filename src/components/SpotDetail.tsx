@@ -759,9 +759,9 @@ function SunMoonPanel({ spot }: { spot: Spot }) {
         // data rather than floating in its own empty quarter of the row.
         display: 'grid', gridTemplateColumns: '1fr 1fr 1fr auto', gap: 8,
       }}>
-        <Stat label="Sunrise" value={formatTime(sunrise)} hint="" color={TOKENS.text}/>
-        <Stat label="Sunset"  value={formatTime(sunset)}  hint={dayLengthStr} color={TOKENS.text}/>
-        <Stat label="Moon"    value={`${Math.round(moon.illumination * 100)}%`} hint={moon.label.toLowerCase()} color={TOKENS.text}/>
+        <Stat dot={false} label="Sunrise" value={formatTime(sunrise)} hint="" color={TOKENS.text}/>
+        <Stat dot={false} label="Sunset"  value={formatTime(sunset)}  hint={dayLengthStr} color={TOKENS.text}/>
+        <Stat dot={false} label="Moon"    value={`${Math.round(moon.illumination * 100)}%`} hint={moon.label.toLowerCase()} color={TOKENS.text}/>
         {/* Phase cell renders as just the moon icon — no label, no caption.
             The Moon stat to its left already carries the textual phase data;
             the icon is the at-a-glance visual. Centered vertically inside
