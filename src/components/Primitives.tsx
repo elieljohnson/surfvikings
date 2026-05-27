@@ -483,12 +483,17 @@ function ScrubTooltip({
 }
 
 export function Stat({
-  label, value, unit, hint, align = 'left', color,
-}: { label: string; value: React.ReactNode; unit?: string; hint?: string; align?: 'left' | 'right'; color?: string }) {
+  label, value, unit, hint, align = 'left', color, dot = true,
+}: { label: string; value: React.ReactNode; unit?: string; hint?: string; align?: 'left' | 'right'; color?: string;
+  /** When false, suppress the colored dot next to the label. The value text
+   *  is already tinted by `color`, so the dot is redundant signal in dense
+   *  contexts (VectorsPanel). Defaults true to preserve existing surfaces. */
+  dot?: boolean;
+}) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: align === 'right' ? 'flex-end' : 'flex-start', gap: 2 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexDirection: align === 'right' ? 'row-reverse' : 'row' }}>
-        {color && <span style={{ width: 6, height: 6, borderRadius: '50%', background: color, flexShrink: 0 }}/>}
+        {dot && color && <span style={{ width: 6, height: 6, borderRadius: '50%', background: color, flexShrink: 0 }}/>}
         <div style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 13, letterSpacing: '0.12em', color: TOKENS.textMute, textTransform: 'uppercase' }}>{label}</div>
       </div>
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 3 }}>
@@ -707,10 +712,10 @@ export function VectorsPanel({
       <div style={{ background: TOKENS.surface, border: `1px solid ${TOKENS.border}`, borderRadius: 10, padding: 16, display: 'flex', alignItems: 'center', gap: 16 }}>
         <CompassRose size={92} swellDir={current.swellDirection} windDir={current.windDirection} offshore={spot.offshore} optimalSwell={spot.optimalSwell} swellDirColor={qualityColor(swellDirQ)} windDirColor={qualityColor(windDirQ)}/>
         <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-          <Stat label="Swell dir" value={degToCardinal(current.swellDirection)} hint={`${Math.round(current.swellDirection)}°`}                       color={qualityColor(swellDirQ)}/>
-          <Stat label="Optimal"   value={degToCardinal(spot.optimalSwell)}      hint={`${spot.optimalSwell}°`}                                       color={TOKENS.phosphor}/>
-          <Stat label="Wind"      value={degToCardinal(current.windDirection)}  unit={`${Math.round(current.windSpeed)}kts`} hint={`${Math.round(current.windDirection)}°`} color={qualityColor(windDirQ)}/>
-          <Stat label="Offshore"  value={degToCardinal(spot.offshore)}          hint={`${spot.offshore}°`}                                           color={TOKENS.phosphor}/>
+          <Stat dot={false} label="Swell dir" value={degToCardinal(current.swellDirection)} hint={`${Math.round(current.swellDirection)}°`}                       color={qualityColor(swellDirQ)}/>
+          <Stat dot={false} label="Optimal"   value={degToCardinal(spot.optimalSwell)}      hint={`${spot.optimalSwell}°`}                                       color={TOKENS.phosphor}/>
+          <Stat dot={false} label="Wind"      value={degToCardinal(current.windDirection)}  unit={`${Math.round(current.windSpeed)}kts`} hint={`${Math.round(current.windDirection)}°`} color={qualityColor(windDirQ)}/>
+          <Stat dot={false} label="Offshore"  value={degToCardinal(spot.offshore)}          hint={`${spot.offshore}°`}                                           color={TOKENS.phosphor}/>
         </div>
       </div>
     </div>
