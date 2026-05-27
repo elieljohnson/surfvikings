@@ -480,7 +480,7 @@ function SpotRow({ spot, timeline, onClick }: { spot: Spot; timeline: ForecastHo
         </div>
         {best && (
           <div style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 13, color, marginTop: 3, letterSpacing: '0.05em' }}>
-            ◉ PEAK {Math.round(best.peak)} @ {hourLabel(best.peakHour)}
+            PEAK {Math.round(best.peak)} @ {hourLabel(best.peakHour)}
           </div>
         )}
       </div>
