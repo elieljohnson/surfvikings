@@ -131,11 +131,10 @@ function MapSpotPin({ spot, score, onClick }: { spot: Spot; score: number; onCli
       background: TOKENS.surface, border: `1px solid ${TOKENS.border}`,
       borderLeft: `3px solid ${color}`, borderRadius: 6,
       padding: '8px 10px', cursor: 'pointer',
+      // Preserve the "epic" glow signal that the dot used to carry — moved
+      // to the left border so high-score cards still pop at a glance.
+      boxShadow: score >= 75 ? `-3px 0 12px -2px ${color}` : 'none',
     }}>
-      <div style={{
-        width: 8, height: 8, borderRadius: 4, background: color,
-        boxShadow: score >= 75 ? `0 0 10px ${color}` : 'none',
-      }}/>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontSize: 13, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{spot.name}</div>
         <div style={{ fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 13, color: TOKENS.textMute, letterSpacing: '0.05em' }}>
