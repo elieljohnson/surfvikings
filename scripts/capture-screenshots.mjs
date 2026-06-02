@@ -69,7 +69,11 @@ for (const view of VIEWS) {
   const url = `${BASE}${view.path}`;
   console.log(`→ ${view.name.padEnd(24)} ${view.device.padEnd(8)} ${url}`);
 
-  await page.goto(url, { waitUntil: 'networkidle' });
+  // 'domcontentloaded' instead of 'networkidle' — the dev server keeps
+  // a Vite HMR websocket open + the app polls /api/conditions on a 15min
+  // schedule via setInterval, so the network is never strictly idle on
+  // app routes. Wait for DOM, then settle below.
+  await page.goto(url, { waitUntil: 'domcontentloaded' });
   // Give images / fonts a beat to settle.
   await page.waitForTimeout(600);
   // Tab navigation for app views: click a bottom-nav item by its label text.
