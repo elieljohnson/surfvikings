@@ -35,7 +35,11 @@ const VIEWS = [
   // bathymetry, water quality, and the moon-phase icon.
   { name: 'spot-detail',         path: '/app/?spot=bolinas-patch', device: 'mobile', scroll: 0   },
   { name: 'spot-detail-mid',     path: '/app/?spot=bolinas-patch', device: 'mobile', scroll: 600 },
-  { name: 'spot-detail-spectral',path: '/app/?spot=bolinas-patch', device: 'mobile', scroll: 1400 },
+  { name: 'spot-detail-spectral',path: '/app/?spot=bolinas-patch', device: 'mobile', scroll: 0,
+    // Anchor on SWELL header so the chart-heavy view dominates the frame.
+    // Previously anchored at scroll=1400 which dropped the bar charts and
+    // emphasized the verbose NWS Marine Forecast text below.
+    anchorText: '^SWELL\\b', anchorOffset: 24 },
   // App: Forecast (Outlook tab — master-scrub heatmap + MiniMetric strip charts).
   // Navigates via the bottom nav after the dashboard loads so the favorite
   // chip strip + selected spot are real, not deep-linked.
@@ -84,7 +88,43 @@ for (const view of VIEWS) {
     await tab.click();
     await page.waitForTimeout(500);
   }
-  if (view.scroll > 0) {
+  if (view.anchorText) {
+    // Anchor the scroll on a text element so the screenshot stays accurate
+    // even when content above changes height. Used for spot-detail-spectral
+    // (anchor on SWELL header so the bar charts above are visible + the
+    // spectral panel below them is in frame). Offset is the distance from
+    // the top of the visible scrollable area to the anchor element.
+    //
+    // Case-insensitive — labels in the app are usually "Swell"/"Wind" with
+    // CSS text-transform: uppercase, so textContent reads them in title case.
+    const result = await page.evaluate(({ pattern, offset }) => {
+      const r = new RegExp(pattern, 'i');
+      // Find the scrollable Screen container (the app's inner scroll area).
+      const screens = Array.from(document.querySelectorAll('div')).filter((d) => {
+        const s = window.getComputedStyle(d);
+        return (s.overflowY === 'auto' || s.overflowY === 'scroll') && d.scrollHeight > d.clientHeight;
+      });
+      const screen = screens[0];
+      if (!screen) return { found: false, reason: 'no-screen' };
+      // First element whose trimmed textContent starts with the pattern.
+      const heading = Array.from(screen.querySelectorAll('*')).find((el) =>
+        r.test((el.textContent || '').trim())
+      );
+      if (!heading) return { found: false, reason: 'no-match' };
+      // Position the heading at `offset` px from the top of the scroll area.
+      const rect = heading.getBoundingClientRect();
+      const screenRect = screen.getBoundingClientRect();
+      screen.scrollTo({
+        top: screen.scrollTop + rect.top - screenRect.top - offset,
+        behavior: 'instant',
+      });
+      return { found: true };
+    }, { pattern: view.anchorText, offset: view.anchorOffset ?? 24 });
+    if (!result.found) {
+      console.warn(`  ! anchorText /${view.anchorText}/i did not match (${result.reason}) — image will be at scroll 0`);
+    }
+    await page.waitForTimeout(300);
+  } else if (view.scroll > 0) {
     // App content scrolls inside the Screen container (overflow: auto), not the
     // page itself — find the right scroll target. Falls back to window scroll
     // for marketing pages where the body scrolls.

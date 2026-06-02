@@ -94,15 +94,18 @@ await page.getByText(/Salt Point/i).first().waitFor({ timeout: 10000 });
 await settle();
 await capture('map');
 
-// 4. Spot Detail Spectral — scrolled view showing the multi-train decomposition
-// from the NDBC spectral file. The hour-0 swell period scoring reads off the
-// dominant H²·T peak from this panel. Marketing surface for the accuracy story.
+// 4. Spot Detail Spectral — scrolled view showing the SWELL / WIND / TIDE
+// bar charts above and the multi-train spectral decomposition below. The
+// hour-0 swell period scoring reads off the dominant H²·T peak from the
+// spectral panel. Marketing surface for the accuracy story.
 console.log('→ Spot Detail Spectral');
 await page.goto(`${BASE}/app/?spot=bolinas-patch`, { waitUntil: 'networkidle' });
 await page.getByText(/spectral · buoy/i).first().waitFor({ timeout: 20000 });
 await settle();
-// Scroll the inner Screen container (the app's content area scrolls, not the
-// page). Find the scrollable Screen and scroll it to the spectral panel.
+// Anchor on the SWELL header (above the spectral panel) so the bar charts
+// are visible at the top of the screenshot and the spectral peaks read
+// below. Previously anchored on SPECTRAL with a -60 offset, which lost
+// the bar charts above and showed the verbose NWS Marine Forecast below.
 await page.evaluate(() => {
   const screens = Array.from(document.querySelectorAll('div')).filter((d) => {
     const s = window.getComputedStyle(d);
@@ -110,14 +113,15 @@ await page.evaluate(() => {
   });
   const screen = screens[0];
   if (!screen) return;
-  // Find SPECTRAL header text and scroll it to the top of the visible area
+  // SWELL · {value}ft label heads the first metric row; the SVG charts and
+  // axis labels follow. Anchoring here puts SWELL at the top of the frame.
   const heading = Array.from(screen.querySelectorAll('*')).find((el) =>
-    /spectral · buoy/i.test(el.textContent || '')
+    /^SWELL\b/i.test((el.textContent || '').trim())
   );
   if (heading) {
     const rect = heading.getBoundingClientRect();
     const screenRect = screen.getBoundingClientRect();
-    screen.scrollTo({ top: screen.scrollTop + rect.top - screenRect.top - 60, behavior: 'instant' });
+    screen.scrollTo({ top: screen.scrollTop + rect.top - screenRect.top - 24, behavior: 'instant' });
   }
 });
 await settle(400);
